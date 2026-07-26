@@ -1,6 +1,16 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+
+console.log("=================================");
+console.log("Nexa Boot");
+console.log("=================================");
+console.log("OpenRouter Key :", !!process.env.OPENROUTER_KEY);
+console.log("Groq Key       :", !!process.env.GROQ_KEY);
+console.log("PORT           :", process.env.PORT || 3000);
+console.log("=================================");
 
 const classifyTask = require("./router");
 const { runPipeline } = require("./pipeline/pipeline");
@@ -75,7 +85,17 @@ app.post("/chat", async (req, res) => {
     sendAnswer(answer);
 
   } catch (error) {
-    console.error("Pipeline Error:", error);
+
+    console.log("\n============= ERROR =============");
+    console.error(error);
+    console.error(error.stack);
+
+    if (error.response) {
+      console.log("HTTP Status :", error.response.status);
+      console.log("Response :", error.response.data);
+    }
+
+    console.log("=================================\n");
 
     sendError(
       error.message || "Ada masalah pada server."
