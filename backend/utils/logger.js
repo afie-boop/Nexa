@@ -29,6 +29,14 @@ function stackLine(err) {
 
 module.exports = {
 
+  info(moduleName, message) {
+    console.log(`[${moduleName}] Info: ${message}`);
+  },
+
+  success(moduleName, message) {
+    console.log(`[${moduleName}] Success: ${message}`);
+  },
+
   start(question = "") {
 
     pipelineStart = hr();

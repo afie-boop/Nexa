@@ -77,8 +77,11 @@ function App() {
 
       setChat((prev) => [...prev, { type: "ai", text: finalAnswer, process: processLog }]);
     } catch (err) {
-      setError("Gagal hubungi server. Cuba refresh.");
-      setChat((prev) => [...prev, { type: "ai", text: "⚠️ Maaf, saya tak dapat balas sekarang." }]);
+      setError(err.message || "Gagal hubungi server. Cuba refresh.");
+      setChat((prev) => [
+        ...prev,
+        { type: "ai", text: `⚠️ Maaf, saya tak dapat balas sekarang: ${err.message || "Gagal hubungi server."}` },
+      ]);
       console.error(err);
     } finally {
       setLoad(false);

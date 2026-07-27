@@ -18,7 +18,7 @@ async function router(data) {
 
   if (task === "code") {
     provider = "openrouter";
-    model = "tencent/hunyuan-a13b-instruct:free";
+    model = "tencent/hy3:free";
 
     system = `
 Kamu ialah AI Coding Nexa.
@@ -32,7 +32,7 @@ Peraturan:
 `;
   } else {
     provider = "groq";
-    model = "openai/gpt-oss-120b";
+    model = "llama-3.3-70b-versatile";
 
     system = `
 Kamu ialah Nexa AI Assistant.

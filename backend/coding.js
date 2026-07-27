@@ -51,7 +51,7 @@ ${draft}`;
 
   let reviewed;
   try {
-    reviewed = await askGroq(reviewPrompt, { model: "qwen/qwen3-32b" });
+    reviewed = await askGroq(reviewPrompt, { model: "llama-3.1-8b-instant" });
     if (!reviewed?.trim()) reviewed = draft;
   } catch {
     reviewed = draft;

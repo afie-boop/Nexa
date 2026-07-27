@@ -51,7 +51,6 @@ async function coder(data) {
     };
 
   } catch (err) {
-    logger.error("Coder", err);
     throw err;
   }
 }

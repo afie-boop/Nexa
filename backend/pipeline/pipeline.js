@@ -10,6 +10,7 @@ const formatter = require("./formatter");
 async function runPipeline(data) {
 
   logger.start(data.question);
+  let currentModule = "";
 
   try {
 
@@ -17,6 +18,7 @@ async function runPipeline(data) {
     // Router
     // ===========================
 
+    currentModule = "Router";
     logger.moduleStart("Router");
 
     data = await router(data);
@@ -33,6 +35,7 @@ async function runPipeline(data) {
     // Planner
     // ===========================
 
+    currentModule = "Planner";
     logger.moduleStart("Planner");
 
     data = await planner(data);
@@ -43,6 +46,7 @@ async function runPipeline(data) {
     // Coder
     // ===========================
 
+    currentModule = "Coder";
     logger.moduleStart("Coder");
 
     data = await coder(data);
@@ -56,6 +60,7 @@ async function runPipeline(data) {
     // Reviewer
     // ===========================
 
+    currentModule = "Reviewer";
     logger.moduleStart("Reviewer");
 
     data = await reviewer(data);
@@ -69,6 +74,7 @@ async function runPipeline(data) {
     // Validator
     // ===========================
 
+    currentModule = "Validator";
     logger.moduleStart("Validator");
 
     data = await validator(data);
@@ -89,6 +95,7 @@ async function runPipeline(data) {
     // Formatter
     // ===========================
 
+    currentModule = "Formatter";
     logger.moduleStart("Formatter");
 
     const output = await formatter(data);
@@ -100,6 +107,10 @@ async function runPipeline(data) {
     return output;
 
   } catch (err) {
+
+    if (currentModule) {
+      logger.moduleFail(currentModule, err);
+    }
 
     logger.error(err);
 

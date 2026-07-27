@@ -14,8 +14,7 @@ ${question}
 
   try {
     const result = await askGroq(prompt, {
-      model: "qwen/qwen3-32b",
-      history,
+      model: "llama-3.1-8b-instant",
       system: "Balas hanya 'code' atau 'general'. Jangan beri penjelasan."
     });
 

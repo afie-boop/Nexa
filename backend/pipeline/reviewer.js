@@ -13,10 +13,6 @@ async function reviewer(data) {
     issues.push("AI tidak menghasilkan jawapan.");
   }
 
-  if (response && response.length < 20) {
-    issues.push("Jawapan terlalu pendek.");
-  }
-
   logger.success(
     "Reviewer",
     issues.length
