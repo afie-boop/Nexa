@@ -16,7 +16,7 @@ async function askGroq(message, options = {}) {
   const response = await axios.post(
     "https://api.groq.com/openai/v1/chat/completions",
     {
-      model: model || "llama-3.3-70b-versatile",
+      model: model || "openai/gpt-oss-120b",
       messages,
     },
     {
