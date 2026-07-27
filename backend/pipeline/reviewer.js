@@ -5,7 +5,7 @@ async function reviewer(data) {
 
   const { response, sendStatus = () => {} } = data;
 
-  sendStatus("🔍 Reviewer sedang menyemak...");
+  sendStatus("Reviewer sedang menyemak...");
 
   const issues = [];
 
