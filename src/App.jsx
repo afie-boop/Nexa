@@ -696,21 +696,18 @@ function App() {
             <h1>{showSettings ? "Tetapan & Evolusi AI" : "Nexa"}</h1>
             <p>{showSettings ? "Konfigurasi personaliti dan tingkah laku" : "Powered by Multiple AI"}</p>
           </div>
-          <button
-            className={`settings-toggle-btn ${showSettings ? "active" : ""}`}
-            onClick={() => {
-              setShowSettings(!showSettings);
-              setSidebarOpen(false);
-            }}
-            title={showSettings ? "Tutup Tetapan" : "Tetapan & Evolusi"}
-            aria-label="Toggle Settings"
-          >
-            {showSettings ? "✕" : "⚙"}
-          </button>
         </header>
 
         {showSettings ? (
           <div className="full-settings-container">
+            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "15px" }}>
+              <button
+                className="back-to-chat-btn"
+                onClick={() => setShowSettings(false)}
+              >
+                Kembali ke Sembang
+              </button>
+            </div>
             <div className="settings-body">
               {/* Basic Settings */}
               <div className="settings-section-title">Tetapan Chat</div>
