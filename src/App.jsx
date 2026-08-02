@@ -175,6 +175,7 @@ function App() {
     setConversations(prev => [newConv, ...prev]);
     setActiveId(newId);
     setSidebarOpen(false);
+    setShowSettings(false);
   };
 
   const handleDeleteConversation = (id, e) => {
@@ -534,7 +535,7 @@ function App() {
             </div>
             <button
               className="sidebar-settings-btn"
-              onClick={() => setShowSettings(true)}
+              onClick={() => setShowSettings(!showSettings)}
               title="Tetapan & Evolusi"
               aria-label="Settings"
             >
@@ -574,10 +575,11 @@ function App() {
                   {list.map((c) => (
                     <div
                       key={c.id}
-                      className={`sidebar-item ${c.id === activeId ? "active" : ""}`}
+                      className={`sidebar-item ${c.id === activeId && !showSettings ? "active" : ""}`}
                       onClick={() => {
                         setActiveId(c.id);
                         setSidebarOpen(false);
+                        setShowSettings(false);
                       }}
                     >
                       {editingId === c.id ? (
@@ -664,7 +666,7 @@ function App() {
           </button>
           <button
             className="sidebar-footer-btn settings-btn-footer"
-            onClick={() => setShowSettings(true)}
+            onClick={() => setShowSettings(!showSettings)}
           >
             ⚙ Tetapan & Evolusi
           </button>
@@ -685,100 +687,102 @@ function App() {
             <div className="mark-core" />
           </div>
           <div className="header-info">
-            <h1>Nexa</h1>
-            <p>Powered by Multiple AI</p>
+            <h1>{showSettings ? "Tetapan & Evolusi AI" : "Nexa"}</h1>
+            <p>{showSettings ? "Konfigurasi personaliti dan tingkah laku" : "Powered by Multiple AI"}</p>
           </div>
+          {showSettings && (
+            <button
+              className="back-to-chat-btn"
+              onClick={() => setShowSettings(false)}
+            >
+              Kembali ke Sembang
+            </button>
+          )}
         </header>
 
-        {showSettings && (
-          <div className="settings-overlay" onClick={() => setShowSettings(false)}>
-            <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="settings-header">
-                <h2>Tetapan & Evolusi AI</h2>
-                <button className="settings-close-btn" onClick={() => setShowSettings(false)}>×</button>
+        {showSettings ? (
+          <div className="full-settings-container">
+            <div className="settings-body">
+              {/* Basic Settings */}
+              <div className="settings-section-title">Tetapan Chat</div>
+              <div className="settings-row">
+                <div className="settings-label-group">
+                  <label className="settings-label">Ingatan Chat (Memory)</label>
+                  <p className="settings-desc">Kenang mesej-mesej terdahulu secara automatik untuk respon yang bersambung.</p>
+                </div>
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={memoryEnabled}
+                    onChange={(e) => setMemoryEnabled(e.target.checked)}
+                  />
+                  <span className="slider round"></span>
+                </label>
               </div>
-              <div className="settings-body">
-                {/* Basic Settings */}
-                <div className="settings-section-title">Tetapan Chat</div>
-                <div className="settings-row">
-                  <div className="settings-label-group">
-                    <label className="settings-label">Ingatan Chat (Memory)</label>
-                    <p className="settings-desc">Kenang mesej-mesej terdahulu secara automatik untuk respon yang bersambung.</p>
-                  </div>
-                  <label className="switch">
-                    <input
-                      type="checkbox"
-                      checked={memoryEnabled}
-                      onChange={(e) => setMemoryEnabled(e.target.checked)}
-                    />
-                    <span className="slider round"></span>
-                  </label>
+
+              <div className="settings-row border-top">
+                <div className="settings-label-group">
+                  <label className="settings-label">Padam Sejarah</label>
+                  <p className="settings-desc">Padam semua mesej sejarah chat semasa dari peranti.</p>
                 </div>
+                <button className="danger-btn" onClick={clearChat}>Padam</button>
+              </div>
 
-                <div className="settings-row border-top">
-                  <div className="settings-label-group">
-                    <label className="settings-label">Padam Sejarah</label>
-                    <p className="settings-desc">Padam semua mesej sejarah chat semasa dari peranti.</p>
-                  </div>
-                  <button className="danger-btn" onClick={clearChat}>Padam</button>
+              {/* AI Evolution System */}
+              <div className="settings-section-title border-top-thick">AI Evolution System</div>
+
+              <div className="evolution-version-card">
+                <div className="version-info">
+                  <span className="version-label">Personality Version</span>
+                  <span className="version-badge">{evoVersion}</span>
                 </div>
+                <button
+                  className={`evo-btn ${isEvolving ? 'evolving' : ''}`}
+                  onClick={triggerSelfEvolution}
+                  disabled={isEvolving}
+                >
+                  {isEvolving ? (
+                    <>
+                      <span className="evo-spinner"></span>
+                      Menganalisis & Berevolusi...
+                    </>
+                  ) : (
+                    "Jalankan Evolusi Kendiri"
+                  )}
+                </button>
+                <p className="settings-desc" style={{ textAlign: "center", marginTop: "4px" }}>
+                  🔄 Evolusi juga berjalan secara automatik selepas perbualan selesai.
+                </p>
+              </div>
 
-                {/* AI Evolution System */}
-                <div className="settings-section-title border-top-thick">AI Evolution System</div>
+              <div className="evolution-scroll-area">
+                <div className="evo-sub-title">Sistem Strategi Aktif</div>
+                <ul className="evo-strategies-list">
+                  {evoStrategies.map((strat, idx) => (
+                    <li key={idx} className="evo-strategy-item">✦ {strat}</li>
+                  ))}
+                </ul>
 
-                <div className="evolution-version-card">
-                  <div className="version-info">
-                    <span className="version-label">Personality Version</span>
-                    <span className="version-badge">{evoVersion}</span>
-                  </div>
-                  <button
-                    className={`evo-btn ${isEvolving ? 'evolving' : ''}`}
-                    onClick={triggerSelfEvolution}
-                    disabled={isEvolving}
-                  >
-                    {isEvolving ? (
-                      <>
-                        <span className="evo-spinner"></span>
-                        Menganalisis & Berevolusi...
-                      </>
-                    ) : (
-                      "Jalankan Evolusi Kendiri"
-                    )}
-                  </button>
-                  <p className="settings-desc" style={{ textAlign: "center", marginTop: "4px" }}>
-                    🔄 Evolusi juga berjalan secara automatik selepas perbualan selesai.
-                  </p>
-                </div>
-
-                <div className="evolution-scroll-area">
-                  <div className="evo-sub-title">Sistem Strategi Aktif</div>
-                  <ul className="evo-strategies-list">
-                    {evoStrategies.map((strat, idx) => (
-                      <li key={idx} className="evo-strategy-item">✦ {strat}</li>
-                    ))}
-                  </ul>
-
-                  <div className="evo-sub-title border-top">Log Pemulihan Kesilapan</div>
-                  <div className="evo-logs">
-                    {evoLogs.map((log, idx) => (
-                      <div key={idx} className="evo-log-item">
-                        <div className="evo-log-meta">
-                          <span className="evo-log-date">{log.date}</span>
-                          <span className="evo-log-status">DISELESAIKAN</span>
-                        </div>
-                        <div className="evo-log-mistake">⚠️ <strong>Kesilapan:</strong> {log.mistake}</div>
-                        <div className="evo-log-strategy">✓ <strong>Strategi Baru:</strong> {log.strategy}</div>
+                <div className="evo-sub-title border-top">Log Pemulihan Kesilapan</div>
+                <div className="evo-logs">
+                  {evoLogs.map((log, idx) => (
+                    <div key={idx} className="evo-log-item">
+                      <div className="evo-log-meta">
+                        <span className="evo-log-date">{log.date}</span>
+                        <span className="evo-log-status">DISELESAIKAN</span>
                       </div>
-                    ))}
-                  </div>
+                      <div className="evo-log-mistake">⚠️ <strong>Kesilapan:</strong> {log.mistake}</div>
+                      <div className="evo-log-strategy">✓ <strong>Strategi Baru:</strong> {log.strategy}</div>
+                    </div>
+                  ))}
                 </div>
-
               </div>
+
             </div>
           </div>
-        )}
-
-        <main className="chat">
+        ) : (
+          <>
+            <main className="chat">
           {chat.length === 0 && !load && (
             <div className="empty-state">
               <div className="empty-mark">
@@ -833,6 +837,8 @@ function App() {
             ➤
           </button>
         </footer>
+          </>
+        )}
       </div>
     </div>
   );
