@@ -218,7 +218,7 @@ function App() {
             onClick={() => setShowSettings(!showSettings)}
             aria-label="Settings"
           >
-            =
+            ⚙️
           </button>
         </header>
 
