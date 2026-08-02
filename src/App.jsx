@@ -535,7 +535,10 @@ function App() {
             </div>
             <button
               className="sidebar-settings-btn"
-              onClick={() => setShowSettings(!showSettings)}
+              onClick={() => {
+                setShowSettings(!showSettings);
+                setSidebarOpen(false);
+              }}
               title="Tetapan & Evolusi"
               aria-label="Settings"
             >
@@ -666,7 +669,10 @@ function App() {
           </button>
           <button
             className="sidebar-footer-btn settings-btn-footer"
-            onClick={() => setShowSettings(!showSettings)}
+            onClick={() => {
+              setShowSettings(!showSettings);
+              setSidebarOpen(false);
+            }}
           >
             ⚙ Tetapan & Evolusi
           </button>
@@ -690,14 +696,17 @@ function App() {
             <h1>{showSettings ? "Tetapan & Evolusi AI" : "Nexa"}</h1>
             <p>{showSettings ? "Konfigurasi personaliti dan tingkah laku" : "Powered by Multiple AI"}</p>
           </div>
-          {showSettings && (
-            <button
-              className="back-to-chat-btn"
-              onClick={() => setShowSettings(false)}
-            >
-              Kembali ke Sembang
-            </button>
-          )}
+          <button
+            className={`settings-toggle-btn ${showSettings ? "active" : ""}`}
+            onClick={() => {
+              setShowSettings(!showSettings);
+              setSidebarOpen(false);
+            }}
+            title={showSettings ? "Tutup Tetapan" : "Tetapan & Evolusi"}
+            aria-label="Toggle Settings"
+          >
+            {showSettings ? "✕" : "⚙"}
+          </button>
         </header>
 
         {showSettings ? (

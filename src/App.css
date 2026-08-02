@@ -81,10 +81,10 @@ body {
 .settings-toggle-btn {
   background: none;
   border: none;
-  font-size: 22px;
+  font-size: 20px;
   cursor: pointer;
   color: var(--text);
-  padding: 6px;
+  padding: 8px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -95,6 +95,13 @@ body {
 .settings-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.08);
   transform: rotate(30deg);
+  color: var(--cyan);
+}
+
+.settings-toggle-btn.active {
+  transform: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--coral);
 }
 
 /* ---------- Settings Modal & Evolution System ---------- */
