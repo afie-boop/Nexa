@@ -7,44 +7,12 @@ import "./App.css";
 
 function App() {
   const [msg, setMsg] = useState("");
-  const [chat, setChat] = useState(() => {
-    try {
-      const saved = localStorage.getItem("nexa_chat_history");
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [memoryEnabled, setMemoryEnabled] = useState(() => {
-    try {
-      const saved = localStorage.getItem("nexa_memory_enabled");
-      return saved !== null ? JSON.parse(saved) : true;
-    } catch {
-      return true;
-    }
-  });
-  const [showSettings, setShowSettings] = useState(false);
+  const [chat, setChat] = useState([]);
   const [load, setLoad] = useState(false);
   const [error, setError] = useState(null);
   const [copiedIdx, setCopiedIdx] = useState(null);
   const [statusText, setStatusText] = useState("Nexa sedang berfikir...");
   const chatEndRef = useRef(null);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("nexa_chat_history", JSON.stringify(chat));
-    } catch (err) {
-      console.error("Gagal menyimpan sejarah ke localStorage", err);
-    }
-  }, [chat]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("nexa_memory_enabled", JSON.stringify(memoryEnabled));
-    } catch (err) {
-      console.error("Gagal menyimpan tetapan ingatan ke localStorage", err);
-    }
-  }, [memoryEnabled]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -54,12 +22,10 @@ function App() {
     if (!msg.trim() || load) return;
 
     const text = msg;
-    const historyForRequest = memoryEnabled
-      ? chat.map((m) => ({
-          role: m.type === "user" ? "user" : "assistant",
-          content: m.text,
-        }))
-      : [];
+    const historyForRequest = chat.map((m) => ({
+      role: m.type === "user" ? "user" : "assistant",
+      content: m.text,
+    }));
 
     setChat((prev) => [...prev, { type: "user", text }]);
     setMsg("");
@@ -195,13 +161,6 @@ function App() {
     },
   };
 
-  function clearChat() {
-    if (window.confirm("Adakah anda pasti mahu memadamkan semua sejarah chat?")) {
-      setChat([]);
-      setError(null);
-    }
-  }
-
   return (
     <div className="app-container">
       <div className="app">
@@ -209,52 +168,11 @@ function App() {
           <div className="mark">
             <div className="mark-core" />
           </div>
-          <div className="header-info">
+          <div>
             <h1>Nexa</h1>
             <p>Powered by Multiple AI</p>
           </div>
-          <button
-            className="settings-toggle-btn"
-            onClick={() => setShowSettings(!showSettings)}
-            aria-label="Settings"
-          >
-            ⚙️
-          </button>
         </header>
-
-        {showSettings && (
-          <div className="settings-overlay" onClick={() => setShowSettings(false)}>
-            <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="settings-header">
-                <h2>Tetapan</h2>
-                <button className="settings-close-btn" onClick={() => setShowSettings(false)}>×</button>
-              </div>
-              <div className="settings-body">
-                <div className="settings-row">
-                  <div className="settings-label-group">
-                    <label className="settings-label">Ingatan Chat (Memory)</label>
-                    <p className="settings-desc">Kenang mesej-mesej terdahulu untuk respon yang bersambung.</p>
-                  </div>
-                  <label className="switch">
-                    <input
-                      type="checkbox"
-                      checked={memoryEnabled}
-                      onChange={(e) => setMemoryEnabled(e.target.checked)}
-                    />
-                    <span className="slider round"></span>
-                  </label>
-                </div>
-                <div className="settings-row border-top">
-                  <div className="settings-label-group">
-                    <label className="settings-label">Padam Sejarah</label>
-                    <p className="settings-desc">Padam semua mesej dalam sejarah chat semasa dari peranti anda.</p>
-                  </div>
-                  <button className="danger-btn" onClick={clearChat}>Padam</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         <main className="chat">
           {chat.length === 0 && !load && (
