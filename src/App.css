@@ -207,56 +207,6 @@ body {
   line-height: 1.4;
 }
 
-/* Profile box and textarea styles */
-.settings-memory-profile-box {
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin: 12px 0 16px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.profile-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.profile-label {
-  font-size: 11.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--cyan);
-}
-
-.profile-textarea {
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--text);
-  font-family: inherit;
-  resize: vertical;
-  min-height: 54px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.profile-textarea:focus {
-  outline: none;
-  border-color: rgba(70, 217, 224, 0.4);
-  box-shadow: 0 0 8px rgba(70, 217, 224, 0.1);
-}
-
-.profile-textarea::placeholder {
-  color: var(--muted);
-  opacity: 0.6;
-}
-
 /* Toggle Switch Styles */
 .switch {
   position: relative;

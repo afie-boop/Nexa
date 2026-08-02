@@ -30,17 +30,6 @@ function App() {
   const [statusText, setStatusText] = useState("Nexa sedang berfikir...");
   const chatEndRef = useRef(null);
 
-  // Long-term Context memory states
-  const [userProjects, setUserProjects] = useState(() => {
-    return localStorage.getItem("nexa_user_projects") || "";
-  });
-  const [userPreferences, setUserPreferences] = useState(() => {
-    return localStorage.getItem("nexa_user_preferences") || "";
-  });
-  const [userGoals, setUserGoals] = useState(() => {
-    return localStorage.getItem("nexa_user_goals") || "";
-  });
-
   // Evolution States
   const [evoVersion, setEvoVersion] = useState(() => {
     return localStorage.getItem("nexa_evo_version") || "v1.0.0-Original";
@@ -76,18 +65,6 @@ function App() {
       console.error(err);
     }
   }, [memoryEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem("nexa_user_projects", userProjects);
-  }, [userProjects]);
-
-  useEffect(() => {
-    localStorage.setItem("nexa_user_preferences", userPreferences);
-  }, [userPreferences]);
-
-  useEffect(() => {
-    localStorage.setItem("nexa_user_goals", userGoals);
-  }, [userGoals]);
 
   useEffect(() => {
     localStorage.setItem("nexa_evo_version", evoVersion);
@@ -166,18 +143,6 @@ function App() {
           content: m.text,
         }))
       : [];
-
-    if (memoryEnabled && (userProjects || userPreferences || userGoals)) {
-      historyForRequest.unshift({
-        role: "system",
-        content: `[INGATAN KELAKUAN & PROJEK PENGGUNA]
-Gunakan konteks profil memori pengguna ini untuk semua balasan masa depan:
-- Projek Lama / Sedang Dijalankan: ${userProjects || 'Tiada'}
-- Cara Menjawab Digemari: ${userPreferences || 'Tiada'}
-- Matlamat Utama Pengguna: ${userGoals || 'Tiada'}
-Jika pengguna menyebut "Sambung projek semalam", "projek lama saya", atau gaya tersirat, rujuk terus kepada maklumat projek, cara menjawab digemari, dan matlamat utama di atas.`
-      });
-    }
 
     setChat((prev) => [...prev, { type: "user", text }]);
     setMsg("");
@@ -353,7 +318,7 @@ Jika pengguna menyebut "Sambung projek semalam", "projek lama saya", atau gaya t
                 <div className="settings-row">
                   <div className="settings-label-group">
                     <label className="settings-label">Ingatan Chat (Memory)</label>
-                    <p className="settings-desc">Kenang mesej-mesej terdahulu untuk respon yang bersambung.</p>
+                    <p className="settings-desc">Kenang mesej-mesej terdahulu secara automatik untuk respon yang bersambung.</p>
                   </div>
                   <label className="switch">
                     <input
@@ -364,43 +329,6 @@ Jika pengguna menyebut "Sambung projek semalam", "projek lama saya", atau gaya t
                     <span className="slider round"></span>
                   </label>
                 </div>
-
-                {/* AI Memory Assistant Fields (Profile) */}
-                {memoryEnabled && (
-                  <div className="settings-memory-profile-box">
-                    <div className="evo-sub-title">Profil Memori AI Assistant</div>
-
-                    <div className="profile-field">
-                      <label className="profile-label">Projek Lama / Semasa</label>
-                      <textarea
-                        className="profile-textarea"
-                        placeholder="Contoh: Projek semalam ialah bot telegram Node.js..."
-                        value={userProjects}
-                        onChange={(e) => setUserProjects(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="profile-field">
-                      <label className="profile-label">Cara Menjawab Kegemaran</label>
-                      <textarea
-                        className="profile-textarea"
-                        placeholder="Contoh: Terus bagi kod tanpa teori panjang lebar..."
-                        value={userPreferences}
-                        onChange={(e) => setUserPreferences(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="profile-field">
-                      <label className="profile-label">Matlamat Utama Anda</label>
-                      <textarea
-                        className="profile-textarea"
-                        placeholder="Contoh: Bina MVP dalam 2 minggu..."
-                        value={userGoals}
-                        onChange={(e) => setUserGoals(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
 
                 <div className="settings-row border-top">
                   <div className="settings-label-group">
