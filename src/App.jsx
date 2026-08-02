@@ -525,11 +525,21 @@ function App() {
       {/* Left Sidebar */}
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
-          <div className="sidebar-brand">
-            <div className="mark small-mark">
-              <div className="mark-core" />
+          <div className="sidebar-brand-wrapper">
+            <div className="sidebar-brand">
+              <div className="mark small-mark">
+                <div className="mark-core" />
+              </div>
+              <span>Nexa Chat</span>
             </div>
-            <span>Nexa Chat</span>
+            <button
+              className="sidebar-settings-btn"
+              onClick={() => setShowSettings(true)}
+              title="Tetapan & Evolusi"
+              aria-label="Settings"
+            >
+              ⚙
+            </button>
           </div>
           <button className="new-chat-btn" onClick={handleNewChat}>
             + Sembang Baru
@@ -652,6 +662,12 @@ function App() {
           >
             {showArchived ? "Lihat Sembang Aktif" : "Lihat Sembang Arkib"}
           </button>
+          <button
+            className="sidebar-footer-btn settings-btn-footer"
+            onClick={() => setShowSettings(true)}
+          >
+            ⚙ Tetapan & Evolusi
+          </button>
         </div>
       </aside>
 
@@ -672,13 +688,6 @@ function App() {
             <h1>Nexa</h1>
             <p>Powered by Multiple AI</p>
           </div>
-          <button
-            className="settings-toggle-btn"
-            onClick={() => setShowSettings(!showSettings)}
-            aria-label="Settings"
-          >
-            =
-          </button>
         </header>
 
         {showSettings && (
