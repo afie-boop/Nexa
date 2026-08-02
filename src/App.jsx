@@ -193,6 +193,11 @@ function App() {
       if (finalAnswer === null) throw new Error("Tiada jawapan diterima.");
 
       setChat((prev) => [...prev, { type: "ai", text: finalAnswer, process: processLog }]);
+
+      // Automatically trigger AI Self-Evolution in background
+      setTimeout(() => {
+        triggerSelfEvolution();
+      }, 1000);
     } catch (err) {
       setError(err.message || "Gagal hubungi server. Cuba refresh.");
       setChat((prev) => [
@@ -360,6 +365,9 @@ function App() {
                       "🧬 Jalankan Evolusi Kendiri"
                     )}
                   </button>
+                  <p className="settings-desc" style={{ textAlign: "center", marginTop: "4px" }}>
+                    🔄 Evolusi juga berjalan secara automatik selepas perbualan selesai.
+                  </p>
                 </div>
 
                 <div className="evolution-scroll-area">
