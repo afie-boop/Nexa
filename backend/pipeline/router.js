@@ -42,6 +42,10 @@ Gunakan Bahasa Melayu atau Indonesia mengikut pengguna.
 `;
   }
 
+  if (data.evoStrategies && data.evoStrategies.length > 0) {
+    system += `\n\nSISTEM STRATEGI AKTIF (EVOLVED):\n` + data.evoStrategies.map(s => `- ${s}`).join("\n");
+  }
+
   logger.success(
     "Router",
     `${provider} | ${model}`

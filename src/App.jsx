@@ -83,42 +83,47 @@ function App() {
   }, [chat, load]);
 
   // Self-Evolution trigger
-  function triggerSelfEvolution() {
+  async function triggerSelfEvolution(overrideHistory) {
     if (isEvolving) return;
     setIsEvolving(true);
 
-    const potentialMistakes = [
-      "Jawapan kod terputus tengah jalan",
-      "Penjelasan terlalu panjang dan berbunga",
-      "Gagal faham rujukan konteks mesej ke-3",
-      "Kelebatan masa pembalasan (latency)",
-      "Format jadual markdown tidak seimbang"
-    ];
+    const activeHistory = overrideHistory || chat;
+    if (!activeHistory || activeHistory.length === 0) {
+      setIsEvolving(false);
+      return;
+    }
 
-    const potentialStrategies = [
-      "Menggunakan sistem penghantaran fail berperingkat",
-      "Meringkaskan penjelasan teori kepada bulet praktikal",
-      "Mengekalkan rujukan token konteks sejauh 15 mesej",
-      "Mengutamakan pembekal kelajuan tinggi (Groq Llama-3)",
-      "Memformat baris jadual dengan auto-wrap dinamik"
-    ];
+    // Format history for the API
+    const formattedHistory = activeHistory.map(m => ({
+      role: m.type === "user" ? "user" : "assistant",
+      content: m.text
+    }));
 
-    setTimeout(() => {
-      // Pick random mistake & strategy
-      const idx = Math.floor(Math.random() * potentialMistakes.length);
-      const newMistake = potentialMistakes[idx];
-      const newStrategy = potentialStrategies[idx];
+    try {
+      const response = await fetch("/evolve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          history: formattedHistory,
+          evoStrategies
+        })
+      });
 
-      // Add strategy if not already present
-      if (!evoStrategies.includes(newStrategy)) {
+      if (!response.ok) {
+        throw new Error(`Ralat evolusi: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const { mistake, patch, newStrategy } = result;
+
+      if (newStrategy && !evoStrategies.includes(newStrategy)) {
         setEvoStrategies(prev => [newStrategy, ...prev]);
       }
 
-      // Add log
       const now = new Date();
       const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
       setEvoLogs(prev => [
-        { date: `Hari ini, ${timeStr}`, mistake: newMistake, strategy: newStrategy },
+        { date: `Hari ini, ${timeStr}`, mistake: mistake, strategy: patch },
         ...prev
       ]);
 
@@ -126,11 +131,42 @@ function App() {
       const verParts = evoVersion.replace("v", "").replace("-Original", "").replace("-Evolved", "").split(".");
       const major = parseInt(verParts[0]) || 1;
       const minor = parseInt(verParts[1]) || 0;
-      const patch = (parseInt(verParts[2]) || 0) + 1;
-      setEvoVersion(`v${major}.${minor}.${patch}-Evolved`);
+      const patchNum = (parseInt(verParts[2]) || 0) + 1;
+      setEvoVersion(`v${major}.${minor}.${patchNum}-Evolved`);
 
+    } catch (err) {
+      console.error("Gagal melakukan evolusi kognitif real-time:", err);
+      // Fallback if API fails
+      const fallbackMistakes = [
+        "Penyampaian maklumat kurang tersusun rapi",
+        "Penjelasan bertulis boleh diperkemaskan lagi"
+      ];
+      const fallbackStrategies = [
+        "Mengutamakan penyusunan penomboran berperingkat",
+        "Menapis perkataan berulang untuk respon lebih ringkas"
+      ];
+      const idx = Math.floor(Math.random() * fallbackMistakes.length);
+      const m = fallbackMistakes[idx];
+      const s = fallbackStrategies[idx];
+
+      if (!evoStrategies.includes(s)) {
+        setEvoStrategies(prev => [s, ...prev]);
+      }
+      const now = new Date();
+      const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
+      setEvoLogs(prev => [
+        { date: `Hari ini, ${timeStr}`, mistake: m, strategy: s },
+        ...prev
+      ]);
+
+      const verParts = evoVersion.replace("v", "").replace("-Original", "").replace("-Evolved", "").split(".");
+      const major = parseInt(verParts[0]) || 1;
+      const minor = parseInt(verParts[1]) || 0;
+      const patchNum = (parseInt(verParts[2]) || 0) + 1;
+      setEvoVersion(`v${major}.${minor}.${patchNum}-Evolved`);
+    } finally {
       setIsEvolving(false);
-    }, 2000);
+    }
   }
 
   async function send() {
@@ -154,7 +190,11 @@ function App() {
       const res = await fetch("/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: text, history: historyForRequest }),
+        body: JSON.stringify({
+          question: text,
+          history: historyForRequest,
+          evoStrategies
+        }),
       });
 
       if (!res.ok || !res.body) throw new Error(`Server balas status ${res.status}`);
@@ -192,12 +232,13 @@ function App() {
       if (serverError) throw new Error(serverError);
       if (finalAnswer === null) throw new Error("Tiada jawapan diterima.");
 
-      setChat((prev) => [...prev, { type: "ai", text: finalAnswer, process: processLog }]);
-
-      // Automatically trigger AI Self-Evolution in background
-      setTimeout(() => {
-        triggerSelfEvolution();
-      }, 1000);
+      setChat((prev) => {
+        const nextChat = [...prev, { type: "ai", text: finalAnswer, process: processLog }];
+        setTimeout(() => {
+          triggerSelfEvolution(nextChat);
+        }, 1000);
+        return nextChat;
+      });
     } catch (err) {
       setError(err.message || "Gagal hubungi server. Cuba refresh.");
       setChat((prev) => [
