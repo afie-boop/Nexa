@@ -1,0 +1,80 @@
+{
+  "providers": {
+    "groq": {
+      "openai/gpt-oss-120b": {
+        "general": {
+          "success": 0,
+          "failed": 0,
+          "avgSpeed": 0,
+          "avgTokens": 0,
+          "score": 100,
+          "totalExecutionTime": 0,
+          "totalTokens": 0,
+          "usageCount": 0,
+          "timeoutCount": 0,
+          "emptyResponseCount": 0,
+          "validationFailedCount": 0,
+          "crashCount": 0,
+          "reviewerPassCount": 0,
+          "validatorPassCount": 0
+        }
+      },
+      "llama-3.3-70b-versatile": {
+        "general": {
+          "success": 0,
+          "failed": 0,
+          "avgSpeed": 0,
+          "avgTokens": 0,
+          "score": 100,
+          "totalExecutionTime": 0,
+          "totalTokens": 0,
+          "usageCount": 0,
+          "timeoutCount": 0,
+          "emptyResponseCount": 0,
+          "validationFailedCount": 0,
+          "crashCount": 0,
+          "reviewerPassCount": 0,
+          "validatorPassCount": 0
+        }
+      }
+    },
+    "openrouter": {
+      "inclusionai/ling-3.0-flash:free": {
+        "coding": {
+          "success": 0,
+          "failed": 0,
+          "avgSpeed": 0,
+          "avgTokens": 0,
+          "score": 100,
+          "totalExecutionTime": 0,
+          "totalTokens": 0,
+          "usageCount": 0,
+          "timeoutCount": 0,
+          "emptyResponseCount": 0,
+          "validationFailedCount": 0,
+          "crashCount": 0,
+          "reviewerPassCount": 0,
+          "validatorPassCount": 0
+        }
+      },
+      "tencent/hy3:free": {
+        "coding": {
+          "success": 0,
+          "failed": 0,
+          "avgSpeed": 0,
+          "avgTokens": 0,
+          "score": 100,
+          "totalExecutionTime": 0,
+          "totalTokens": 0,
+          "usageCount": 0,
+          "timeoutCount": 0,
+          "emptyResponseCount": 0,
+          "validationFailedCount": 0,
+          "crashCount": 0,
+          "reviewerPassCount": 0,
+          "validatorPassCount": 0
+        }
+      }
+    }
+  }
+}

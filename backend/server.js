@@ -105,6 +105,18 @@ app.post("/chat", async (req, res) => {
   }
 });
 
+const { getSystemStatus } = require("./evolution/engine");
+
+app.get("/evolution/status", (req, res) => {
+  try {
+    const status = getSystemStatus();
+    res.json(status);
+  } catch (error) {
+    console.error("Gagal mendapatkan status evolusi:", error);
+    res.status(500).json({ error: error.message || "Gagal mendapatkan status evolusi." });
+  }
+});
+
 app.post("/evolve", async (req, res) => {
   const { history, evoStrategies } = req.body;
 

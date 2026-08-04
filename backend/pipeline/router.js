@@ -1,4 +1,5 @@
 const logger = require("../utils/logger");
+const { getBestModelForTask } = require("../evolution/engine");
 
 async function router(data) {
   logger.info("Router", "Memilih AI...");
@@ -12,14 +13,12 @@ async function router(data) {
 
   sendStatus("Router memilih AI...");
 
-  let provider;
-  let model;
+  const modelChoice = getBestModelForTask(task === "code" ? "coding" : "general");
+  const provider = modelChoice.provider;
+  const model = modelChoice.model;
   let system;
 
   if (task === "code") {
-    provider = "openrouter";
-    model = "inclusionai/ling-3.0-flash:free";
-
     system = `
 Kamu ialah AI Coding Nexa.
 
@@ -31,9 +30,6 @@ Peraturan:
 - Jangan beri penerangan panjang.
 `;
   } else {
-    provider = "groq";
-    model = "openai/gpt-oss-120b";
-
     system = `
 Kamu ialah Nexa AI Assistant.
 
