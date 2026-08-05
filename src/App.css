@@ -972,7 +972,7 @@ body {
 }
 
 [data-theme="dark"] .black-emoji {
-  filter: grayscale(100%) brightness(2) invert(1);
+  filter: grayscale(100%) brightness(0) invert(1);
 }
 
 /* Responsive Rules */
