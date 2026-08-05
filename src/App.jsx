@@ -66,6 +66,16 @@ function App() {
       return true;
     }
   });
+
+  const [evolutionEnabled, setEvolutionEnabled] = useState(() => {
+    try {
+      const saved = localStorage.getItem("nexa_evolution_enabled");
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
   const [showSettings, setShowSettings] = useState(false);
   const [load, setLoad] = useState(false);
   const [error, setError] = useState(null);
@@ -120,6 +130,14 @@ function App() {
       console.error(err);
     }
   }, [memoryEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("nexa_evolution_enabled", JSON.stringify(evolutionEnabled));
+    } catch (err) {
+      console.error(err);
+    }
+  }, [evolutionEnabled]);
 
   useEffect(() => {
     localStorage.setItem("nexa_evo_version", evoVersion);
@@ -378,9 +396,11 @@ function App() {
           return c;
         });
       });
-      setTimeout(() => {
-        triggerSelfEvolution(finalChatRef);
-      }, 1000);
+      if (evolutionEnabled) {
+        setTimeout(() => {
+          triggerSelfEvolution(finalChatRef);
+        }, 1000);
+      }
     } catch (err) {
       setError(err.message || "Gagal hubungi server. Cuba refresh.");
       updateActiveMessages((prev) => [
@@ -533,17 +553,6 @@ function App() {
               </div>
               <span>Nexa Chat</span>
             </div>
-            <button
-              className="sidebar-settings-btn"
-              onClick={() => {
-                setShowSettings(!showSettings);
-                setSidebarOpen(false);
-              }}
-              title="Tetapan & Evolusi"
-              aria-label="Settings"
-            >
-              ⚙
-            </button>
           </div>
           <button className="new-chat-btn" onClick={handleNewChat}>
             + Sembang Baru
@@ -736,6 +745,21 @@ function App() {
 
               {/* AI Evolution System */}
               <div className="settings-section-title border-top-thick">AI Evolution System</div>
+
+              <div className="settings-row" style={{ marginBottom: "15px" }}>
+                <div className="settings-label-group">
+                  <label className="settings-label">Evolusi Kognitif Automatik (Auto Evolution)</label>
+                  <p className="settings-desc">Analisis dan jana strategi baru secara automatik selepas perbualan selesai.</p>
+                </div>
+                <label className="switch">
+                  <input
+                    type="checkbox"
+                    checked={evolutionEnabled}
+                    onChange={(e) => setEvolutionEnabled(e.target.checked)}
+                  />
+                  <span className="slider round"></span>
+                </label>
+              </div>
 
               <div className="evolution-version-card">
                 <div className="version-info">

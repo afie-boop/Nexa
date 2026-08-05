@@ -4,17 +4,17 @@
       "openai/gpt-oss-120b": {
         "general": {
           "success": 0,
-          "failed": 0,
-          "avgSpeed": 0,
+          "failed": 1,
+          "avgSpeed": 0.083,
           "avgTokens": 0,
-          "score": 100,
-          "totalExecutionTime": 0,
+          "score": 82,
+          "totalExecutionTime": 0.083,
           "totalTokens": 0,
-          "usageCount": 0,
+          "usageCount": 1,
           "timeoutCount": 0,
           "emptyResponseCount": 0,
-          "validationFailedCount": 0,
-          "crashCount": 0,
+          "validationFailedCount": 1,
+          "crashCount": 1,
           "reviewerPassCount": 0,
           "validatorPassCount": 0
         }
