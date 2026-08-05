@@ -598,37 +598,37 @@ function App() {
             className={`nav-item ${activeNav === "chats" ? "active" : ""}`}
             onClick={() => { setActiveNav("chats"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon">💬</span> Chats
+            <span className="nav-icon"><span className="black-emoji">💬</span></span> Chats
           </button>
           <button
             className={`nav-item ${activeNav === "models" ? "active" : ""}`}
             onClick={() => { setActiveNav("models"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon">🤖</span> Models
+            <span className="nav-icon"><span className="black-emoji">🤖</span></span> Models
           </button>
           <button
             className={`nav-item ${activeNav === "history" ? "active" : ""}`}
             onClick={() => { setActiveNav("history"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon">📜</span> History
+            <span className="nav-icon"><span className="black-emoji">📜</span></span> History
           </button>
           <button
             className={`nav-item ${activeNav === "tools" ? "active" : ""}`}
             onClick={() => { setActiveNav("tools"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon">🛠️</span> Tools
+            <span className="nav-icon"><span className="black-emoji">🛠️</span></span> Tools
           </button>
           <button
             className={`nav-item ${activeNav === "settings" ? "active" : ""}`}
             onClick={() => { setActiveNav("settings"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon">⚙️</span> Settings
+            <span className="nav-icon"><span className="black-emoji">⚙️</span></span> Settings
           </button>
           <button
             className={`nav-item ${activeNav === "about" ? "active" : ""}`}
             onClick={() => { setActiveNav("about"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon">ℹ️</span> About
+            <span className="nav-icon"><span className="black-emoji">ℹ️</span></span> About
           </button>
 
           {/* Sesi Aktif List inside Sidebar for easy access when Chats navigation is active */}
@@ -675,14 +675,14 @@ function App() {
                             onClick={(e) => handlePinConversation(c.id, e)}
                             title="Pin Sembang"
                           >
-                            {c.pinned ? "📌" : "📍"}
+                            {c.pinned ? <span className="black-emoji">📌</span> : <span className="black-emoji">📍</span>}
                           </button>
                           <button
                             className="sidebar-action-btn"
                             onClick={(e) => handleArchiveConversation(c.id, e)}
                             title="Arkib Sembang"
                           >
-                            📦
+                            <span className="black-emoji">📦</span>
                           </button>
                           <button
                             className="sidebar-action-btn"
@@ -693,14 +693,14 @@ function App() {
                             }}
                             title="Nama Semula"
                           >
-                            ✏️
+                            <span className="black-emoji">✏️</span>
                           </button>
                           <button
                             className="sidebar-action-btn"
                             onClick={(e) => handleDeleteConversation(c.id, e)}
                             title="Padam Sembang"
                           >
-                            🗑️
+                            <span className="black-emoji">🗑️</span>
                           </button>
                         </div>
                       </>
@@ -750,7 +750,7 @@ function App() {
 
           <div className="top-bar-actions">
             <button className="theme-toggle-btn" onClick={toggleTheme}>
-              {theme === "light" ? "🌙 Dark" : "☀️ Light"}
+              {theme === "light" ? <><span className="black-emoji">🌙</span> Dark</> : <><span className="black-emoji">☀️</span> Light</>}
             </button>
           </div>
         </header>
@@ -773,19 +773,19 @@ function App() {
                     className="suggestion-btn"
                     onClick={() => handleSuggestionClick("Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.")}
                   >
-                    🐍 Tulis Kod Fibonacci
+                    <span className="black-emoji">🐍</span> Tulis Kod Fibonacci
                   </button>
                   <button
                     className="suggestion-btn"
                     onClick={() => handleSuggestionClick("Apakah itu Sistem Evolusi Kognitif Nexa?")}
                   >
-                    🧠 Terangkan Evolusi Kognitif
+                    <span className="black-emoji">🧠</span> Terangkan Evolusi Kognitif
                   </button>
                   <button
                     className="suggestion-btn"
                     onClick={() => handleSuggestionClick("Bina satu strategi pemasaran digital ringkas untuk permulaan teknologi.")}
                   >
-                    📈 Strategi Pemasaran
+                    <span className="black-emoji">📈</span> Strategi Pemasaran
                   </button>
                 </div>
               </div>
@@ -826,27 +826,27 @@ function App() {
                               className="card-action-btn"
                               onClick={() => copyCode(c.text, `ai-${i}`)}
                             >
-                              {copiedIdx === `ai-${i}` ? "✓ Disalin" : "📋 Salin Respon"}
+                              {copiedIdx === `ai-${i}` ? "✓ Disalin" : <><span className="black-emoji">📋</span> Salin Respon</>}
                             </button>
                             <button
                               className="card-action-btn"
                               onClick={() => handleLike(i)}
                               style={likes[i] ? { color: "var(--accent)", borderColor: "var(--accent)", backgroundColor: "var(--accent-light)" } : {}}
                             >
-                              👍 Like
+                              <span className="black-emoji">👍</span> Like
                             </button>
                             <button
                               className="card-action-btn"
                               onClick={() => handleDislike(i)}
                               style={dislikes[i] ? { color: "#EF4444", borderColor: "#EF4444", backgroundColor: "rgba(239, 68, 68, 0.08)" } : {}}
                             >
-                              👎 Dislike
+                              <span className="black-emoji">👎</span> Dislike
                             </button>
                             <button
                               className="card-action-btn"
                               onClick={() => handleRegenerate(i)}
                             >
-                              🔄 Regenerate
+                              <span className="black-emoji">🔄</span> Regenerate
                             </button>
                           </div>
                         </div>
@@ -901,19 +901,19 @@ function App() {
                 {/* Flat composer workspace utilities row */}
                 <div className="composer-toolbar">
                   <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "📎 ")}>
-                    📎 Attachment
+                    <span className="black-emoji">📎</span> Attachment
                   </button>
                   <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "🖼️ ")}>
-                    🖼️ Image
+                    <span className="black-emoji">🖼️</span> Image
                   </button>
                   <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "🎙️ ")}>
-                    🎙️ Voice
+                    <span className="black-emoji">🎙️</span> Voice
                   </button>
                   <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "💻 ")}>
-                    💻 Code
+                    <span className="black-emoji">💻</span> Code
                   </button>
                   <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "@ ")}>
-                    👤 Mention
+                    <span className="black-emoji">👤</span> Mention
                   </button>
                 </div>
               </div>
@@ -957,7 +957,7 @@ function App() {
                   <div key={c.id} className="flat-card">
                     <span className="flat-card-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
                       {c.title}
-                      <span>{c.pinned ? "📌" : ""}</span>
+                      <span>{c.pinned ? <span className="black-emoji">📌</span> : ""}</span>
                     </span>
                     <p className="flat-card-desc">Mesej: {c.messages?.length || 0} | Dibuat: {new Date(c.createdAt).toLocaleDateString()}</p>
                     <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
@@ -1064,7 +1064,7 @@ function App() {
                       onClick={() => triggerSelfEvolution()}
                       disabled={isEvolving}
                     >
-                      {isEvolving ? "🔄 Berevolusi..." : "Jalankan Evolusi Kendiri"}
+                      {isEvolving ? <><span className="black-emoji">🔄</span> Berevolusi...</> : "Jalankan Evolusi Kendiri"}
                     </button>
                   </div>
                 </div>
@@ -1078,7 +1078,7 @@ function App() {
                           <span>{log.date}</span>
                           <span style={{ color: "var(--accent)", fontWeight: "600" }}>RESOLVED</span>
                         </div>
-                        <div>⚠️ <strong>Kesilapan:</strong> {log.mistake}</div>
+                        <div><span className="black-emoji">⚠️</span> <strong>Kesilapan:</strong> {log.mistake}</div>
                         <div style={{ marginTop: "4px" }}>✓ <strong>Strategi:</strong> {log.strategy}</div>
                       </div>
                     ))}

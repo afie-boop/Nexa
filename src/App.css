@@ -964,6 +964,17 @@ body {
   max-width: 100%;
 }
 
+/* Monochromatic Black/White Emoji styling */
+.black-emoji {
+  display: inline-block;
+  filter: grayscale(100%) brightness(0);
+  transition: filter 120ms ease;
+}
+
+[data-theme="dark"] .black-emoji {
+  filter: grayscale(100%) brightness(2) invert(1);
+}
+
 /* Responsive Rules */
 @media (max-width: 768px) {
   .sidebar {
