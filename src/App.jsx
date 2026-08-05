@@ -8,6 +8,17 @@ import "./App.css";
 function App() {
   const [msg, setMsg] = useState("");
 
+  // Navigation State: 'chats' | 'models' | 'history' | 'tools' | 'settings' | 'about'
+  const [activeNav, setActiveNav] = useState("chats");
+
+  // Theme State: 'light' | 'dark'
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("nexa_theme") || "light";
+  });
+
+  // Online / Offline state tracking
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
   // Conversations State
   const [conversations, setConversations] = useState(() => {
     try {
@@ -50,7 +61,6 @@ function App() {
   });
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [showArchived, setShowArchived] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
@@ -76,12 +86,14 @@ function App() {
     }
   });
 
-  const [showSettings, setShowSettings] = useState(false);
   const [load, setLoad] = useState(false);
   const [error, setError] = useState(null);
   const [copiedIdx, setCopiedIdx] = useState(null);
-  const [statusText, setStatusText] = useState("Nexa sedang berfikir...");
   const chatEndRef = useRef(null);
+
+  // Like/Dislike state track for messages
+  const [likes, setLikes] = useState({});
+  const [dislikes, setDislikes] = useState({});
 
   // Evolution States
   const [evoVersion, setEvoVersion] = useState(() => {
@@ -91,7 +103,7 @@ function App() {
     const saved = localStorage.getItem("nexa_evo_strategies");
     return saved ? JSON.parse(saved) : [
       "Mengesan kategori tugasan secara automatik",
-      "Format tindak balas dengan gaya ChatGPT kemas",
+      "Format tindak balas dengan gaya kemas",
       "Gunakan bahasa Melayu kasual jika sesuai"
     ];
   });
@@ -102,6 +114,17 @@ function App() {
     ];
   });
   const [isEvolving, setIsEvolving] = useState(false);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   useEffect(() => {
     if (conversations.length > 0 && !activeId) {
@@ -152,6 +175,11 @@ function App() {
   }, [evoLogs]);
 
   useEffect(() => {
+    localStorage.setItem("nexa_theme", theme);
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chat, load]);
 
@@ -193,11 +221,11 @@ function App() {
     setConversations(prev => [newConv, ...prev]);
     setActiveId(newId);
     setSidebarOpen(false);
-    setShowSettings(false);
+    setActiveNav("chats");
   };
 
   const handleDeleteConversation = (id, e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     if (conversations.length === 1) {
       const newId = "conv_" + Date.now();
       setConversations([{
@@ -226,13 +254,46 @@ function App() {
   };
 
   const handleArchiveConversation = (id, e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setConversations(prev => prev.map(c => c.id === id ? { ...c, archived: !c.archived } : c));
   };
 
   const handlePinConversation = (id, e) => {
-    e.stopPropagation();
+    if (e) e.stopPropagation();
     setConversations(prev => prev.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c));
+  };
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === "light" ? "dark" : "light");
+  };
+
+  const handleSuggestionClick = (promptText) => {
+    setMsg(promptText);
+  };
+
+  const handleLike = (msgIdx) => {
+    setLikes(prev => ({ ...prev, [msgIdx]: !prev[msgIdx] }));
+    setDislikes(prev => ({ ...prev, [msgIdx]: false }));
+  };
+
+  const handleDislike = (msgIdx) => {
+    setDislikes(prev => ({ ...prev, [msgIdx]: !prev[msgIdx] }));
+    setLikes(prev => ({ ...prev, [msgIdx]: false }));
+  };
+
+  const handleRegenerate = async (msgIdx) => {
+    // Find the last user message before this AI response
+    const lastUserMsgIdx = chat.slice(0, msgIdx).reduce((lastIdx, m, i) => m.type === "user" ? i : lastIdx, -1);
+    if (lastUserMsgIdx !== -1) {
+      const userText = chat[lastUserMsgIdx].text;
+      // Slice history up to that user message
+      const historyToKeep = chat.slice(0, lastUserMsgIdx);
+      updateActiveMessages(historyToKeep);
+      setMsg(userText);
+      setTimeout(() => {
+        send(userText, historyToKeep);
+      }, 50);
+    }
   };
 
   // Self-Evolution trigger
@@ -322,21 +383,23 @@ function App() {
     }
   }
 
-  async function send() {
-    if (!msg.trim() || load) return;
+  async function send(overrideMsg, overrideHistory) {
+    const textToSend = overrideMsg || msg;
+    if (!textToSend.trim() || load) return;
 
-    const text = msg;
     const historyForRequest = memoryEnabled
-      ? chat.map((m) => ({
+      ? (overrideHistory || chat).map((m) => ({
           role: m.type === "user" ? "user" : "assistant",
           content: m.text,
         }))
       : [];
 
-    updateActiveMessages((prev) => [...prev, { type: "user", text }]);
-    setMsg("");
+    if (!overrideMsg) {
+      updateActiveMessages((prev) => [...prev, { type: "user", text: textToSend }]);
+      setMsg("");
+    }
+
     setLoad(true);
-    setStatusText("Nexa sedang berfikir...");
     setError(null);
 
     try {
@@ -344,7 +407,7 @@ function App() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: text,
+          question: textToSend,
           history: historyForRequest,
           evoStrategies
         }),
@@ -372,7 +435,6 @@ function App() {
           const data = JSON.parse(part.slice(6));
 
           if (data.type === "status") {
-            setStatusText(data.text);
             processLog.push(data.text);
           } else if (data.type === "answer") {
             finalAnswer = data.text;
@@ -448,9 +510,9 @@ function App() {
       return (
         <div className="code-block-wrapper">
           <div className="code-block-header">
-            <span className="code-lang">{lang}</span>
+            <span>{lang}</span>
             <button className="copy-btn" onClick={() => copyCode(content, key)}>
-              {copiedIdx === key ? "Disalin!" : "Salin"}
+              {copiedIdx === key ? "Disalin!" : "Salin kod"}
             </button>
           </div>
           <div className="code-block-body">
@@ -461,9 +523,9 @@ function App() {
               customStyle={{
                 margin: 0,
                 borderRadius: "0",
-                padding: "12px 14px",
-                fontSize: "12px",
-                lineHeight: "1.5",
+                padding: "16px",
+                fontSize: "13px",
+                lineHeight: "1.6",
                 background: "transparent",
                 whiteSpace: "pre-wrap",
                 overflowWrap: "anywhere",
@@ -493,381 +555,553 @@ function App() {
     }
   }
 
-  const groupConversations = (convList) => {
-    const groups = {
-      pinned: [],
-      today: [],
-      yesterday: [],
-      thisWeek: [],
-      older: []
-    };
-
-    const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
-    const thisWeekStart = todayStart - 7 * 24 * 60 * 60 * 1000;
-
-    convList.forEach(c => {
-      if (c.pinned) {
-        groups.pinned.push(c);
-      } else {
-        const time = c.createdAt;
-        if (time >= todayStart) {
-          groups.today.push(c);
-        } else if (time >= yesterdayStart) {
-          groups.yesterday.push(c);
-        } else if (time >= thisWeekStart) {
-          groups.thisWeek.push(c);
-        } else {
-          groups.older.push(c);
-        }
-      }
-    });
-
-    return groups;
-  };
-
   const filteredConversations = conversations.filter(c => {
     const matchesTitle = c.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesContent = c.messages.some(m => m.text.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesTitle || matchesContent;
   });
 
-  const displayConversations = filteredConversations.filter(c => showArchived ? c.archived : !c.archived);
-  const grouped = groupConversations(displayConversations);
+  // Calculate current dynamic status
+  const getDynamicStatus = () => {
+    if (!isOnline) return "Offline";
+    if (load) return "Thinking";
+    if (isOnline && !load && chat.length > 0) return "Ready";
+    return "Online";
+  };
+
+  const currentStatus = getDynamicStatus();
 
   return (
     <div className="app-container">
-      {/* Sidebar Mobile Overlay */}
+      {/* Mobile Overlay */}
       {sidebarOpen && (
         <div className="sidebar-mobile-overlay" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* Left Sidebar */}
+      {/* ==========================================================================
+         SIDEBAR (LEFT) - 260px Fixed Layout
+         ========================================================================== */}
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
-          <div className="sidebar-brand-wrapper">
-            <div className="sidebar-brand">
-              <div className="mark small-mark">
-                <div className="mark-core" />
-              </div>
-              <span>Nexa Chat</span>
-            </div>
+          <div className="logo-container">
+            <div className="logo-icon">N</div>
+            <div className="logo-text">NEXA</div>
           </div>
           <button className="new-chat-btn" onClick={handleNewChat}>
-            + Sembang Baru
+            + New Chat
           </button>
         </div>
 
-        <div className="sidebar-search">
-          <input
-            type="text"
-            placeholder="Cari sembang..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        {/* Sidebar Menu Options */}
+        <nav className="sidebar-nav">
+          <button
+            className={`nav-item ${activeNav === "chats" ? "active" : ""}`}
+            onClick={() => { setActiveNav("chats"); setSidebarOpen(false); }}
+          >
+            <span className="nav-icon">💬</span> Chats
+          </button>
+          <button
+            className={`nav-item ${activeNav === "models" ? "active" : ""}`}
+            onClick={() => { setActiveNav("models"); setSidebarOpen(false); }}
+          >
+            <span className="nav-icon">🤖</span> Models
+          </button>
+          <button
+            className={`nav-item ${activeNav === "history" ? "active" : ""}`}
+            onClick={() => { setActiveNav("history"); setSidebarOpen(false); }}
+          >
+            <span className="nav-icon">📜</span> History
+          </button>
+          <button
+            className={`nav-item ${activeNav === "tools" ? "active" : ""}`}
+            onClick={() => { setActiveNav("tools"); setSidebarOpen(false); }}
+          >
+            <span className="nav-icon">🛠️</span> Tools
+          </button>
+          <button
+            className={`nav-item ${activeNav === "settings" ? "active" : ""}`}
+            onClick={() => { setActiveNav("settings"); setSidebarOpen(false); }}
+          >
+            <span className="nav-icon">⚙️</span> Settings
+          </button>
+          <button
+            className={`nav-item ${activeNav === "about" ? "active" : ""}`}
+            onClick={() => { setActiveNav("about"); setSidebarOpen(false); }}
+          >
+            <span className="nav-icon">ℹ️</span> About
+          </button>
 
-        <div className="sidebar-scroll">
-          {Object.entries(grouped).map(([key, list]) => {
-            if (list.length === 0) return null;
-
-            const titleMap = {
-              pinned: "Pinned 📌",
-              today: "Hari Ini",
-              yesterday: "Semalam",
-              thisWeek: "Minggu Ini",
-              older: "Sebelum Ini"
-            };
-
-            return (
-              <div key={key} className="sidebar-group">
-                <div className="sidebar-group-title">{titleMap[key]}</div>
-                <div className="sidebar-group-list">
-                  {list.map((c) => (
-                    <div
-                      key={c.id}
-                      className={`sidebar-item ${c.id === activeId && !showSettings ? "active" : ""}`}
-                      onClick={() => {
-                        setActiveId(c.id);
-                        setSidebarOpen(false);
-                        setShowSettings(false);
-                      }}
-                    >
-                      {editingId === c.id ? (
-                        <div className="sidebar-item-edit-wrapper" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="text"
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                handleRenameConversation(c.id, editTitle);
-                              } else if (e.key === "Escape") {
-                                setEditingId(null);
-                              }
-                            }}
-                            autoFocus
-                          />
+          {/* Sesi Aktif List inside Sidebar for easy access when Chats navigation is active */}
+          {activeNav === "chats" && (
+            <div className="sidebar-sub-section animate-fade">
+              <span className="sidebar-sub-title">Sesi Aktif</span>
+              <div className="sidebar-search-box">
+                <input
+                  type="text"
+                  placeholder="Cari..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="sidebar-conv-list">
+                {filteredConversations.filter(c => !c.archived).map((c) => (
+                  <div
+                    key={c.id}
+                    className={`sidebar-conv-item ${c.id === activeId ? "active" : ""}`}
+                    onClick={() => { setActiveId(c.id); setSidebarOpen(false); }}
+                  >
+                    {editingId === c.id ? (
+                      <div className="sidebar-item-edit-wrapper" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              handleRenameConversation(c.id, editTitle);
+                            } else if (e.key === "Escape") {
+                              setEditingId(null);
+                            }
+                          }}
+                          autoFocus
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <span className="sidebar-conv-title">{c.title}</span>
+                        <div className="sidebar-conv-actions">
                           <button
-                            className="edit-save-btn"
-                            onClick={() => handleRenameConversation(c.id, editTitle)}
+                            className="sidebar-action-btn"
+                            onClick={(e) => handlePinConversation(c.id, e)}
+                            title="Pin Sembang"
                           >
-                            ✓
+                            {c.pinned ? "📌" : "📍"}
                           </button>
                           <button
-                            className="edit-cancel-btn"
-                            onClick={() => setEditingId(null)}
+                            className="sidebar-action-btn"
+                            onClick={(e) => handleArchiveConversation(c.id, e)}
+                            title="Arkib Sembang"
                           >
-                            ×
+                            📦
+                          </button>
+                          <button
+                            className="sidebar-action-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingId(c.id);
+                              setEditTitle(c.title);
+                            }}
+                            title="Nama Semula"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            className="sidebar-action-btn"
+                            onClick={(e) => handleDeleteConversation(c.id, e)}
+                            title="Padam Sembang"
+                          >
+                            🗑️
                           </button>
                         </div>
-                      ) : (
-                        <>
-                          <span className="sidebar-item-title" title={c.title}>{c.title}</span>
-                          <div className="sidebar-item-actions">
-                            <button
-                              className={`action-btn ${c.pinned ? "active" : ""}`}
-                              onClick={(e) => handlePinConversation(c.id, e)}
-                              title={c.pinned ? "Unpin Sembang" : "Pin Sembang"}
-                            >
-                              📌
-                            </button>
-                            <button
-                              className={`action-btn ${c.archived ? "active" : ""}`}
-                              onClick={(e) => handleArchiveConversation(c.id, e)}
-                              title={c.archived ? "Nyaharkib Sembang" : "Arkib Sembang"}
-                            >
-                              📦
-                            </button>
-                            <button
-                              className="action-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingId(c.id);
-                                setEditTitle(c.title);
-                              }}
-                              title="Nama Semula"
-                            >
-                              ✏️
-                            </button>
-                            <button
-                              className="action-btn delete-btn"
-                              onClick={(e) => handleDeleteConversation(c.id, e)}
-                              title="Padam Sembang"
-                            >
-                              🗑️
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                      </>
+                    )}
+                  </div>
+                ))}
               </div>
-            );
-          })}
+            </div>
+          )}
+        </nav>
+
+        {/* User Profile Info */}
+        <div className="sidebar-profile">
+          <div className="profile-avatar">UX</div>
+          <div className="profile-info">
+            <span className="profile-name">Nexa Developer</span>
+            <span className="profile-plan">Pro Evolution Plan</span>
+          </div>
         </div>
 
+        {/* Version Footer */}
         <div className="sidebar-footer">
-          <button
-            className="sidebar-footer-btn"
-            onClick={() => setShowArchived(!showArchived)}
-          >
-            {showArchived ? "Lihat Sembang Aktif" : "Lihat Sembang Arkib"}
-          </button>
-          <button
-            className="sidebar-footer-btn settings-btn-footer"
-            onClick={() => {
-              setShowSettings(!showSettings);
-              setSidebarOpen(false);
-            }}
-          >
-              Tetapan & Evolusi
-          </button>
+          <span>Version 1.2.4</span>
         </div>
       </aside>
 
-      {/* Main App Panel */}
-      <div className="app">
-        <header className="top">
+      {/* ==========================================================================
+         WORKSPACE UTAMA (Spans all remaining space)
+         ========================================================================== */}
+      <div className="workspace">
+        {/* 1. Top Bar */}
+        <header className="top-bar">
           <button
-            className="sidebar-toggle-btn"
+            className="mobile-toggle"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            aria-label="Toggle Sidebar"
           >
             ☰
           </button>
-          <div className="mark">
-            <div className="mark-core" />
+
+          <div className="ai-status-container">
+            <span className="ai-name">Nexa AI</span>
+            <div className="status-indicator">
+              <span className={`status-dot ${currentStatus === "Thinking" ? "thinking" : ""}`} />
+              <span>{currentStatus}</span>
+            </div>
           </div>
-          <div className="header-info">
-            <h1>{showSettings ? "Tetapan & Evolusi AI" : "Nexa"}</h1>
-            <p>{showSettings ? "Konfigurasi personaliti dan tingkah laku" : "Powered by Multiple AI"}</p>
+
+          <div className="top-bar-actions">
+            <button className="theme-toggle-btn" onClick={toggleTheme}>
+              {theme === "light" ? "🌙 Dark" : "☀️ Light"}
+            </button>
           </div>
         </header>
 
-        {showSettings ? (
-          <div className="full-settings-container">
-            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "15px" }}>
-              <button
-                className="back-to-chat-btn"
-                onClick={() => setShowSettings(false)}
-              >
-                Kembali ke Sembang
-              </button>
-            </div>
-            <div className="settings-body">
-              {/* Basic Settings */}
-              <div className="settings-section-title">Tetapan Chat</div>
-              <div className="settings-row">
-                <div className="settings-label-group">
-                  <label className="settings-label">Ingatan Chat (Memory)</label>
-                  <p className="settings-desc">Kenang mesej-mesej terdahulu secara automatik untuk respon yang bersambung.</p>
+        {/* Display Banner Errors if present */}
+        {error && <div className="error-banner animate-slide">{error}</div>}
+
+        {/* Render Panels based on activeNav */}
+        {activeNav === "chats" && (
+          <>
+            {/* 2. Hero Section (when empty) */}
+            {chat.length === 0 && !load ? (
+              <div className="hero-section animate-fade">
+                <div className="hero-logo">N</div>
+                <h2 className="hero-title">Hello, I'm Nexa.</h2>
+                <p className="hero-tagline">Build. Think. Create.</p>
+
+                <div className="suggestion-prompts-container">
+                  <button
+                    className="suggestion-btn"
+                    onClick={() => handleSuggestionClick("Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.")}
+                  >
+                    🐍 Tulis Kod Fibonacci
+                  </button>
+                  <button
+                    className="suggestion-btn"
+                    onClick={() => handleSuggestionClick("Apakah itu Sistem Evolusi Kognitif Nexa?")}
+                  >
+                    🧠 Terangkan Evolusi Kognitif
+                  </button>
+                  <button
+                    className="suggestion-btn"
+                    onClick={() => handleSuggestionClick("Bina satu strategi pemasaran digital ringkas untuk permulaan teknologi.")}
+                  >
+                    📈 Strategi Pemasaran
+                  </button>
                 </div>
-                <label className="switch">
+              </div>
+            ) : (
+              /* 3. Conversation Area */
+              <div className="conversation-area">
+                <div className="conversation-inner">
+                  {chat.map((c, i) => {
+                    if (c.type === "user") {
+                      return (
+                        <div key={i} className="user-message-row animate-slide">
+                          <div className="user-message-content">{c.text}</div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div key={i} className="ai-card animate-slide">
+                          <div className="ai-card-header">
+                            <div className="ai-card-avatar">N</div>
+                            <div className="ai-card-meta">
+                              <span className="ai-card-title">Nexa AI</span>
+                              <span className="ai-card-subtitle">Evolved Strategy Response</span>
+                            </div>
+                          </div>
+
+                          <div className="ai-card-body">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={MarkdownComponents}
+                            >
+                              {c.text}
+                            </ReactMarkdown>
+                          </div>
+
+                          {/* Control actions for AI response: Copy, Like, Dislike, Regenerate */}
+                          <div className="ai-card-actions">
+                            <button
+                              className="card-action-btn"
+                              onClick={() => copyCode(c.text, `ai-${i}`)}
+                            >
+                              {copiedIdx === `ai-${i}` ? "✓ Disalin" : "📋 Salin Respon"}
+                            </button>
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleLike(i)}
+                              style={likes[i] ? { color: "var(--accent)", borderColor: "var(--accent)", backgroundColor: "var(--accent-light)" } : {}}
+                            >
+                              👍 Like
+                            </button>
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleDislike(i)}
+                              style={dislikes[i] ? { color: "#EF4444", borderColor: "#EF4444", backgroundColor: "rgba(239, 68, 68, 0.08)" } : {}}
+                            >
+                              👎 Dislike
+                            </button>
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleRegenerate(i)}
+                            >
+                              🔄 Regenerate
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+                  })}
+
+                  {/* Active Loading response card */}
+                  {load && (
+                    <div className="ai-card animate-slide">
+                      <div className="ai-card-header">
+                        <div className="ai-card-avatar">N</div>
+                        <div className="ai-card-meta">
+                          <span className="ai-card-title">Nexa AI</span>
+                          <span className="ai-card-subtitle">Thinking...</span>
+                        </div>
+                      </div>
+                      <div className="ai-card-body">
+                        <div className="loading-card">
+                          <span className="loading-text">Nexa sedang berfikir dan menyusun jawapan terbaik...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+              </div>
+            )}
+
+            {/* 5. Composer Workspace (Sticky Bottom) */}
+            <div className="composer-sticky-container">
+              <div className="composer-workspace">
+                <div className="composer-input-row">
+                  <textarea
+                    className="composer-textarea"
+                    value={msg}
+                    onChange={(e) => setMsg(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Tanya Nexa apa sahaja... (Gunakan Shift+Enter untuk baris baru)"
+                    disabled={load}
+                  />
+                  <button
+                    className="send-btn-round"
+                    onClick={() => send()}
+                    disabled={load || !msg.trim()}
+                    aria-label="Send"
+                  >
+                    ➤
+                  </button>
+                </div>
+
+                {/* Flat composer workspace utilities row */}
+                <div className="composer-toolbar">
+                  <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "📎 ")}>
+                    📎 Attachment
+                  </button>
+                  <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "🖼️ ")}>
+                    🖼️ Image
+                  </button>
+                  <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "🎙️ ")}>
+                    🎙️ Voice
+                  </button>
+                  <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "💻 ")}>
+                    💻 Code
+                  </button>
+                  <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "@ ")}>
+                    👤 Mention
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Other Panel Views matching Navbar */}
+        {activeNav === "models" && (
+          <div className="sub-panel-container animate-fade">
+            <div className="sub-panel-inner">
+              <h2 className="panel-title">Nexa AI Models</h2>
+              <p className="panel-subtitle">Available high performance intelligence units routing through Nexa Evolution Engine.</p>
+
+              <div className="grid-container">
+                <div className="flat-card">
+                  <span className="flat-card-title">llama-3.3-70b-versatile</span>
+                  <p className="flat-card-desc">Our highly versatile model optimized for complex logical thinking, creative content generation, and long conversations.</p>
+                </div>
+                <div className="flat-card">
+                  <span className="flat-card-title">cohere/north-mini-code</span>
+                  <p className="flat-card-desc">Specialized coding unit tuned to construct precise, beautiful structures, clear markdown listings, and directory frameworks.</p>
+                </div>
+                <div className="flat-card">
+                  <span className="flat-card-title">llama-3.1-8b-instant</span>
+                  <p className="flat-card-desc">Ultra-fast general response model deployed primarily for automated error repairs, cognitive analysis, and simple tasks.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeNav === "history" && (
+          <div className="sub-panel-container animate-fade">
+            <div className="sub-panel-inner">
+              <h2 className="panel-title">Conversation History Overview</h2>
+              <p className="panel-subtitle">Manage, rename, archive, or delete previous discussions securely stored on this local client.</p>
+
+              <div className="grid-container">
+                {conversations.map((c) => (
+                  <div key={c.id} className="flat-card">
+                    <span className="flat-card-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      {c.title}
+                      <span>{c.pinned ? "📌" : ""}</span>
+                    </span>
+                    <p className="flat-card-desc">Mesej: {c.messages?.length || 0} | Dibuat: {new Date(c.createdAt).toLocaleDateString()}</p>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                      <button
+                        className="card-action-btn"
+                        onClick={() => { setActiveId(c.id); setActiveNav("chats"); }}
+                      >
+                        Buka Sembang
+                      </button>
+                      <button
+                        className="card-action-btn"
+                        onClick={(e) => handleArchiveConversation(c.id, e)}
+                      >
+                        {c.archived ? "Nyaharkib" : "Arkibkan"}
+                      </button>
+                      <button
+                        className="card-action-btn"
+                        style={{ color: "#EF4444" }}
+                        onClick={(e) => handleDeleteConversation(c.id, e)}
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeNav === "tools" && (
+          <div className="sub-panel-container animate-fade">
+            <div className="sub-panel-inner">
+              <h2 className="panel-title">Active Cognitive Tools</h2>
+              <p className="panel-subtitle">Specialized self-evolution heuristics and live strategic pipeline rules currently used in prompt generation.</p>
+
+              <div className="grid-container">
+                {evoStrategies.map((strat, idx) => (
+                  <div key={idx} className="flat-card">
+                    <span className="flat-card-title">Strategi {idx + 1}</span>
+                    <p className="flat-card-desc">✦ {strat}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeNav === "settings" && (
+          <div className="sub-panel-container animate-fade">
+            <div className="sub-panel-inner">
+              <h2 className="panel-title">Settings & Cognitive Evolution Engine</h2>
+              <p className="panel-subtitle">Fine-tune the Nexa AI behavior memory parameters and control the live performance routers.</p>
+
+              <div className="ai-card">
+                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" }}>
+                  <div>
+                    <strong style={{ display: "block", fontSize: "14px" }}>Ingatan Chat (Memory Toggle)</strong>
+                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Sertakan konteks mesej terdahulu secara automatik dalam permintaan API.</span>
+                  </div>
                   <input
                     type="checkbox"
+                    style={{ width: "20px", height: "20px", cursor: "pointer" }}
                     checked={memoryEnabled}
                     onChange={(e) => setMemoryEnabled(e.target.checked)}
                   />
-                  <span className="slider round"></span>
-                </label>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid var(--border)" }}>
+                  <div>
+                    <strong style={{ display: "block", fontSize: "14px" }}>Hapus Sejarah</strong>
+                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Padam keseluruhan data perbualan semasa dari storan tempatan peranti.</span>
+                  </div>
+                  <button className="card-action-btn" style={{ color: "#EF4444", borderColor: "#EF4444" }} onClick={clearChat}>
+                    Padam Sejarah
+                  </button>
+                </div>
               </div>
 
-              <div className="settings-row border-top">
-                <div className="settings-label-group">
-                  <label className="settings-label">Padam Sejarah</label>
-                  <p className="settings-desc">Padam semua mesej sejarah chat semasa dari peranti.</p>
-                </div>
-                <button className="danger-btn" onClick={clearChat}>Padam</button>
-              </div>
-
-              {/* AI Evolution System */}
-              <div className="settings-section-title border-top-thick">AI Evolution System</div>
-
-              <div className="settings-row" style={{ marginBottom: "15px" }}>
-                <div className="settings-label-group">
-                  <label className="settings-label">Evolusi Kognitif Automatik (Auto Evolution)</label>
-                  <p className="settings-desc">Analisis dan jana strategi baru secara automatik selepas perbualan selesai.</p>
-                </div>
-                <label className="switch">
+              <div className="ai-card">
+                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Sistem Evolusi Kognitif Automatik (Self-Evolution)</h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" }}>
+                  <div>
+                    <strong style={{ display: "block", fontSize: "14px" }}>Evolusi Kognitif Automatik</strong>
+                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Menganalisis kesilapan atau kritik chat secara langsung untuk merumus pembetulan kognitif.</span>
+                  </div>
                   <input
                     type="checkbox"
+                    style={{ width: "20px", height: "20px", cursor: "pointer" }}
                     checked={evolutionEnabled}
                     onChange={(e) => setEvolutionEnabled(e.target.checked)}
                   />
-                  <span className="slider round"></span>
-                </label>
-              </div>
-
-              <div className="evolution-version-card">
-                <div className="version-info">
-                  <span className="version-label">Personality Version</span>
-                  <span className="version-badge">{evoVersion}</span>
                 </div>
-                <button
-                  className={`evo-btn ${isEvolving ? 'evolving' : ''}`}
-                  onClick={triggerSelfEvolution}
-                  disabled={isEvolving}
-                >
-                  {isEvolving ? (
-                    <>
-                      <span className="evo-spinner"></span>
-                      Menganalisis & Berevolusi...
-                    </>
-                  ) : (
-                    "Jalankan Evolusi Kendiri"
-                  )}
-                </button>
-                <p className="settings-desc" style={{ textAlign: "center", marginTop: "4px" }}>
-                  🔄 Evolusi juga berjalan secara automatik selepas perbualan selesai.
-                </p>
-              </div>
 
-              <div className="evolution-scroll-area">
-                <div className="evo-sub-title">Sistem Strategi Aktif</div>
-                <ul className="evo-strategies-list">
-                  {evoStrategies.map((strat, idx) => (
-                    <li key={idx} className="evo-strategy-item">✦ {strat}</li>
-                  ))}
-                </ul>
-
-                <div className="evo-sub-title border-top">Log Pemulihan Kesilapan</div>
-                <div className="evo-logs">
-                  {evoLogs.map((log, idx) => (
-                    <div key={idx} className="evo-log-item">
-                      <div className="evo-log-meta">
-                        <span className="evo-log-date">{log.date}</span>
-                        <span className="evo-log-status">DISELESAIKAN</span>
-                      </div>
-                      <div className="evo-log-mistake">⚠️ <strong>Kesilapan:</strong> {log.mistake}</div>
-                      <div className="evo-log-strategy">✓ <strong>Strategi Baru:</strong> {log.strategy}</div>
+                <div style={{ padding: "16px 0", borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: "12px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <span style={{ fontSize: "13px", fontWeight: "500", color: "var(--secondary-text)" }}>Personality Version:</span>
+                      <strong style={{ fontSize: "13px", color: "var(--accent)", marginLeft: "8px" }}>{evoVersion}</strong>
                     </div>
-                  ))}
+                    <button
+                      className="card-action-btn"
+                      onClick={() => triggerSelfEvolution()}
+                      disabled={isEvolving}
+                    >
+                      {isEvolving ? "🔄 Berevolusi..." : "Jalankan Evolusi Kendiri"}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "12px" }}>
+                  <span style={{ fontSize: "12px", fontWeight: "600", textTransform: "uppercase", color: "var(--secondary-text)" }}>Log Evolusi Terkini</span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "150px", overflowY: "auto" }}>
+                    {evoLogs.map((log, idx) => (
+                      <div key={idx} style={{ padding: "10px", border: "1px solid var(--border)", borderRadius: "8px", backgroundColor: "var(--bg)", fontSize: "12.5px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", color: "var(--secondary-text)", fontSize: "11px", marginBottom: "4px" }}>
+                          <span>{log.date}</span>
+                          <span style={{ color: "var(--accent)", fontWeight: "600" }}>RESOLVED</span>
+                        </div>
+                        <div>⚠️ <strong>Kesilapan:</strong> {log.mistake}</div>
+                        <div style={{ marginTop: "4px" }}>✓ <strong>Strategi:</strong> {log.strategy}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-
             </div>
           </div>
-        ) : (
-          <>
-            <main className="chat">
-          {chat.length === 0 && !load && (
-            <div className="empty-state">
-              <div className="empty-mark">
-                <div className="mark-core" />
-              </div>
-              <p>Tanya apa sahaja. Saya sedia bantu.</p>
-            </div>
-          )}
+        )}
 
-          {chat.map((c, i) => (
-            <div key={i} className={`row row-${c.type}`}>
-              <div className={c.type}>
-                {c.type === "ai" ? (
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={MarkdownComponents}>
-                    {c.text}
-                  </ReactMarkdown>
-                ) : (
-                  <p className="msg-text">{c.text}</p>
-                )}
+        {activeNav === "about" && (
+          <div className="sub-panel-container animate-fade">
+            <div className="sub-panel-inner">
+              <h2 className="panel-title">About NEXA AI</h2>
+              <p className="panel-subtitle">Nexa is a minimalist, clean, and highly productive workspace designed from the ground up for developer efficiency.</p>
+
+              <div className="ai-card">
+                <p>Nexa is built upon a dual-column flat structural philosophy: an organized sidebar navigation for immediate interaction and a broad central workspace providing a clean layout with zero visual clutter.</p>
+                <p>Equipped with a live Self-Evolution cognitive engine, Nexa monitors request metrics, user critique, and formatting feedback to upgrade its system prompts dynamically on every session.</p>
+                <p style={{ marginTop: "16px", fontWeight: "500" }}>Made with focus, clarity, and precision for professional builders.</p>
               </div>
             </div>
-          ))}
-
-          {load && (
-            <div className="row row-ai">
-              <div className="ai">
-                <div className="nexa-loading">
-                  <div className="nexa-loader">
-                    <div className="nexa-blob" />
-                    <div className="nexa-blob" />
-                    <div className="nexa-blob" />
-                  </div>
-                  <span className="loading-text">{statusText}</span>
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={chatEndRef} />
-        </main>
-
-        {error && <div className="error-banner">{error}</div>}
-
-        <footer className="inputBox">
-          <input
-            value={msg}
-            onChange={(e) => setMsg(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Tanya sesuatu..."
-            disabled={load}
-          />
-          <button className="send-btn" onClick={send} disabled={load || !msg.trim()} aria-label="Hantar">
-            ➤
-          </button>
-        </footer>
-          </>
+          </div>
         )}
       </div>
     </div>
