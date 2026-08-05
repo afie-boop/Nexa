@@ -683,7 +683,7 @@ function App() {
               setSidebarOpen(false);
             }}
           >
-            ⚙ Tetapan & Evolusi
+              Tetapan & Evolusi
           </button>
         </div>
       </aside>
