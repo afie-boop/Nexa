@@ -288,8 +288,7 @@ function App() {
       const userText = chat[lastUserMsgIdx].text;
       // Slice history up to that user message
       const historyToKeep = chat.slice(0, lastUserMsgIdx);
-      updateActiveMessages(historyToKeep);
-      setMsg(userText);
+      updateActiveMessages([...historyToKeep, { type: "user", text: userText }]);
       setTimeout(() => {
         send(userText, historyToKeep);
       }, 50);
@@ -467,7 +466,7 @@ function App() {
       setError(err.message || "Gagal hubungi server. Cuba refresh.");
       updateActiveMessages((prev) => [
         ...prev,
-        { type: "ai", text: `⚠️ Maaf, saya tak dapat balas sekarang: ${err.message || "Gagal hubungi server."}` },
+        { type: "ai", text: "Maaf, saya tak dapat balas sekarang: " + (err.message || "Gagal hubungi server.") }
       ]);
       console.error(err);
     } finally {
@@ -579,7 +578,7 @@ function App() {
       )}
 
       {/* ==========================================================================
-         SIDEBAR (LEFT) - 260px Fixed Layout
+         SIDEBAR (LEFT) - 260px Fixed Layout (NO EMOJIS)
          ========================================================================== */}
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
@@ -598,37 +597,37 @@ function App() {
             className={`nav-item ${activeNav === "chats" ? "active" : ""}`}
             onClick={() => { setActiveNav("chats"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon"><span className="black-emoji">💬</span></span> Chats
+            Chats
           </button>
           <button
             className={`nav-item ${activeNav === "models" ? "active" : ""}`}
             onClick={() => { setActiveNav("models"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon"><span className="black-emoji">🤖</span></span> Models
+            Models
           </button>
           <button
             className={`nav-item ${activeNav === "history" ? "active" : ""}`}
             onClick={() => { setActiveNav("history"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon"><span className="black-emoji">📜</span></span> History
+            History
           </button>
           <button
             className={`nav-item ${activeNav === "tools" ? "active" : ""}`}
             onClick={() => { setActiveNav("tools"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon"><span className="black-emoji">🛠️</span></span> Tools
+            Tools
           </button>
           <button
             className={`nav-item ${activeNav === "settings" ? "active" : ""}`}
             onClick={() => { setActiveNav("settings"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon"><span className="black-emoji">⚙️</span></span> Settings
+            Settings
           </button>
           <button
             className={`nav-item ${activeNav === "about" ? "active" : ""}`}
             onClick={() => { setActiveNav("about"); setSidebarOpen(false); }}
           >
-            <span className="nav-icon"><span className="black-emoji">ℹ️</span></span> About
+            About
           </button>
 
           {/* Sesi Aktif List inside Sidebar for easy access when Chats navigation is active */}
@@ -675,14 +674,14 @@ function App() {
                             onClick={(e) => handlePinConversation(c.id, e)}
                             title="Pin Sembang"
                           >
-                            {c.pinned ? <span className="black-emoji">📌</span> : <span className="black-emoji">📍</span>}
+                            {c.pinned ? "Unpin" : "Pin"}
                           </button>
                           <button
                             className="sidebar-action-btn"
                             onClick={(e) => handleArchiveConversation(c.id, e)}
                             title="Arkib Sembang"
                           >
-                            <span className="black-emoji">📦</span>
+                            Arkib
                           </button>
                           <button
                             className="sidebar-action-btn"
@@ -693,14 +692,14 @@ function App() {
                             }}
                             title="Nama Semula"
                           >
-                            <span className="black-emoji">✏️</span>
+                            Edit
                           </button>
                           <button
                             className="sidebar-action-btn"
                             onClick={(e) => handleDeleteConversation(c.id, e)}
                             title="Padam Sembang"
                           >
-                            <span className="black-emoji">🗑️</span>
+                            Padam
                           </button>
                         </div>
                       </>
@@ -750,7 +749,7 @@ function App() {
 
           <div className="top-bar-actions">
             <button className="theme-toggle-btn" onClick={toggleTheme}>
-              {theme === "light" ? <><span className="black-emoji">🌙</span> Dark</> : <><span className="black-emoji">☀️</span> Light</>}
+              {theme === "light" ? "Dark Mode" : "Light Mode"}
             </button>
           </div>
         </header>
@@ -773,19 +772,19 @@ function App() {
                     className="suggestion-btn"
                     onClick={() => handleSuggestionClick("Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.")}
                   >
-                    <span className="black-emoji">🐍</span> Tulis Kod Fibonacci
+                    Tulis Kod Fibonacci
                   </button>
                   <button
                     className="suggestion-btn"
                     onClick={() => handleSuggestionClick("Apakah itu Sistem Evolusi Kognitif Nexa?")}
                   >
-                    <span className="black-emoji">🧠</span> Terangkan Evolusi Kognitif
+                    Terangkan Evolusi Kognitif
                   </button>
                   <button
                     className="suggestion-btn"
                     onClick={() => handleSuggestionClick("Bina satu strategi pemasaran digital ringkas untuk permulaan teknologi.")}
                   >
-                    <span className="black-emoji">📈</span> Strategi Pemasaran
+                    Strategi Pemasaran
                   </button>
                 </div>
               </div>
@@ -826,27 +825,27 @@ function App() {
                               className="card-action-btn"
                               onClick={() => copyCode(c.text, `ai-${i}`)}
                             >
-                              {copiedIdx === `ai-${i}` ? "✓ Disalin" : <><span className="black-emoji">📋</span> Salin Respon</>}
+                              {copiedIdx === `ai-${i}` ? "Disalin" : "Salin Respon"}
                             </button>
                             <button
                               className="card-action-btn"
                               onClick={() => handleLike(i)}
                               style={likes[i] ? { color: "var(--accent)", borderColor: "var(--accent)", backgroundColor: "var(--accent-light)" } : {}}
                             >
-                              <span className="black-emoji">👍</span> Like
+                              Like
                             </button>
                             <button
                               className="card-action-btn"
                               onClick={() => handleDislike(i)}
                               style={dislikes[i] ? { color: "#EF4444", borderColor: "#EF4444", backgroundColor: "rgba(239, 68, 68, 0.08)" } : {}}
                             >
-                              <span className="black-emoji">👎</span> Dislike
+                              Dislike
                             </button>
                             <button
                               className="card-action-btn"
                               onClick={() => handleRegenerate(i)}
                             >
-                              <span className="black-emoji">🔄</span> Regenerate
+                              Regenerate
                             </button>
                           </div>
                         </div>
@@ -876,7 +875,7 @@ function App() {
               </div>
             )}
 
-            {/* 5. Composer Workspace (Sticky Bottom) */}
+            {/* 5. Composer Workspace (Sticky Bottom) - NO TOOLBAR BUTTONS */}
             <div className="composer-sticky-container">
               <div className="composer-workspace">
                 <div className="composer-input-row">
@@ -885,7 +884,7 @@ function App() {
                     value={msg}
                     onChange={(e) => setMsg(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Tanya Nexa apa sahaja... (Gunakan Shift+Enter untuk baris baru)"
+                    placeholder="Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
                     disabled={load}
                   />
                   <button
@@ -895,25 +894,6 @@ function App() {
                     aria-label="Send"
                   >
                     ➤
-                  </button>
-                </div>
-
-                {/* Flat composer workspace utilities row */}
-                <div className="composer-toolbar">
-                  <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "📎 ")}>
-                    <span className="black-emoji">📎</span> Attachment
-                  </button>
-                  <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "🖼️ ")}>
-                    <span className="black-emoji">🖼️</span> Image
-                  </button>
-                  <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "🎙️ ")}>
-                    <span className="black-emoji">🎙️</span> Voice
-                  </button>
-                  <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "💻 ")}>
-                    <span className="black-emoji">💻</span> Code
-                  </button>
-                  <button className="toolbar-btn" onClick={() => setMsg(prev => prev + "@ ")}>
-                    <span className="black-emoji">👤</span> Mention
                   </button>
                 </div>
               </div>
@@ -957,7 +937,7 @@ function App() {
                   <div key={c.id} className="flat-card">
                     <span className="flat-card-title" style={{ display: 'flex', justifyContent: 'space-between' }}>
                       {c.title}
-                      <span>{c.pinned ? <span className="black-emoji">📌</span> : ""}</span>
+                      <span>{c.pinned ? "Pinned" : ""}</span>
                     </span>
                     <p className="flat-card-desc">Mesej: {c.messages?.length || 0} | Dibuat: {new Date(c.createdAt).toLocaleDateString()}</p>
                     <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
@@ -998,7 +978,7 @@ function App() {
                 {evoStrategies.map((strat, idx) => (
                   <div key={idx} className="flat-card">
                     <span className="flat-card-title">Strategi {idx + 1}</span>
-                    <p className="flat-card-desc">✦ {strat}</p>
+                    <p className="flat-card-desc">{strat}</p>
                   </div>
                 ))}
               </div>
@@ -1064,7 +1044,7 @@ function App() {
                       onClick={() => triggerSelfEvolution()}
                       disabled={isEvolving}
                     >
-                      {isEvolving ? <><span className="black-emoji">🔄</span> Berevolusi...</> : "Jalankan Evolusi Kendiri"}
+                      {isEvolving ? "Berevolusi..." : "Jalankan Evolusi Kendiri"}
                     </button>
                   </div>
                 </div>
@@ -1078,8 +1058,8 @@ function App() {
                           <span>{log.date}</span>
                           <span style={{ color: "var(--accent)", fontWeight: "600" }}>RESOLVED</span>
                         </div>
-                        <div><span className="black-emoji">⚠️</span> <strong>Kesilapan:</strong> {log.mistake}</div>
-                        <div style={{ marginTop: "4px" }}>✓ <strong>Strategi:</strong> {log.strategy}</div>
+                        <div>Kesilapan: {log.mistake}</div>
+                        <div style={{ marginTop: "4px" }}>Strategi: {log.strategy}</div>
                       </div>
                     ))}
                   </div>

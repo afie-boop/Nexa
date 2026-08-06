@@ -48,6 +48,7 @@ html, body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--primary-text);
   overflow-x: hidden;
+  max-width: 100vw;
   width: 100%;
   height: 100%;
   -webkit-font-smoothing: antialiased;
@@ -61,6 +62,8 @@ body {
 #root {
   width: 100%;
   height: 100%;
+  max-width: 100vw;
+  overflow: hidden;
 }
 
 /* App Container Layout */
@@ -365,7 +368,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  overflow-x: hidden; /* Smartphone compatibility */
   position: relative;
   background-color: var(--bg);
 }
@@ -529,6 +532,7 @@ body {
 .conversation-area {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden; /* Smartphone compatibility */
   padding: 32px 16px;
   display: flex;
   flex-direction: column;
@@ -557,11 +561,12 @@ body {
   color: #FFFFFF;
   border-radius: var(--radius);
   padding: 14px 18px;
-  max-width: 80%;
+  max-width: 85%;
   font-size: 15px;
   line-height: 1.5;
   white-space: pre-wrap;
-  word-break: break-word;
+  word-break: break-word; /* Smartphone compatibility */
+  overflow-wrap: break-word;
 }
 
 /* AI Answer - Clean FLAT Card layout with border 1px, NO glassmorphism, gradient, or neon. */
@@ -576,6 +581,8 @@ body {
   width: 100%;
   box-shadow: none; /* Spec: border nipis sahaja, tiada shadow tebal */
   transition: border-color 120ms ease;
+  max-width: 100%;
+  overflow-x: hidden; /* Smartphone compatibility */
 }
 
 .ai-card-header {
@@ -619,8 +626,9 @@ body {
   font-size: 15px;
   line-height: 1.65;
   color: var(--primary-text);
-  overflow-wrap: break-word;
-  word-break: normal;
+  overflow-wrap: break-word; /* Smartphone compatibility */
+  word-break: break-word;
+  max-width: 100%;
 }
 
 .ai-card-body p {
@@ -680,10 +688,11 @@ body {
   font-weight: 600;
 }
 
-/* AI Card Actions */
+/* AI Card Actions - CRITICAL WRAPPING FOR SMARTPHONE COMPATIBILITY */
 .ai-card-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap; /* Prevent button overflow on smart phones */
   gap: 8px;
   margin-top: 8px;
   border-top: 1px solid var(--border);
@@ -699,10 +708,11 @@ body {
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   transition: all 120ms ease;
+  white-space: nowrap;
 }
 
 .card-action-btn:hover {
@@ -720,6 +730,7 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  max-width: 100%;
 }
 
 .code-block-header {
@@ -775,6 +786,7 @@ body {
   position: sticky;
   bottom: 0;
   z-index: 50;
+  max-width: 100%;
 }
 
 .composer-workspace {
@@ -787,12 +799,14 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-width: 100%;
 }
 
 .composer-input-row {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  max-width: 100%;
 }
 
 .composer-textarea {
@@ -808,6 +822,7 @@ body {
   max-height: 160px;
   outline: none;
   padding: 4px 0;
+  min-width: 0; /* Smartphone compatibility */
 }
 
 .composer-textarea::placeholder {
@@ -841,36 +856,6 @@ body {
   cursor: not-allowed;
 }
 
-/* Composer Toolbar (Buttons like attachment, voice, image, code, mention) */
-.composer-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
-}
-
-.toolbar-btn {
-  background: none;
-  border: 1px solid var(--border);
-  color: var(--secondary-text);
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 120ms ease;
-}
-
-.toolbar-btn:hover {
-  background-color: var(--bg);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
 /* ==========================================================================
    OTHER VIEWS (Models, History, Tools, About, Settings Panel)
    ========================================================================== */
@@ -879,6 +864,7 @@ body {
   overflow-y: auto;
   padding: 32px;
   width: 100%;
+  max-width: 100%;
 }
 
 .sub-panel-inner {
@@ -908,6 +894,7 @@ body {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 16px;
+  max-width: 100%;
 }
 
 .flat-card {
@@ -918,6 +905,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  max-width: 100%;
 }
 
 .flat-card-title {
@@ -949,6 +937,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 24px;
+  max-width: 100%;
 }
 
 .loading-text {
@@ -964,18 +953,7 @@ body {
   max-width: 100%;
 }
 
-/* Monochromatic Black/White Emoji styling */
-.black-emoji {
-  display: inline-block;
-  filter: grayscale(100%) brightness(0);
-  transition: filter 120ms ease;
-}
-
-[data-theme="dark"] .black-emoji {
-  filter: grayscale(100%) brightness(0) invert(1);
-}
-
-/* Responsive Rules */
+/* Responsive Rules for Small Smart Phones */
 @media (max-width: 768px) {
   .sidebar {
     position: fixed;
@@ -1004,5 +982,81 @@ body {
 
   .conversation-area {
     padding: 16px;
+  }
+
+  .ai-card {
+    padding: 16px;
+  }
+
+  .ai-card-actions {
+    justify-content: flex-start;
+  }
+
+  .card-action-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-bar {
+    padding: 0 12px;
+  }
+
+  .ai-name {
+    font-size: 14px;
+  }
+
+  .status-indicator {
+    font-size: 11px;
+    padding: 2px 8px;
+  }
+
+  .conversation-area {
+    padding: 12px 8px;
+    gap: 16px;
+  }
+
+  .ai-card {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .user-message-content {
+    font-size: 14px;
+    padding: 10px 14px;
+    max-width: 90%;
+  }
+
+  .ai-card-body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .ai-card-actions {
+    gap: 6px;
+  }
+
+  .card-action-btn {
+    padding: 5px 8px;
+    font-size: 10.5px;
+  }
+
+  .composer-sticky-container {
+    padding: 12px;
+  }
+
+  .composer-workspace {
+    padding: 10px;
+  }
+
+  .composer-textarea {
+    font-size: 14px;
+  }
+
+  .send-btn-round {
+    width: 38px;
+    height: 38px;
+    font-size: 14px;
   }
 }
