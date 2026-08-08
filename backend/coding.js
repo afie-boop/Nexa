@@ -1,5 +1,4 @@
 const askOpenRouter = require("./openrouter");
-const askGroq = require("./groq");
 const plan = require("./planner");
 const validate = require("./validator");
 const format = require("./formatter");
@@ -22,7 +21,7 @@ async function askCoding(question, history = [], onProgress = () => {}) {
   let draft;
   try {
     draft = await askOpenRouter(contextPrompt, {
-      model: "inclusionai/ling-3.0-flash:free",
+      model: "openrouter/free",
       history,
       system:
         "Kamu pakar coding. Tulis code dengan format kemas (indent betul, satu statement satu baris). " +
@@ -51,7 +50,7 @@ ${draft}`;
 
   let reviewed;
   try {
-    reviewed = await askGroq(reviewPrompt, { model: "llama-3.1-8b-instant" });
+    reviewed = await askOpenRouter(reviewPrompt, { model: "openai/gpt-oss-20b:free" });
     if (!reviewed?.trim()) reviewed = draft;
   } catch {
     reviewed = draft;

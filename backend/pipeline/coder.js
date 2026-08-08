@@ -1,7 +1,6 @@
 const logger = require("../utils/logger");
 
 const askOpenRouter = require("../openrouter");
-const askGroq = require("../groq");
 
 async function coder(data) {
   logger.info("Coder", "Menjana jawapan AI...");
@@ -20,24 +19,11 @@ async function coder(data) {
   try {
     let response;
 
-    switch (provider) {
-      case "groq":
-        response = await askGroq(question, {
-          model,
-          history,
-          system
-        });
-        break;
-
-      case "openrouter":
-      default:
-        response = await askOpenRouter(question, {
-          model,
-          history,
-          system
-        });
-        break;
-    }
+    response = await askOpenRouter(question, {
+      model,
+      history,
+      system
+    });
 
     if (!response || !response.trim()) {
       throw new Error("AI tidak memberikan jawapan.");

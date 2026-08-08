@@ -1,5 +1,4 @@
 const logger = require("../utils/logger");
-const { getBestModelForTask } = require("../evolution/engine");
 
 async function router(data) {
   logger.info("Router", "Memilih AI...");
@@ -13,9 +12,14 @@ async function router(data) {
 
   sendStatus("Router memilih AI...");
 
-  const modelChoice = getBestModelForTask(task === "code" ? "coding" : "general");
-  const provider = modelChoice.provider;
-  const model = modelChoice.model;
+  let provider, model;
+  if (task === "code") {
+    provider = "openrouter";
+    model = "openrouter/free";
+  } else {
+    provider = "openrouter";
+    model = "qwen/qwen3-235b-a22b-2507";
+  }
   let system;
 
   if (task === "code") {
@@ -36,10 +40,6 @@ Kamu ialah Nexa AI Assistant.
 Jawab dengan jelas dan padat.
 Gunakan Bahasa Melayu atau Indonesia mengikut pengguna.
 `;
-  }
-
-  if (data.evoStrategies && data.evoStrategies.length > 0) {
-    system += `\n\nSISTEM STRATEGI AKTIF (EVOLVED):\n` + data.evoStrategies.map(s => `- ${s}`).join("\n");
   }
 
   logger.success(

@@ -1,4 +1,4 @@
-const askGroq = require("./groq");
+const askOpenRouter = require("./openrouter");
 
 async function classifyTask(question, history = []) {
   const prompt = `
@@ -13,8 +13,8 @@ ${question}
 `;
 
   try {
-    const result = await askGroq(prompt, {
-      model: "llama-3.1-8b-instant",
+    const result = await askOpenRouter(prompt, {
+      model: "openai/gpt-oss-20b:free",
       system: "Balas hanya 'code' atau 'general'. Jangan beri penjelasan."
     });
 

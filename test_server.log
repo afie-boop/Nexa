@@ -1,0 +1,11 @@
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+=================================
+Nexa Boot
+=================================
+OpenRouter Key : false
+Groq Key       : false
+PORT           : 3000
+=================================
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+◇ injected env (0) from .env // tip: ⌘ suppress logs { quiet: true }
+Nexa Server berjalan di port 3000
