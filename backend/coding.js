@@ -50,7 +50,7 @@ ${draft}`;
 
   let reviewed;
   try {
-    reviewed = await askOpenRouter(reviewPrompt, { model: "openai/gpt-oss-20b:free" });
+    reviewed = await askOpenRouter(reviewPrompt, { model: "openai/gpt-oss-120b:free" });
     if (!reviewed?.trim()) reviewed = draft;
   } catch {
     reviewed = draft;
