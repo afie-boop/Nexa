@@ -1,0 +1,56 @@
+const express = require("express");
+const cors = require("cors");
+require("dotenv").config();
+
+const askGemini = require("./ai");
+const askGroq = require("./groq");
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+
+app.post("/chat", async (req,res)=>{
+
+  const question = req.body.message;
+
+  let gemini = "Gemini gagal";
+  let groq = "Groq gagal";
+
+
+  try{
+    gemini = await askGemini(question);
+  }
+  catch(error){
+    console.log("Gemini:", error.message);
+  }
+
+
+  try{
+    groq = await askGroq(question);
+  }
+  catch(error){
+    console.log("Groq:", error.message);
+  }
+
+
+  res.json({
+
+    reply:
+    "🧠 Gemini:\n\n" +
+    gemini +
+    "\n\n⚡ Groq:\n\n" +
+    groq
+
+  });
+
+
+});
+
+
+app.listen(3001, ()=>{
+
+console.log("FusionAI Backend hidup 🔥");
+
+});
