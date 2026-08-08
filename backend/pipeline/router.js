@@ -18,7 +18,7 @@ async function router(data) {
     model = "openrouter/free";
   } else {
     provider = "openrouter";
-    model = "qwen/qwen3-235b-a22b-2507:free";
+    model = "qwen/qwen3-235b-a22b:free";
   }
   let system;
 
