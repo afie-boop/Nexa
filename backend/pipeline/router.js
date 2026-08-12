@@ -1,4 +1,5 @@
 const logger = require("../utils/logger");
+const { retrieveRelevantMemories } = require("../feedback/memoryRetriever");
 
 async function router(data) {
   logger.info("Router", "Memilih AI...");
@@ -42,6 +43,13 @@ Gunakan Bahasa Melayu atau Indonesia mengikut pengguna.
 `;
   }
 
+  // Retrieve relevant feedback memories / lessons / preferences
+  const memories = retrieveRelevantMemories(question);
+  if (memories.warningPrompt) {
+    logger.info("Router", "Memori kesalahan lampau / keutamaan ditemui. Menyuntik ke dalam prompt sistem.");
+    system += `\n\nSila ambil perhatian tentang arahan tambahan daripada sejarah maklum balas pengguna ini:\n${memories.warningPrompt}\n`;
+  }
+
   logger.success(
     "Router",
     `${provider} | ${model}`
@@ -53,7 +61,8 @@ Gunakan Bahasa Melayu atau Indonesia mengikut pengguna.
     history,
     provider,
     model,
-    system
+    system,
+    retrievedMemories: memories
   };
 }
 

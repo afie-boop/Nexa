@@ -13,6 +13,7 @@ console.log("=================================");
 
 const classifyTask = require("./router");
 const { runPipeline } = require("./pipeline/pipeline");
+const { handlePostFeedback } = require("./feedback/feedbackController");
 
 const app = express();
 
@@ -21,6 +22,8 @@ app.use(express.json());
 
 const distPath = path.join(__dirname, "..", "dist");
 app.use(express.static(distPath));
+
+app.post("/api/feedback", handlePostFeedback);
 
 app.post("/chat", async (req, res) => {
   const { question, history } = req.body;

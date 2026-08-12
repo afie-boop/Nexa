@@ -85,6 +85,7 @@ function App() {
   // Like/Dislike state track for messages
   const [likes, setLikes] = useState({});
   const [dislikes, setDislikes] = useState({});
+  const [dislikeReasonMsgIdx, setDislikeReasonMsgIdx] = useState(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -222,14 +223,68 @@ function App() {
     setMsg(promptText);
   };
 
+  const getUserMessageBeforeIndex = (idx) => {
+    for (let k = idx - 1; k >= 0; k--) {
+      if (chat[k].type === "user") {
+        return chat[k].text;
+      }
+    }
+    return "";
+  };
+
+  const sendFeedbackToBackend = async (msgIdx, type, reason = "") => {
+    try {
+      const userMessageText = getUserMessageBeforeIndex(msgIdx);
+      const aiResponseText = chat[msgIdx]?.text || "";
+      const isCode = userMessageText.toLowerCase().includes("kod") || userMessageText.toLowerCase().includes("code") || aiResponseText.includes("```");
+      const model = isCode ? "openrouter/free" : "qwen/qwen3-235b-a22b-2507";
+
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversation_id: activeId,
+          message_id: `ai-${msgIdx}`,
+          user_message: userMessageText,
+          ai_response: aiResponseText,
+          provider: "openrouter",
+          model: model,
+          type: type,
+          reason: reason
+        })
+      });
+    } catch (err) {
+      console.error("Gagal menghantar maklum balas:", err);
+    }
+  };
+
   const handleLike = (msgIdx) => {
-    setLikes(prev => ({ ...prev, [msgIdx]: !prev[msgIdx] }));
+    const isLikedNow = !likes[msgIdx];
+    setLikes(prev => ({ ...prev, [msgIdx]: isLikedNow }));
     setDislikes(prev => ({ ...prev, [msgIdx]: false }));
+    setDislikeReasonMsgIdx(null);
+
+    if (isLikedNow) {
+      sendFeedbackToBackend(msgIdx, "positive");
+    }
   };
 
   const handleDislike = (msgIdx) => {
-    setDislikes(prev => ({ ...prev, [msgIdx]: !prev[msgIdx] }));
+    const isDislikedNow = !dislikes[msgIdx];
+    setDislikes(prev => ({ ...prev, [msgIdx]: isDislikedNow }));
     setLikes(prev => ({ ...prev, [msgIdx]: false }));
+
+    if (isDislikedNow) {
+      setDislikeReasonMsgIdx(msgIdx);
+      sendFeedbackToBackend(msgIdx, "negative");
+    } else {
+      setDislikeReasonMsgIdx(null);
+    }
+  };
+
+  const handleSelectReason = (msgIdx, option) => {
+    sendFeedbackToBackend(msgIdx, "negative", option);
+    setDislikeReasonMsgIdx(null);
   };
 
   const handleRegenerate = async (msgIdx) => {
@@ -734,6 +789,27 @@ function App() {
                               Regenerate
                             </button>
                           </div>
+
+                          {/* Dislike reason picker */}
+                          {dislikes[i] && dislikeReasonMsgIdx === i && (
+                            <div className="dislike-reason-popup animate-slide">
+                              <span className="reason-title">Sila pilih alasan (pilihan):</span>
+                              <div className="reason-options">
+                                {["Wrong", "Incomplete", "Didn't follow instruction", "Bad code", "Other"].map(opt => (
+                                  <button
+                                    key={opt}
+                                    className="reason-opt-btn"
+                                    onClick={() => handleSelectReason(i, opt)}
+                                  >
+                                    {opt}
+                                  </button>
+                                ))}
+                              </div>
+                              <button className="reason-close-btn" onClick={() => setDislikeReasonMsgIdx(null)}>
+                                Tutup
+                              </button>
+                            </div>
+                          )}
                         </div>
                       );
                     }

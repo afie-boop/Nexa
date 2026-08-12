@@ -1,0 +1,49 @@
+[
+  {
+    "id": "lsn_1786548188892_t80b1",
+    "category": "wrong_code",
+    "lesson": "Jangan gunakan API X untuk React versi semasa.",
+    "source_feedback_ids": [],
+    "confidence": "low",
+    "positive_count": 0,
+    "negative_count": 1,
+    "original_context": "Gunakan API X dalam React.",
+    "frequency": 1,
+    "created_at": "2026-08-12T15:23:08.892Z",
+    "updated_at": "2026-08-12T15:23:08.892Z",
+    "last_seen": "2026-08-12T15:23:08.892Z"
+  },
+  {
+    "id": "lsn_1786549189543_qd4h5",
+    "category": "wrong_code",
+    "lesson": "Hindari pepijat berkaitan: Gunakan API X dalam React.",
+    "source_feedback_ids": [
+      "fb_1786549189415_onmow"
+    ],
+    "confidence": "low",
+    "positive_count": 0,
+    "negative_count": 1,
+    "original_context": "Gunakan API X dalam React.",
+    "frequency": 1,
+    "created_at": "2026-08-12T15:39:49.543Z",
+    "updated_at": "2026-08-12T15:39:49.543Z",
+    "last_seen": "2026-08-12T15:39:49.543Z"
+  },
+  {
+    "id": "lsn_1786549564998_ukap4",
+    "category": "wrong_information",
+    "lesson": "Hindari pepijat berkaitan: Tulis fungsi Fibonacci dalam Python dan jelaskan p",
+    "source_feedback_ids": [
+      "fb_1786549564972_ldz3s",
+      "fb_1786549567172_q7v62"
+    ],
+    "confidence": "medium",
+    "positive_count": 0,
+    "negative_count": 2,
+    "original_context": "Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.",
+    "frequency": 2,
+    "created_at": "2026-08-12T15:46:04.998Z",
+    "updated_at": "2026-08-12T15:46:07.198Z",
+    "last_seen": "2026-08-12T15:46:07.198Z"
+  }
+]

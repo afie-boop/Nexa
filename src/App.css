@@ -1002,6 +1002,66 @@ body {
   max-width: 100%;
 }
 
+/* Dislike Reason Popup Styling */
+.dislike-reason-popup {
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slideIn 120ms ease-out both;
+}
+
+.reason-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary-text);
+}
+
+.reason-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reason-opt-btn {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--primary-text);
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.reason-opt-btn:hover {
+  background-color: var(--accent-light);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.reason-close-btn {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  color: var(--secondary-text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.reason-close-btn:hover {
+  color: var(--primary-text);
+  background-color: var(--border);
+}
+
 /* Responsive Rules for Small Smart Phones */
 @media (max-width: 768px) {
   .sidebar {

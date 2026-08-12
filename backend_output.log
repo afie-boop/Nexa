@@ -1,15 +1,13 @@
-◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
+◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
 =================================
 Nexa Boot
 =================================
 OpenRouter Key : false
-Groq Key       : false
 PORT           : 3000
 =================================
-◇ injected env (0) from .env // tip: ⌁ auth for agents [www.vestauth.com]
-◇ injected env (0) from .env // tip: ◈ secrets for agents [www.dotenvx.com]
+◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
 Nexa Server berjalan di port 3000
-[Router] AxiosError: Request failed with status code 401
+[feedbackAnalyzer] Gagal menganalisis maklum balas dengan LLM: AxiosError: Request failed with status code 401
     at settle (/app/backend/node_modules/axios/dist/node/axios.cjs:2216:12)
     at IncomingMessage.handleStreamEnd (/app/backend/node_modules/axios/dist/node/axios.cjs:4062:11)
     at IncomingMessage.emit (node:events:531:35)
@@ -17,9 +15,9 @@ Nexa Server berjalan di port 3000
     at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
     at Axios.request (/app/backend/node_modules/axios/dist/node/axios.cjs:5517:41)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async askGroq (/app/backend/groq.js:16:20)
-    at async classifyTask (/app/backend/router.js:16:20)
-    at async /app/backend/server.js:74:18 {
+    at async askOpenRouter (/app/backend/openrouter.js:16:20)
+    at async analyzeFeedback (/app/backend/feedback/feedbackAnalyzer.js:49:23)
+    at async processUserFeedback (/app/backend/feedback/lessonGenerator.js:19:24) {
   isAxiosError: true,
   code: 'ERR_BAD_REQUEST',
   config: [Object: null prototype] {
@@ -45,13 +43,15 @@ Nexa Server berjalan di port 3000
       Accept: 'application/json, text/plain, */*',
       'Content-Type': 'application/json',
       Authorization: 'Bearer undefined',
+      'HTTP-Referer': 'https://render.com',
+      'X-Title': 'Nexa AI',
       'User-Agent': 'axios/1.18.1',
-      'Content-Length': '322',
+      'Content-Length': '1870',
       'Accept-Encoding': 'gzip, compress, deflate, br'
     },
     method: 'post',
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    data: `{"model":"llama-3.1-8b-instant","messages":[{"role":"system","content":"Balas hanya 'code' atau 'general'. Jangan beri penjelasan."},{"role":"user","content":"\\nTentukan kategori mesej pengguna.\\n\\nBalas SATU perkataan sahaja:\\n- code\\n- general\\n\\nMesej pengguna:\\nHello Nexa! Sila tunjuk kod Python untuk Fibonacci\\n"}]}`,
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    data: '{"model":"openrouter/free","messages":[{"role":"system","content":"Anda adalah feedback analyzer. Sila balas dengan JSON format sahaja tanpa sebarang markdown hiasan."},{"role":"user","content":"\\nAnda adalah Nexa AI Feedback Analyzer. Tugas anda adalah menganalisis feedback negatif (dislike) yang diberikan oleh pengguna terhadap jawapan AI, dan mengekstrak pelajaran (lesson) atau keutamaan pengguna (user preference).\\n\\nKonteks Perbualan:\\nMesej Pengguna:\\n\\"\\"\\"\\nGunakan API X dalam React.\\n\\"\\"\\"\\n\\nJawapan AI:\\n\\"\\"\\"\\nimport { APIX } from \\"react\\";\\n\\"\\"\\"\\n\\nAlasan Dislike Pengguna (jika ada): \\"Bad code\\"\\n\\nSila kategorikan isu ini kepada salah satu daripada yang berikut:\\n- wrong_information (maklumat fakta salah)\\n- wrong_code (kod salah/tidak boleh run)\\n- incomplete_answer (jawapan tergantung atau tidak lengkap)\\n- instruction_not_followed (tidak mengikut arahan/prompt)\\n- reasoning_error (kesalahan logik/pemikiran)\\n- outdated_information (maklumat lapuk/deprecated)\\n- formatting_problem (masalah visual/format markdown)\\n- style_problem (gaya penulisan tidak sesuai)\\n- other (lain-lain)\\n\\nTentukan sama ada ini adalah:\\n1. \\"preference\\" (pilihan/gaya/bahasa kegemaran pengguna, contoh: mahukan jawapan pendek, lebih suka kod sahaja, mahu bahasa Melayu, dsb.)\\n2. \\"error\\" (kesalahan teknikal, fakta salah, kod salah, arahan dilanggar)\\n\\nSila berikan jawapan dalam format JSON sahaja seperti berikut:\\n{\\n  \\"type\\": \\"error\\" atau \\"preference\\",\\n  \\"category\\": \\"salah satu kategori di atas\\",\\n  \\"lesson_or_preference\\": \\"Satu pengajaran atau keutamaan yang ringkas, pendek, padat dan boleh diguna semula untuk masa hadapan (Maksimum 1-2 ayat)\\",\\n  \\"confidence\\": \\"low\\" atau \\"medium\\" atau \\"high\\"\\n}\\n\\nPastikan anda hanya mengembalikan JSON yang sah. Jangan sertakan markdown, penulisan hiasan atau pembuka ```json.\\n"}]}',
     allowAbsoluteUrls: true
   },
   request: <ref *1> ClientRequest {
@@ -81,20 +81,22 @@ Nexa Server berjalan di port 3000
     _removedContLen: false,
     _removedTE: false,
     strictContentLength: false,
-    _contentLength: 322,
+    _contentLength: 1870,
     _hasBody: true,
     _trailer: '',
     finished: true,
     _headerSent: true,
     _closed: true,
-    _header: 'POST /openai/v1/chat/completions HTTP/1.1\r\n' +
+    _header: 'POST /api/v1/chat/completions HTTP/1.1\r\n' +
       'Accept: application/json, text/plain, */*\r\n' +
       'Content-Type: application/json\r\n' +
       'Authorization: Bearer undefined\r\n' +
+      'HTTP-Referer: https://render.com\r\n' +
+      'X-Title: Nexa AI\r\n' +
       'User-Agent: axios/1.18.1\r\n' +
-      'Content-Length: 322\r\n' +
+      'Content-Length: 1870\r\n' +
       'Accept-Encoding: gzip, compress, deflate, br\r\n' +
-      'Host: api.groq.com\r\n' +
+      'Host: openrouter.ai\r\n' +
       'Connection: keep-alive\r\n' +
       '\r\n',
     _keepAliveTimeout: 0,
@@ -127,7 +129,7 @@ Nexa Server berjalan di port 3000
     maxHeaderSize: undefined,
     insecureHTTPParser: false,
     joinDuplicateHeaders: undefined,
-    path: '/openai/v1/chat/completions',
+    path: '/api/v1/chat/completions',
     _ended: true,
     res: IncomingMessage {
       _events: [Object],
@@ -148,16 +150,16 @@ Nexa Server berjalan di port 3000
       statusCode: 401,
       statusMessage: 'Unauthorized',
       client: [TLSSocket],
-      _consuming: false,
+      _consuming: true,
       _dumped: false,
       req: [Circular *1],
       _eventsCount: 4,
-      responseUrl: 'https://api.groq.com/openai/v1/chat/completions',
+      responseUrl: 'https://openrouter.ai/api/v1/chat/completions',
       redirects: [],
       [Symbol(shapeMode)]: true,
       [Symbol(kCapture)]: false,
       [Symbol(kHeaders)]: [Object],
-      [Symbol(kHeadersCount)]: 28,
+      [Symbol(kHeadersCount)]: 24,
       [Symbol(kTrailers)]: null,
       [Symbol(kTrailersCount)]: 0
     },
@@ -167,7 +169,7 @@ Nexa Server berjalan di port 3000
     parser: null,
     maxHeadersCount: null,
     reusedSocket: false,
-    host: 'api.groq.com',
+    host: 'openrouter.ai',
     protocol: 'https:',
     _redirectable: Writable {
       _events: [Object],
@@ -178,13 +180,13 @@ Nexa Server berjalan di port 3000
       _ending: true,
       _redirectCount: 0,
       _redirects: [],
-      _requestBodyLength: 322,
+      _requestBodyLength: 1870,
       _requestBodyBuffers: [],
       _eventsCount: 4,
       _onNativeResponse: [Function (anonymous)],
       _headerFilter: /^(?:Authorization|Proxy-Authorization|Cookie)$/i,
       _currentRequest: [Circular *1],
-      _currentUrl: 'https://api.groq.com/openai/v1/chat/completions',
+      _currentUrl: 'https://openrouter.ai/api/v1/chat/completions',
       _timeout: null,
       [Symbol(shapeMode)]: true,
       [Symbol(kCapture)]: false
@@ -204,7 +206,7 @@ Nexa Server berjalan di port 3000
       _controlReleased: true,
       secureConnecting: false,
       _SNICallback: null,
-      servername: 'api.groq.com',
+      servername: 'openrouter.ai',
       alpnProtocol: false,
       authorized: true,
       authorizationError: null,
@@ -214,7 +216,7 @@ Nexa Server berjalan di port 3000
       connecting: false,
       _hadError: false,
       _parent: null,
-      _host: 'api.groq.com',
+      _host: 'openrouter.ai',
       _closeAfterHandlingError: false,
       _readableState: [ReadableState],
       _writableState: [WritableState],
@@ -243,15 +245,15 @@ Nexa Server berjalan di port 3000
         _idleTimeout: 5000,
         _idlePrev: [TimersList],
         _idleNext: [TimersList],
-        _idleStart: 154037,
+        _idleStart: 554197,
         _onTimeout: [Function: bound ],
         _timerArgs: undefined,
         _repeat: null,
         _destroyed: false,
         [Symbol(refed)]: false,
         [Symbol(kHasPrimitive)]: false,
-        [Symbol(asyncId)]: 40,
-        [Symbol(triggerId)]: 38,
+        [Symbol(asyncId)]: 43,
+        [Symbol(triggerId)]: 41,
         [Symbol(kAsyncContextFrame)]: undefined
       },
       [Symbol(kBuffer)]: null,
@@ -272,6 +274,8 @@ Nexa Server berjalan di port 3000
       accept: [Array],
       'content-type': [Array],
       authorization: [Array],
+      'http-referer': [Array],
+      'x-title': [Array],
       'user-agent': [Array],
       'content-length': [Array],
       'accept-encoding': [Array],
@@ -286,20 +290,18 @@ Nexa Server berjalan di port 3000
     status: 401,
     statusText: 'Unauthorized',
     headers: Object [AxiosHeaders] {
-      date: 'Thu, 06 Aug 2026 01:12:35 GMT',
+      date: 'Wed, 12 Aug 2026 15:39:49 GMT',
       'content-type': 'application/json',
-      'content-length': '96',
+      'transfer-encoding': 'chunked',
       connection: 'keep-alive',
-      'cache-control': 'private, max-age=0, no-store, no-cache, must-revalidate',
-      server: 'cloudflare',
-      vary: 'Origin',
-      'x-groq-region': 'msp',
-      'x-request-id': 'req_01kzaa26fxebhtw5mrg7dq987n',
-      'cf-cache-status': 'DYNAMIC',
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'X-Generation-Id,X-Provider-Name,cf-ray',
       'set-cookie': [Array],
-      'strict-transport-security': 'max-age=15552000',
-      'cf-ray': 'a26a2c965cf845d7-ORD',
-      'alt-svc': 'h3=":443"; ma=86400'
+      'permissions-policy': 'payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")',
+      'referrer-policy': 'no-referrer, strict-origin-when-cross-origin',
+      'x-content-type-options': 'nosniff',
+      server: 'cloudflare',
+      'cf-ray': 'a2a09333a8cb356a-ORD'
     },
     config: [Object: null prototype] {
       transitional: [Object],
@@ -315,8 +317,8 @@ Nexa Server berjalan di port 3000
       validateStatus: [Function: validateStatus],
       headers: [Object [AxiosHeaders]],
       method: 'post',
-      url: 'https://api.groq.com/openai/v1/chat/completions',
-      data: `{"model":"llama-3.1-8b-instant","messages":[{"role":"system","content":"Balas hanya 'code' atau 'general'. Jangan beri penjelasan."},{"role":"user","content":"\\nTentukan kategori mesej pengguna.\\n\\nBalas SATU perkataan sahaja:\\n- code\\n- general\\n\\nMesej pengguna:\\nHello Nexa! Sila tunjuk kod Python untuk Fibonacci\\n"}]}`,
+      url: 'https://openrouter.ai/api/v1/chat/completions',
+      data: '{"model":"openrouter/free","messages":[{"role":"system","content":"Anda adalah feedback analyzer. Sila balas dengan JSON format sahaja tanpa sebarang markdown hiasan."},{"role":"user","content":"\\nAnda adalah Nexa AI Feedback Analyzer. Tugas anda adalah menganalisis feedback negatif (dislike) yang diberikan oleh pengguna terhadap jawapan AI, dan mengekstrak pelajaran (lesson) atau keutamaan pengguna (user preference).\\n\\nKonteks Perbualan:\\nMesej Pengguna:\\n\\"\\"\\"\\nGunakan API X dalam React.\\n\\"\\"\\"\\n\\nJawapan AI:\\n\\"\\"\\"\\nimport { APIX } from \\"react\\";\\n\\"\\"\\"\\n\\nAlasan Dislike Pengguna (jika ada): \\"Bad code\\"\\n\\nSila kategorikan isu ini kepada salah satu daripada yang berikut:\\n- wrong_information (maklumat fakta salah)\\n- wrong_code (kod salah/tidak boleh run)\\n- incomplete_answer (jawapan tergantung atau tidak lengkap)\\n- instruction_not_followed (tidak mengikut arahan/prompt)\\n- reasoning_error (kesalahan logik/pemikiran)\\n- outdated_information (maklumat lapuk/deprecated)\\n- formatting_problem (masalah visual/format markdown)\\n- style_problem (gaya penulisan tidak sesuai)\\n- other (lain-lain)\\n\\nTentukan sama ada ini adalah:\\n1. \\"preference\\" (pilihan/gaya/bahasa kegemaran pengguna, contoh: mahukan jawapan pendek, lebih suka kod sahaja, mahu bahasa Melayu, dsb.)\\n2. \\"error\\" (kesalahan teknikal, fakta salah, kod salah, arahan dilanggar)\\n\\nSila berikan jawapan dalam format JSON sahaja seperti berikut:\\n{\\n  \\"type\\": \\"error\\" atau \\"preference\\",\\n  \\"category\\": \\"salah satu kategori di atas\\",\\n  \\"lesson_or_preference\\": \\"Satu pengajaran atau keutamaan yang ringkas, pendek, padat dan boleh diguna semula untuk masa hadapan (Maksimum 1-2 ayat)\\",\\n  \\"confidence\\": \\"low\\" atau \\"medium\\" atau \\"high\\"\\n}\\n\\nPastikan anda hanya mengembalikan JSON yang sah. Jangan sertakan markdown, penulisan hiasan atau pembuka ```json.\\n"}]}',
       allowAbsoluteUrls: true
     },
     request: <ref *1> ClientRequest {
@@ -338,20 +340,22 @@ Nexa Server berjalan di port 3000
       _removedContLen: false,
       _removedTE: false,
       strictContentLength: false,
-      _contentLength: 322,
+      _contentLength: 1870,
       _hasBody: true,
       _trailer: '',
       finished: true,
       _headerSent: true,
       _closed: true,
-      _header: 'POST /openai/v1/chat/completions HTTP/1.1\r\n' +
+      _header: 'POST /api/v1/chat/completions HTTP/1.1\r\n' +
         'Accept: application/json, text/plain, */*\r\n' +
         'Content-Type: application/json\r\n' +
         'Authorization: Bearer undefined\r\n' +
+        'HTTP-Referer: https://render.com\r\n' +
+        'X-Title: Nexa AI\r\n' +
         'User-Agent: axios/1.18.1\r\n' +
-        'Content-Length: 322\r\n' +
+        'Content-Length: 1870\r\n' +
         'Accept-Encoding: gzip, compress, deflate, br\r\n' +
-        'Host: api.groq.com\r\n' +
+        'Host: openrouter.ai\r\n' +
         'Connection: keep-alive\r\n' +
         '\r\n',
       _keepAliveTimeout: 0,
@@ -362,7 +366,7 @@ Nexa Server berjalan di port 3000
       maxHeaderSize: undefined,
       insecureHTTPParser: false,
       joinDuplicateHeaders: undefined,
-      path: '/openai/v1/chat/completions',
+      path: '/api/v1/chat/completions',
       _ended: true,
       res: [IncomingMessage],
       aborted: false,
@@ -371,7 +375,397 @@ Nexa Server berjalan di port 3000
       parser: null,
       maxHeadersCount: null,
       reusedSocket: false,
-      host: 'api.groq.com',
+      host: 'openrouter.ai',
+      protocol: 'https:',
+      _redirectable: [Writable],
+      [Symbol(shapeMode)]: false,
+      [Symbol(kCapture)]: false,
+      [Symbol(kBytesWritten)]: 0,
+      [Symbol(kNeedDrain)]: false,
+      [Symbol(corked)]: 0,
+      [Symbol(kChunkedBuffer)]: [],
+      [Symbol(kChunkedLength)]: 0,
+      [Symbol(kSocket)]: [TLSSocket],
+      [Symbol(kOutHeaders)]: [Object: null prototype],
+      [Symbol(errored)]: null,
+      [Symbol(kHighWaterMark)]: 65536,
+      [Symbol(kRejectNonStandardBodyWrites)]: false,
+      [Symbol(kUniqueHeaders)]: null
+    },
+    data: { error: [Object] }
+  },
+  status: 401
+}
+[feedbackController] Maklum balas diproses secara tak senkron: processed_lesson
+[Router] AxiosError: Request failed with status code 401
+    at settle (/app/backend/node_modules/axios/dist/node/axios.cjs:2216:12)
+    at IncomingMessage.handleStreamEnd (/app/backend/node_modules/axios/dist/node/axios.cjs:4062:11)
+    at IncomingMessage.emit (node:events:531:35)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
+    at Axios.request (/app/backend/node_modules/axios/dist/node/axios.cjs:5517:41)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+    at async askOpenRouter (/app/backend/openrouter.js:16:20)
+    at async classifyTask (/app/backend/router.js:16:20)
+    at async /app/backend/server.js:75:18 {
+  isAxiosError: true,
+  code: 'ERR_BAD_REQUEST',
+  config: [Object: null prototype] {
+    transitional: {
+      silentJSONParsing: true,
+      forcedJSONParsing: true,
+      clarifyTimeoutError: false,
+      legacyInterceptorReqResOrdering: true,
+      advertiseZstdAcceptEncoding: false,
+      validateStatusUndefinedResolves: true
+    },
+    adapter: [ 'xhr', 'http', 'fetch' ],
+    transformRequest: [ [Function: transformRequest] ],
+    transformResponse: [ [Function: transformResponse] ],
+    timeout: 0,
+    xsrfCookieName: 'XSRF-TOKEN',
+    xsrfHeaderName: 'X-XSRF-TOKEN',
+    maxContentLength: -1,
+    maxBodyLength: -1,
+    env: { FormData: [Function], Blob: [class Blob] },
+    validateStatus: [Function: validateStatus],
+    headers: Object [AxiosHeaders] {
+      Accept: 'application/json, text/plain, */*',
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer undefined',
+      'HTTP-Referer': 'https://render.com',
+      'X-Title': 'Nexa AI',
+      'User-Agent': 'axios/1.18.1',
+      'Content-Length': '336',
+      'Accept-Encoding': 'gzip, compress, deflate, br'
+    },
+    method: 'post',
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    data: `{"model":"openai/gpt-oss-20b:free","messages":[{"role":"system","content":"Balas hanya 'code' atau 'general'. Jangan beri penjelasan."},{"role":"user","content":"\\nTentukan kategori mesej pengguna.\\n\\nBalas SATU perkataan sahaja:\\n- code\\n- general\\n\\nMesej pengguna:\\nTulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.\\n"}]}`,
+    allowAbsoluteUrls: true
+  },
+  request: <ref *1> ClientRequest {
+    _events: [Object: null prototype] {
+      abort: [Function (anonymous)],
+      aborted: [Function (anonymous)],
+      connect: [Function (anonymous)],
+      error: [Function (anonymous)],
+      socket: [Function (anonymous)],
+      timeout: [Function (anonymous)],
+      finish: [Function: requestOnFinish]
+    },
+    _eventsCount: 7,
+    _maxListeners: undefined,
+    outputData: [],
+    outputSize: 0,
+    writable: true,
+    destroyed: true,
+    _last: false,
+    chunkedEncoding: false,
+    shouldKeepAlive: true,
+    maxRequestsOnConnectionReached: false,
+    _defaultKeepAlive: true,
+    useChunkedEncodingByDefault: true,
+    sendDate: false,
+    _removedConnection: false,
+    _removedContLen: false,
+    _removedTE: false,
+    strictContentLength: false,
+    _contentLength: 336,
+    _hasBody: true,
+    _trailer: '',
+    finished: true,
+    _headerSent: true,
+    _closed: true,
+    _header: 'POST /api/v1/chat/completions HTTP/1.1\r\n' +
+      'Accept: application/json, text/plain, */*\r\n' +
+      'Content-Type: application/json\r\n' +
+      'Authorization: Bearer undefined\r\n' +
+      'HTTP-Referer: https://render.com\r\n' +
+      'X-Title: Nexa AI\r\n' +
+      'User-Agent: axios/1.18.1\r\n' +
+      'Content-Length: 336\r\n' +
+      'Accept-Encoding: gzip, compress, deflate, br\r\n' +
+      'Host: openrouter.ai\r\n' +
+      'Connection: keep-alive\r\n' +
+      '\r\n',
+    _keepAliveTimeout: 0,
+    _onPendingData: [Function: nop],
+    agent: Agent {
+      _events: [Object: null prototype],
+      _eventsCount: 2,
+      _maxListeners: undefined,
+      options: [Object: null prototype],
+      defaultPort: 443,
+      protocol: 'https:',
+      requests: [Object: null prototype] {},
+      sockets: [Object: null prototype] {},
+      freeSockets: [Object: null prototype],
+      keepAliveMsecs: 1000,
+      keepAlive: true,
+      maxSockets: Infinity,
+      maxFreeSockets: 256,
+      scheduling: 'lifo',
+      maxTotalSockets: Infinity,
+      totalSocketCount: 1,
+      agentKeepAliveTimeoutBuffer: 1000,
+      maxCachedSessions: 100,
+      _sessionCache: [Object],
+      [Symbol(shapeMode)]: false,
+      [Symbol(kCapture)]: false
+    },
+    socketPath: undefined,
+    method: 'POST',
+    maxHeaderSize: undefined,
+    insecureHTTPParser: false,
+    joinDuplicateHeaders: undefined,
+    path: '/api/v1/chat/completions',
+    _ended: true,
+    res: IncomingMessage {
+      _events: [Object],
+      _readableState: [ReadableState],
+      _maxListeners: undefined,
+      socket: null,
+      httpVersionMajor: 1,
+      httpVersionMinor: 1,
+      httpVersion: '1.1',
+      complete: true,
+      rawHeaders: [Array],
+      rawTrailers: [],
+      joinDuplicateHeaders: undefined,
+      aborted: false,
+      upgrade: false,
+      url: '',
+      method: null,
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+      client: [TLSSocket],
+      _consuming: true,
+      _dumped: false,
+      req: [Circular *1],
+      _eventsCount: 4,
+      responseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+      redirects: [],
+      [Symbol(shapeMode)]: true,
+      [Symbol(kCapture)]: false,
+      [Symbol(kHeaders)]: [Object],
+      [Symbol(kHeadersCount)]: 24,
+      [Symbol(kTrailers)]: null,
+      [Symbol(kTrailersCount)]: 0
+    },
+    aborted: false,
+    timeoutCb: null,
+    upgradeOrConnect: false,
+    parser: null,
+    maxHeadersCount: null,
+    reusedSocket: false,
+    host: 'openrouter.ai',
+    protocol: 'https:',
+    _redirectable: Writable {
+      _events: [Object],
+      _writableState: [WritableState],
+      _maxListeners: undefined,
+      _options: [Object],
+      _ended: true,
+      _ending: true,
+      _redirectCount: 0,
+      _redirects: [],
+      _requestBodyLength: 336,
+      _requestBodyBuffers: [],
+      _eventsCount: 4,
+      _onNativeResponse: [Function (anonymous)],
+      _headerFilter: /^(?:Authorization|Proxy-Authorization|Cookie)$/i,
+      _currentRequest: [Circular *1],
+      _currentUrl: 'https://openrouter.ai/api/v1/chat/completions',
+      _timeout: null,
+      [Symbol(shapeMode)]: true,
+      [Symbol(kCapture)]: false
+    },
+    [Symbol(shapeMode)]: false,
+    [Symbol(kCapture)]: false,
+    [Symbol(kBytesWritten)]: 0,
+    [Symbol(kNeedDrain)]: false,
+    [Symbol(corked)]: 0,
+    [Symbol(kChunkedBuffer)]: [],
+    [Symbol(kChunkedLength)]: 0,
+    [Symbol(kSocket)]: TLSSocket {
+      _tlsOptions: [Object],
+      _secureEstablished: true,
+      _securePending: false,
+      _newSessionPending: false,
+      _controlReleased: true,
+      secureConnecting: false,
+      _SNICallback: null,
+      servername: 'openrouter.ai',
+      alpnProtocol: false,
+      authorized: true,
+      authorizationError: null,
+      encrypted: true,
+      _events: [Object: null prototype],
+      _eventsCount: 9,
+      connecting: false,
+      _hadError: false,
+      _parent: null,
+      _host: 'openrouter.ai',
+      _closeAfterHandlingError: false,
+      _readableState: [ReadableState],
+      _writableState: [WritableState],
+      allowHalfOpen: false,
+      _maxListeners: undefined,
+      _sockname: null,
+      _pendingData: null,
+      _pendingEncoding: '',
+      server: undefined,
+      _server: null,
+      ssl: [TLSWrap],
+      _requestCert: true,
+      _rejectUnauthorized: true,
+      timeout: 5000,
+      parser: null,
+      _httpMessage: null,
+      autoSelectFamilyAttemptedAddresses: [Array],
+      [Symbol(alpncallback)]: null,
+      [Symbol(res)]: [TLSWrap],
+      [Symbol(verified)]: true,
+      [Symbol(pendingSession)]: null,
+      [Symbol(async_id_symbol)]: -1,
+      [Symbol(kHandle)]: [TLSWrap],
+      [Symbol(lastWriteQueueSize)]: 0,
+      [Symbol(timeout)]: Timeout {
+        _idleTimeout: 5000,
+        _idlePrev: [TimersList],
+        _idleNext: [TimersList],
+        _idleStart: 926668,
+        _onTimeout: [Function: bound ],
+        _timerArgs: undefined,
+        _repeat: null,
+        _destroyed: false,
+        [Symbol(refed)]: false,
+        [Symbol(kHasPrimitive)]: false,
+        [Symbol(asyncId)]: 381,
+        [Symbol(triggerId)]: 379,
+        [Symbol(kAsyncContextFrame)]: undefined
+      },
+      [Symbol(kBuffer)]: null,
+      [Symbol(kBufferCb)]: null,
+      [Symbol(kBufferGen)]: null,
+      [Symbol(shapeMode)]: true,
+      [Symbol(kCapture)]: false,
+      [Symbol(kSetNoDelay)]: false,
+      [Symbol(kSetKeepAlive)]: true,
+      [Symbol(kSetKeepAliveInitialDelay)]: 1,
+      [Symbol(kBytesRead)]: 0,
+      [Symbol(kBytesWritten)]: 0,
+      [Symbol(connect-options)]: [Object],
+      [Symbol(axios.http.socketListener)]: true,
+      [Symbol(axios.http.currentReq)]: [Writable]
+    },
+    [Symbol(kOutHeaders)]: [Object: null prototype] {
+      accept: [Array],
+      'content-type': [Array],
+      authorization: [Array],
+      'http-referer': [Array],
+      'x-title': [Array],
+      'user-agent': [Array],
+      'content-length': [Array],
+      'accept-encoding': [Array],
+      host: [Array]
+    },
+    [Symbol(errored)]: null,
+    [Symbol(kHighWaterMark)]: 65536,
+    [Symbol(kRejectNonStandardBodyWrites)]: false,
+    [Symbol(kUniqueHeaders)]: null
+  },
+  response: {
+    status: 401,
+    statusText: 'Unauthorized',
+    headers: Object [AxiosHeaders] {
+      date: 'Wed, 12 Aug 2026 15:46:02 GMT',
+      'content-type': 'application/json',
+      'transfer-encoding': 'chunked',
+      connection: 'keep-alive',
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'X-Generation-Id,X-Provider-Name,cf-ray',
+      'set-cookie': [Array],
+      'permissions-policy': 'payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")',
+      'referrer-policy': 'no-referrer, strict-origin-when-cross-origin',
+      'x-content-type-options': 'nosniff',
+      server: 'cloudflare',
+      'cf-ray': 'a2a09c4bd8b8356a-ORD'
+    },
+    config: [Object: null prototype] {
+      transitional: [Object],
+      adapter: [Array],
+      transformRequest: [Array],
+      transformResponse: [Array],
+      timeout: 0,
+      xsrfCookieName: 'XSRF-TOKEN',
+      xsrfHeaderName: 'X-XSRF-TOKEN',
+      maxContentLength: -1,
+      maxBodyLength: -1,
+      env: [Object],
+      validateStatus: [Function: validateStatus],
+      headers: [Object [AxiosHeaders]],
+      method: 'post',
+      url: 'https://openrouter.ai/api/v1/chat/completions',
+      data: `{"model":"openai/gpt-oss-20b:free","messages":[{"role":"system","content":"Balas hanya 'code' atau 'general'. Jangan beri penjelasan."},{"role":"user","content":"\\nTentukan kategori mesej pengguna.\\n\\nBalas SATU perkataan sahaja:\\n- code\\n- general\\n\\nMesej pengguna:\\nTulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.\\n"}]}`,
+      allowAbsoluteUrls: true
+    },
+    request: <ref *1> ClientRequest {
+      _events: [Object: null prototype],
+      _eventsCount: 7,
+      _maxListeners: undefined,
+      outputData: [],
+      outputSize: 0,
+      writable: true,
+      destroyed: true,
+      _last: false,
+      chunkedEncoding: false,
+      shouldKeepAlive: true,
+      maxRequestsOnConnectionReached: false,
+      _defaultKeepAlive: true,
+      useChunkedEncodingByDefault: true,
+      sendDate: false,
+      _removedConnection: false,
+      _removedContLen: false,
+      _removedTE: false,
+      strictContentLength: false,
+      _contentLength: 336,
+      _hasBody: true,
+      _trailer: '',
+      finished: true,
+      _headerSent: true,
+      _closed: true,
+      _header: 'POST /api/v1/chat/completions HTTP/1.1\r\n' +
+        'Accept: application/json, text/plain, */*\r\n' +
+        'Content-Type: application/json\r\n' +
+        'Authorization: Bearer undefined\r\n' +
+        'HTTP-Referer: https://render.com\r\n' +
+        'X-Title: Nexa AI\r\n' +
+        'User-Agent: axios/1.18.1\r\n' +
+        'Content-Length: 336\r\n' +
+        'Accept-Encoding: gzip, compress, deflate, br\r\n' +
+        'Host: openrouter.ai\r\n' +
+        'Connection: keep-alive\r\n' +
+        '\r\n',
+      _keepAliveTimeout: 0,
+      _onPendingData: [Function: nop],
+      agent: [Agent],
+      socketPath: undefined,
+      method: 'POST',
+      maxHeaderSize: undefined,
+      insecureHTTPParser: false,
+      joinDuplicateHeaders: undefined,
+      path: '/api/v1/chat/completions',
+      _ended: true,
+      res: [IncomingMessage],
+      aborted: false,
+      timeoutCb: null,
+      upgradeOrConnect: false,
+      parser: null,
+      maxHeadersCount: null,
+      reusedSocket: false,
+      host: 'openrouter.ai',
       protocol: 'https:',
       _redirectable: [Writable],
       [Symbol(shapeMode)]: false,
@@ -396,19 +790,19 @@ Nexa Server berjalan di port 3000
 ==================================================
 PIPELINE START
 ==================================================
-Time     : 01:12:35
-Question : Hello Nexa! Sila tunjuk kod Python untuk Fibonacci
+Time     : 15:46:02
+Question : Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.
 
 ----------------------------------------
 Router
 ----------------------------------------
 [Router] Info: Memilih AI...
-[Router] Success: groq | llama-3.3-70b-versatile
+[Router] Success: openrouter | qwen/qwen3-235b-a22b-2507
 Status : OK
-Time   : 1.24 ms
+Time   : 1.26 ms
 
-Provider : groq
-Model    : llama-3.3-70b-versatile
+Provider : openrouter
+Model    : qwen/qwen3-235b-a22b-2507
 Task     : general
 
 ----------------------------------------
@@ -417,14 +811,14 @@ Planner
 [Planner] Info: Membina pelan kerja...
 [Planner] Success: 5 langkah disediakan.
 Status : OK
-Time   : 0.31 ms
+Time   : 0.30 ms
 
 ----------------------------------------
 Coder
 ----------------------------------------
 [Coder] Info: Menjana jawapan AI...
 Status : FAILED
-Time   : 37.61 ms
+Time   : 1477.35 ms
 
 Reason
 ------
@@ -445,7 +839,7 @@ Status : 401
 
 at settle (/app/backend/node_modules/axios/dist/node/axios.cjs:2216:12)
 
-Elapsed : 76.27 ms
+Elapsed : 1538.79 ms
 ==================================================
 
 ============= ERROR =============
@@ -457,10 +851,10 @@ AxiosError: Request failed with status code 401
     at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
     at Axios.request (/app/backend/node_modules/axios/dist/node/axios.cjs:5517:41)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async askGroq (/app/backend/groq.js:16:20)
-    at async coder (/app/backend/pipeline/coder.js:25:20)
-    at async runPipeline (/app/backend/pipeline/pipeline.js:60:12)
-    at async /app/backend/server.js:79:20 {
+    at async askOpenRouter (/app/backend/openrouter.js:16:20)
+    at async coder (/app/backend/pipeline/coder.js:22:16)
+    at async runPipeline (/app/backend/pipeline/pipeline.js:59:12)
+    at async /app/backend/server.js:80:20 {
   isAxiosError: true,
   code: 'ERR_BAD_REQUEST',
   config: [Object: null prototype] {
@@ -486,13 +880,15 @@ AxiosError: Request failed with status code 401
       Accept: 'application/json, text/plain, */*',
       'Content-Type': 'application/json',
       Authorization: 'Bearer undefined',
+      'HTTP-Referer': 'https://render.com',
+      'X-Title': 'Nexa AI',
       'User-Agent': 'axios/1.18.1',
-      'Content-Length': '448',
+      'Content-Length': '294',
       'Accept-Encoding': 'gzip, compress, deflate, br'
     },
     method: 'post',
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    data: '{"model":"llama-3.3-70b-versatile","messages":[{"role":"system","content":"\\nKamu ialah Nexa AI Assistant.\\n\\nJawab dengan jelas dan padat.\\nGunakan Bahasa Melayu atau Indonesia mengikut pengguna.\\n\\n\\nSISTEM STRATEGI AKTIF (EVOLVED):\\n- Mengesan kategori tugasan secara automatik\\n- Format tindak balas dengan gaya kemas\\n- Gunakan bahasa Melayu kasual jika sesuai"},{"role":"user","content":"Hello Nexa! Sila tunjuk kod Python untuk Fibonacci"}]}',
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    data: '{"model":"qwen/qwen3-235b-a22b-2507","messages":[{"role":"system","content":"\\nKamu ialah Nexa AI Assistant.\\n\\nJawab dengan jelas dan padat.\\nGunakan Bahasa Melayu atau Indonesia mengikut pengguna.\\n"},{"role":"user","content":"Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya."}]}',
     allowAbsoluteUrls: true
   },
   request: <ref *1> ClientRequest {
@@ -522,20 +918,22 @@ AxiosError: Request failed with status code 401
     _removedContLen: false,
     _removedTE: false,
     strictContentLength: false,
-    _contentLength: 448,
+    _contentLength: 294,
     _hasBody: true,
     _trailer: '',
     finished: true,
     _headerSent: true,
     _closed: true,
-    _header: 'POST /openai/v1/chat/completions HTTP/1.1\r\n' +
+    _header: 'POST /api/v1/chat/completions HTTP/1.1\r\n' +
       'Accept: application/json, text/plain, */*\r\n' +
       'Content-Type: application/json\r\n' +
       'Authorization: Bearer undefined\r\n' +
+      'HTTP-Referer: https://render.com\r\n' +
+      'X-Title: Nexa AI\r\n' +
       'User-Agent: axios/1.18.1\r\n' +
-      'Content-Length: 448\r\n' +
+      'Content-Length: 294\r\n' +
       'Accept-Encoding: gzip, compress, deflate, br\r\n' +
-      'Host: api.groq.com\r\n' +
+      'Host: openrouter.ai\r\n' +
       'Connection: keep-alive\r\n' +
       '\r\n',
     _keepAliveTimeout: 0,
@@ -568,7 +966,7 @@ AxiosError: Request failed with status code 401
     maxHeaderSize: undefined,
     insecureHTTPParser: false,
     joinDuplicateHeaders: undefined,
-    path: '/openai/v1/chat/completions',
+    path: '/api/v1/chat/completions',
     _ended: true,
     res: IncomingMessage {
       _events: [Object],
@@ -589,16 +987,16 @@ AxiosError: Request failed with status code 401
       statusCode: 401,
       statusMessage: 'Unauthorized',
       client: [TLSSocket],
-      _consuming: false,
+      _consuming: true,
       _dumped: false,
       req: [Circular *1],
       _eventsCount: 4,
-      responseUrl: 'https://api.groq.com/openai/v1/chat/completions',
+      responseUrl: 'https://openrouter.ai/api/v1/chat/completions',
       redirects: [],
       [Symbol(shapeMode)]: true,
       [Symbol(kCapture)]: false,
       [Symbol(kHeaders)]: [Object],
-      [Symbol(kHeadersCount)]: 28,
+      [Symbol(kHeadersCount)]: 24,
       [Symbol(kTrailers)]: null,
       [Symbol(kTrailersCount)]: 0
     },
@@ -608,7 +1006,7 @@ AxiosError: Request failed with status code 401
     parser: null,
     maxHeadersCount: null,
     reusedSocket: true,
-    host: 'api.groq.com',
+    host: 'openrouter.ai',
     protocol: 'https:',
     _redirectable: Writable {
       _events: [Object],
@@ -619,13 +1017,13 @@ AxiosError: Request failed with status code 401
       _ending: true,
       _redirectCount: 0,
       _redirects: [],
-      _requestBodyLength: 448,
+      _requestBodyLength: 294,
       _requestBodyBuffers: [],
       _eventsCount: 4,
       _onNativeResponse: [Function (anonymous)],
       _headerFilter: /^(?:Authorization|Proxy-Authorization|Cookie)$/i,
       _currentRequest: [Circular *1],
-      _currentUrl: 'https://api.groq.com/openai/v1/chat/completions',
+      _currentUrl: 'https://openrouter.ai/api/v1/chat/completions',
       _timeout: null,
       [Symbol(shapeMode)]: true,
       [Symbol(kCapture)]: false
@@ -645,7 +1043,7 @@ AxiosError: Request failed with status code 401
       _controlReleased: true,
       secureConnecting: false,
       _SNICallback: null,
-      servername: 'api.groq.com',
+      servername: 'openrouter.ai',
       alpnProtocol: false,
       authorized: true,
       authorizationError: null,
@@ -655,7 +1053,7 @@ AxiosError: Request failed with status code 401
       connecting: false,
       _hadError: false,
       _parent: null,
-      _host: 'api.groq.com',
+      _host: 'openrouter.ai',
       _closeAfterHandlingError: false,
       _readableState: [ReadableState],
       _writableState: [WritableState],
@@ -684,15 +1082,15 @@ AxiosError: Request failed with status code 401
         _idleTimeout: 5000,
         _idlePrev: [TimersList],
         _idleNext: [TimersList],
-        _idleStart: 154115,
+        _idleStart: 928214,
         _onTimeout: [Function: bound ],
         _timerArgs: undefined,
         _repeat: null,
         _destroyed: false,
         [Symbol(refed)]: false,
         [Symbol(kHasPrimitive)]: false,
-        [Symbol(asyncId)]: 60,
-        [Symbol(triggerId)]: 58,
+        [Symbol(asyncId)]: 398,
+        [Symbol(triggerId)]: 396,
         [Symbol(kAsyncContextFrame)]: undefined
       },
       [Symbol(kBuffer)]: null,
@@ -713,6 +1111,8 @@ AxiosError: Request failed with status code 401
       accept: [Array],
       'content-type': [Array],
       authorization: [Array],
+      'http-referer': [Array],
+      'x-title': [Array],
       'user-agent': [Array],
       'content-length': [Array],
       'accept-encoding': [Array],
@@ -727,20 +1127,18 @@ AxiosError: Request failed with status code 401
     status: 401,
     statusText: 'Unauthorized',
     headers: Object [AxiosHeaders] {
-      date: 'Thu, 06 Aug 2026 01:12:35 GMT',
+      date: 'Wed, 12 Aug 2026 15:46:03 GMT',
       'content-type': 'application/json',
-      'content-length': '96',
+      'transfer-encoding': 'chunked',
       connection: 'keep-alive',
-      'cache-control': 'private, max-age=0, no-store, no-cache, must-revalidate',
-      server: 'cloudflare',
-      vary: 'Origin',
-      'x-groq-region': 'msp',
-      'x-request-id': 'req_01kzaa26jeeqha6wf32hjvwddd',
-      'cf-cache-status': 'DYNAMIC',
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'X-Generation-Id,X-Provider-Name,cf-ray',
       'set-cookie': [Array],
-      'strict-transport-security': 'max-age=15552000',
-      'cf-ray': 'a26a2c96dee445d7-ORD',
-      'alt-svc': 'h3=":443"; ma=86400'
+      'permissions-policy': 'payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")',
+      'referrer-policy': 'no-referrer, strict-origin-when-cross-origin',
+      'x-content-type-options': 'nosniff',
+      server: 'cloudflare',
+      'cf-ray': 'a2a09c4c6b6f356a-ORD'
     },
     config: [Object: null prototype] {
       transitional: [Object],
@@ -756,8 +1154,8 @@ AxiosError: Request failed with status code 401
       validateStatus: [Function: validateStatus],
       headers: [Object [AxiosHeaders]],
       method: 'post',
-      url: 'https://api.groq.com/openai/v1/chat/completions',
-      data: '{"model":"llama-3.3-70b-versatile","messages":[{"role":"system","content":"\\nKamu ialah Nexa AI Assistant.\\n\\nJawab dengan jelas dan padat.\\nGunakan Bahasa Melayu atau Indonesia mengikut pengguna.\\n\\n\\nSISTEM STRATEGI AKTIF (EVOLVED):\\n- Mengesan kategori tugasan secara automatik\\n- Format tindak balas dengan gaya kemas\\n- Gunakan bahasa Melayu kasual jika sesuai"},{"role":"user","content":"Hello Nexa! Sila tunjuk kod Python untuk Fibonacci"}]}',
+      url: 'https://openrouter.ai/api/v1/chat/completions',
+      data: '{"model":"qwen/qwen3-235b-a22b-2507","messages":[{"role":"system","content":"\\nKamu ialah Nexa AI Assistant.\\n\\nJawab dengan jelas dan padat.\\nGunakan Bahasa Melayu atau Indonesia mengikut pengguna.\\n"},{"role":"user","content":"Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya."}]}',
       allowAbsoluteUrls: true
     },
     request: <ref *1> ClientRequest {
@@ -779,20 +1177,22 @@ AxiosError: Request failed with status code 401
       _removedContLen: false,
       _removedTE: false,
       strictContentLength: false,
-      _contentLength: 448,
+      _contentLength: 294,
       _hasBody: true,
       _trailer: '',
       finished: true,
       _headerSent: true,
       _closed: true,
-      _header: 'POST /openai/v1/chat/completions HTTP/1.1\r\n' +
+      _header: 'POST /api/v1/chat/completions HTTP/1.1\r\n' +
         'Accept: application/json, text/plain, */*\r\n' +
         'Content-Type: application/json\r\n' +
         'Authorization: Bearer undefined\r\n' +
+        'HTTP-Referer: https://render.com\r\n' +
+        'X-Title: Nexa AI\r\n' +
         'User-Agent: axios/1.18.1\r\n' +
-        'Content-Length: 448\r\n' +
+        'Content-Length: 294\r\n' +
         'Accept-Encoding: gzip, compress, deflate, br\r\n' +
-        'Host: api.groq.com\r\n' +
+        'Host: openrouter.ai\r\n' +
         'Connection: keep-alive\r\n' +
         '\r\n',
       _keepAliveTimeout: 0,
@@ -803,7 +1203,7 @@ AxiosError: Request failed with status code 401
       maxHeaderSize: undefined,
       insecureHTTPParser: false,
       joinDuplicateHeaders: undefined,
-      path: '/openai/v1/chat/completions',
+      path: '/api/v1/chat/completions',
       _ended: true,
       res: [IncomingMessage],
       aborted: false,
@@ -812,7 +1212,7 @@ AxiosError: Request failed with status code 401
       parser: null,
       maxHeadersCount: null,
       reusedSocket: true,
-      host: 'api.groq.com',
+      host: 'openrouter.ai',
       protocol: 'https:',
       _redirectable: [Writable],
       [Symbol(shapeMode)]: false,
@@ -841,21 +1241,15 @@ AxiosError: Request failed with status code 401
     at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
     at Axios.request (/app/backend/node_modules/axios/dist/node/axios.cjs:5517:41)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async askGroq (/app/backend/groq.js:16:20)
-    at async coder (/app/backend/pipeline/coder.js:25:20)
-    at async runPipeline (/app/backend/pipeline/pipeline.js:60:12)
-    at async /app/backend/server.js:79:20
+    at async askOpenRouter (/app/backend/openrouter.js:16:20)
+    at async coder (/app/backend/pipeline/coder.js:22:16)
+    at async runPipeline (/app/backend/pipeline/pipeline.js:59:12)
+    at async /app/backend/server.js:80:20
 HTTP Status : 401
-Response : {
-  error: {
-    message: 'Invalid API Key',
-    type: 'invalid_request_error',
-    code: 'invalid_api_key'
-  }
-}
+Response : { error: { message: 'Missing Authentication header', code: 401 } }
 =================================
 
-[Router] AxiosError: Request failed with status code 401
+[feedbackAnalyzer] Gagal menganalisis maklum balas dengan LLM: AxiosError: Request failed with status code 401
     at settle (/app/backend/node_modules/axios/dist/node/axios.cjs:2216:12)
     at IncomingMessage.handleStreamEnd (/app/backend/node_modules/axios/dist/node/axios.cjs:4062:11)
     at IncomingMessage.emit (node:events:531:35)
@@ -863,9 +1257,9 @@ Response : {
     at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
     at Axios.request (/app/backend/node_modules/axios/dist/node/axios.cjs:5517:41)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async askGroq (/app/backend/groq.js:16:20)
-    at async classifyTask (/app/backend/router.js:16:20)
-    at async /app/backend/server.js:74:18 {
+    at async askOpenRouter (/app/backend/openrouter.js:16:20)
+    at async analyzeFeedback (/app/backend/feedback/feedbackAnalyzer.js:49:23)
+    at async processUserFeedback (/app/backend/feedback/lessonGenerator.js:19:24) {
   isAxiosError: true,
   code: 'ERR_BAD_REQUEST',
   config: [Object: null prototype] {
@@ -891,13 +1285,15 @@ Response : {
       Accept: 'application/json, text/plain, */*',
       'Content-Type': 'application/json',
       Authorization: 'Bearer undefined',
+      'HTTP-Referer': 'https://render.com',
+      'X-Title': 'Nexa AI',
       'User-Agent': 'axios/1.18.1',
-      'Content-Length': '322',
+      'Content-Length': '1957',
       'Accept-Encoding': 'gzip, compress, deflate, br'
     },
     method: 'post',
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    data: `{"model":"llama-3.1-8b-instant","messages":[{"role":"system","content":"Balas hanya 'code' atau 'general'. Jangan beri penjelasan."},{"role":"user","content":"\\nTentukan kategori mesej pengguna.\\n\\nBalas SATU perkataan sahaja:\\n- code\\n- general\\n\\nMesej pengguna:\\nHello Nexa! Sila tunjuk kod Python untuk Fibonacci\\n"}]}`,
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    data: '{"model":"openrouter/free","messages":[{"role":"system","content":"Anda adalah feedback analyzer. Sila balas dengan JSON format sahaja tanpa sebarang markdown hiasan."},{"role":"user","content":"\\nAnda adalah Nexa AI Feedback Analyzer. Tugas anda adalah menganalisis feedback negatif (dislike) yang diberikan oleh pengguna terhadap jawapan AI, dan mengekstrak pelajaran (lesson) atau keutamaan pengguna (user preference).\\n\\nKonteks Perbualan:\\nMesej Pengguna:\\n\\"\\"\\"\\nTulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.\\n\\"\\"\\"\\n\\nJawapan AI:\\n\\"\\"\\"\\nMaaf, saya tak dapat balas sekarang: Request failed with status code 401\\n\\"\\"\\"\\n\\nAlasan Dislike Pengguna (jika ada): \\"Tiada alasan khusus\\"\\n\\nSila kategorikan isu ini kepada salah satu daripada yang berikut:\\n- wrong_information (maklumat fakta salah)\\n- wrong_code (kod salah/tidak boleh run)\\n- incomplete_answer (jawapan tergantung atau tidak lengkap)\\n- instruction_not_followed (tidak mengikut arahan/prompt)\\n- reasoning_error (kesalahan logik/pemikiran)\\n- outdated_information (maklumat lapuk/deprecated)\\n- formatting_problem (masalah visual/format markdown)\\n- style_problem (gaya penulisan tidak sesuai)\\n- other (lain-lain)\\n\\nTentukan sama ada ini adalah:\\n1. \\"preference\\" (pilihan/gaya/bahasa kegemaran pengguna, contoh: mahukan jawapan pendek, lebih suka kod sahaja, mahu bahasa Melayu, dsb.)\\n2. \\"error\\" (kesalahan teknikal, fakta salah, kod salah, arahan dilanggar)\\n\\nSila berikan jawapan dalam format JSON sahaja seperti berikut:\\n{\\n  \\"type\\": \\"error\\" atau \\"preference\\",\\n  \\"category\\": \\"salah satu kategori di atas\\",\\n  \\"lesson_or_preference\\": \\"Satu pengajaran atau keutamaan yang ringkas, pendek, padat dan boleh diguna semula untuk masa hadapan (Maksimum 1-2 ayat)\\",\\n  \\"confidence\\": \\"low\\" atau \\"medium\\" atau \\"high\\"\\n}\\n\\nPastikan anda hanya mengembalikan JSON yang sah. Jangan sertakan markdown, penulisan hiasan atau pembuka ```json.\\n"}]}',
     allowAbsoluteUrls: true
   },
   request: <ref *1> ClientRequest {
@@ -927,20 +1323,22 @@ Response : {
     _removedContLen: false,
     _removedTE: false,
     strictContentLength: false,
-    _contentLength: 322,
+    _contentLength: 1957,
     _hasBody: true,
     _trailer: '',
     finished: true,
     _headerSent: true,
     _closed: true,
-    _header: 'POST /openai/v1/chat/completions HTTP/1.1\r\n' +
+    _header: 'POST /api/v1/chat/completions HTTP/1.1\r\n' +
       'Accept: application/json, text/plain, */*\r\n' +
       'Content-Type: application/json\r\n' +
       'Authorization: Bearer undefined\r\n' +
+      'HTTP-Referer: https://render.com\r\n' +
+      'X-Title: Nexa AI\r\n' +
       'User-Agent: axios/1.18.1\r\n' +
-      'Content-Length: 322\r\n' +
+      'Content-Length: 1957\r\n' +
       'Accept-Encoding: gzip, compress, deflate, br\r\n' +
-      'Host: api.groq.com\r\n' +
+      'Host: openrouter.ai\r\n' +
       'Connection: keep-alive\r\n' +
       '\r\n',
     _keepAliveTimeout: 0,
@@ -973,7 +1371,7 @@ Response : {
     maxHeaderSize: undefined,
     insecureHTTPParser: false,
     joinDuplicateHeaders: undefined,
-    path: '/openai/v1/chat/completions',
+    path: '/api/v1/chat/completions',
     _ended: true,
     res: IncomingMessage {
       _events: [Object],
@@ -994,457 +1392,16 @@ Response : {
       statusCode: 401,
       statusMessage: 'Unauthorized',
       client: [TLSSocket],
-      _consuming: false,
+      _consuming: true,
       _dumped: false,
       req: [Circular *1],
       _eventsCount: 4,
-      responseUrl: 'https://api.groq.com/openai/v1/chat/completions',
+      responseUrl: 'https://openrouter.ai/api/v1/chat/completions',
       redirects: [],
       [Symbol(shapeMode)]: true,
       [Symbol(kCapture)]: false,
       [Symbol(kHeaders)]: [Object],
-      [Symbol(kHeadersCount)]: 28,
-      [Symbol(kTrailers)]: null,
-      [Symbol(kTrailersCount)]: 0
-    },
-    aborted: false,
-    timeoutCb: null,
-    upgradeOrConnect: false,
-    parser: null,
-    maxHeadersCount: null,
-    reusedSocket: false,
-    host: 'api.groq.com',
-    protocol: 'https:',
-    _redirectable: Writable {
-      _events: [Object],
-      _writableState: [WritableState],
-      _maxListeners: undefined,
-      _options: [Object],
-      _ended: true,
-      _ending: true,
-      _redirectCount: 0,
-      _redirects: [],
-      _requestBodyLength: 322,
-      _requestBodyBuffers: [],
-      _eventsCount: 4,
-      _onNativeResponse: [Function (anonymous)],
-      _headerFilter: /^(?:Authorization|Proxy-Authorization|Cookie)$/i,
-      _currentRequest: [Circular *1],
-      _currentUrl: 'https://api.groq.com/openai/v1/chat/completions',
-      _timeout: null,
-      [Symbol(shapeMode)]: true,
-      [Symbol(kCapture)]: false
-    },
-    [Symbol(shapeMode)]: false,
-    [Symbol(kCapture)]: false,
-    [Symbol(kBytesWritten)]: 0,
-    [Symbol(kNeedDrain)]: false,
-    [Symbol(corked)]: 0,
-    [Symbol(kChunkedBuffer)]: [],
-    [Symbol(kChunkedLength)]: 0,
-    [Symbol(kSocket)]: TLSSocket {
-      _tlsOptions: [Object],
-      _secureEstablished: true,
-      _securePending: false,
-      _newSessionPending: false,
-      _controlReleased: true,
-      secureConnecting: false,
-      _SNICallback: null,
-      servername: 'api.groq.com',
-      alpnProtocol: false,
-      authorized: true,
-      authorizationError: null,
-      encrypted: true,
-      _events: [Object: null prototype],
-      _eventsCount: 9,
-      connecting: false,
-      _hadError: false,
-      _parent: null,
-      _host: 'api.groq.com',
-      _closeAfterHandlingError: false,
-      _readableState: [ReadableState],
-      _writableState: [WritableState],
-      allowHalfOpen: false,
-      _maxListeners: undefined,
-      _sockname: null,
-      _pendingData: null,
-      _pendingEncoding: '',
-      server: undefined,
-      _server: null,
-      ssl: [TLSWrap],
-      _requestCert: true,
-      _rejectUnauthorized: true,
-      timeout: 5000,
-      parser: null,
-      _httpMessage: null,
-      autoSelectFamilyAttemptedAddresses: [Array],
-      [Symbol(alpncallback)]: null,
-      [Symbol(res)]: [TLSWrap],
-      [Symbol(verified)]: true,
-      [Symbol(pendingSession)]: null,
-      [Symbol(async_id_symbol)]: -1,
-      [Symbol(kHandle)]: [TLSWrap],
-      [Symbol(lastWriteQueueSize)]: 0,
-      [Symbol(timeout)]: Timeout {
-        _idleTimeout: 5000,
-        _idlePrev: [TimersList],
-        _idleNext: [TimersList],
-        _idleStart: 705252,
-        _onTimeout: [Function: bound ],
-        _timerArgs: undefined,
-        _repeat: null,
-        _destroyed: false,
-        [Symbol(refed)]: false,
-        [Symbol(kHasPrimitive)]: false,
-        [Symbol(asyncId)]: 107,
-        [Symbol(triggerId)]: 105,
-        [Symbol(kAsyncContextFrame)]: undefined
-      },
-      [Symbol(kBuffer)]: null,
-      [Symbol(kBufferCb)]: null,
-      [Symbol(kBufferGen)]: null,
-      [Symbol(shapeMode)]: true,
-      [Symbol(kCapture)]: false,
-      [Symbol(kSetNoDelay)]: false,
-      [Symbol(kSetKeepAlive)]: true,
-      [Symbol(kSetKeepAliveInitialDelay)]: 1,
-      [Symbol(kBytesRead)]: 0,
-      [Symbol(kBytesWritten)]: 0,
-      [Symbol(connect-options)]: [Object],
-      [Symbol(axios.http.socketListener)]: true,
-      [Symbol(axios.http.currentReq)]: [Writable]
-    },
-    [Symbol(kOutHeaders)]: [Object: null prototype] {
-      accept: [Array],
-      'content-type': [Array],
-      authorization: [Array],
-      'user-agent': [Array],
-      'content-length': [Array],
-      'accept-encoding': [Array],
-      host: [Array]
-    },
-    [Symbol(errored)]: null,
-    [Symbol(kHighWaterMark)]: 65536,
-    [Symbol(kRejectNonStandardBodyWrites)]: false,
-    [Symbol(kUniqueHeaders)]: null
-  },
-  response: {
-    status: 401,
-    statusText: 'Unauthorized',
-    headers: Object [AxiosHeaders] {
-      date: 'Thu, 06 Aug 2026 01:55:07 GMT',
-      'content-type': 'application/json',
-      'content-length': '96',
-      connection: 'keep-alive',
-      'cache-control': 'private, max-age=0, no-store, no-cache, must-revalidate',
-      server: 'cloudflare',
-      vary: 'Origin',
-      'x-groq-region': 'msp',
-      'x-request-id': 'req_01kzacg271ew8vnrk1hm0aaar7',
-      'cf-cache-status': 'DYNAMIC',
-      'set-cookie': [Array],
-      'strict-transport-security': 'max-age=15552000',
-      'cf-ray': 'a26a6ae14e49e270-ORD',
-      'alt-svc': 'h3=":443"; ma=86400'
-    },
-    config: [Object: null prototype] {
-      transitional: [Object],
-      adapter: [Array],
-      transformRequest: [Array],
-      transformResponse: [Array],
-      timeout: 0,
-      xsrfCookieName: 'XSRF-TOKEN',
-      xsrfHeaderName: 'X-XSRF-TOKEN',
-      maxContentLength: -1,
-      maxBodyLength: -1,
-      env: [Object],
-      validateStatus: [Function: validateStatus],
-      headers: [Object [AxiosHeaders]],
-      method: 'post',
-      url: 'https://api.groq.com/openai/v1/chat/completions',
-      data: `{"model":"llama-3.1-8b-instant","messages":[{"role":"system","content":"Balas hanya 'code' atau 'general'. Jangan beri penjelasan."},{"role":"user","content":"\\nTentukan kategori mesej pengguna.\\n\\nBalas SATU perkataan sahaja:\\n- code\\n- general\\n\\nMesej pengguna:\\nHello Nexa! Sila tunjuk kod Python untuk Fibonacci\\n"}]}`,
-      allowAbsoluteUrls: true
-    },
-    request: <ref *1> ClientRequest {
-      _events: [Object: null prototype],
-      _eventsCount: 7,
-      _maxListeners: undefined,
-      outputData: [],
-      outputSize: 0,
-      writable: true,
-      destroyed: true,
-      _last: false,
-      chunkedEncoding: false,
-      shouldKeepAlive: true,
-      maxRequestsOnConnectionReached: false,
-      _defaultKeepAlive: true,
-      useChunkedEncodingByDefault: true,
-      sendDate: false,
-      _removedConnection: false,
-      _removedContLen: false,
-      _removedTE: false,
-      strictContentLength: false,
-      _contentLength: 322,
-      _hasBody: true,
-      _trailer: '',
-      finished: true,
-      _headerSent: true,
-      _closed: true,
-      _header: 'POST /openai/v1/chat/completions HTTP/1.1\r\n' +
-        'Accept: application/json, text/plain, */*\r\n' +
-        'Content-Type: application/json\r\n' +
-        'Authorization: Bearer undefined\r\n' +
-        'User-Agent: axios/1.18.1\r\n' +
-        'Content-Length: 322\r\n' +
-        'Accept-Encoding: gzip, compress, deflate, br\r\n' +
-        'Host: api.groq.com\r\n' +
-        'Connection: keep-alive\r\n' +
-        '\r\n',
-      _keepAliveTimeout: 0,
-      _onPendingData: [Function: nop],
-      agent: [Agent],
-      socketPath: undefined,
-      method: 'POST',
-      maxHeaderSize: undefined,
-      insecureHTTPParser: false,
-      joinDuplicateHeaders: undefined,
-      path: '/openai/v1/chat/completions',
-      _ended: true,
-      res: [IncomingMessage],
-      aborted: false,
-      timeoutCb: null,
-      upgradeOrConnect: false,
-      parser: null,
-      maxHeadersCount: null,
-      reusedSocket: false,
-      host: 'api.groq.com',
-      protocol: 'https:',
-      _redirectable: [Writable],
-      [Symbol(shapeMode)]: false,
-      [Symbol(kCapture)]: false,
-      [Symbol(kBytesWritten)]: 0,
-      [Symbol(kNeedDrain)]: false,
-      [Symbol(corked)]: 0,
-      [Symbol(kChunkedBuffer)]: [],
-      [Symbol(kChunkedLength)]: 0,
-      [Symbol(kSocket)]: [TLSSocket],
-      [Symbol(kOutHeaders)]: [Object: null prototype],
-      [Symbol(errored)]: null,
-      [Symbol(kHighWaterMark)]: 65536,
-      [Symbol(kRejectNonStandardBodyWrites)]: false,
-      [Symbol(kUniqueHeaders)]: null
-    },
-    data: { error: [Object] }
-  },
-  status: 401
-}
-
-==================================================
-PIPELINE START
-==================================================
-Time     : 01:55:07
-Question : Hello Nexa! Sila tunjuk kod Python untuk Fibonacci
-
-----------------------------------------
-Router
-----------------------------------------
-[Router] Info: Memilih AI...
-[Router] Success: groq | openai/gpt-oss-120b
-Status : OK
-Time   : 5.14 ms
-
-Provider : groq
-Model    : openai/gpt-oss-120b
-Task     : general
-
-----------------------------------------
-Planner
-----------------------------------------
-[Planner] Info: Membina pelan kerja...
-[Planner] Success: 5 langkah disediakan.
-Status : OK
-Time   : 0.16 ms
-
-----------------------------------------
-Coder
-----------------------------------------
-[Coder] Info: Menjana jawapan AI...
-Status : FAILED
-Time   : 61.00 ms
-
-Reason
-------
-Request failed with status code 401
-
-HTTP : 401
-
-Stack
------
-at settle (/app/backend/node_modules/axios/dist/node/axios.cjs:2216:12)
-
-==================================================
-PIPELINE ERROR
-==================================================
-Type   : AxiosError
-Reason : Request failed with status code 401
-Status : 401
-
-at settle (/app/backend/node_modules/axios/dist/node/axios.cjs:2216:12)
-
-Elapsed : 85.10 ms
-==================================================
-
-============= ERROR =============
-AxiosError: Request failed with status code 401
-    at settle (/app/backend/node_modules/axios/dist/node/axios.cjs:2216:12)
-    at IncomingMessage.handleStreamEnd (/app/backend/node_modules/axios/dist/node/axios.cjs:4062:11)
-    at IncomingMessage.emit (node:events:531:35)
-    at endReadableNT (node:internal/streams/readable:1698:12)
-    at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
-    at Axios.request (/app/backend/node_modules/axios/dist/node/axios.cjs:5517:41)
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async askGroq (/app/backend/groq.js:16:20)
-    at async coder (/app/backend/pipeline/coder.js:25:20)
-    at async runPipeline (/app/backend/pipeline/pipeline.js:60:12)
-    at async /app/backend/server.js:79:20 {
-  isAxiosError: true,
-  code: 'ERR_BAD_REQUEST',
-  config: [Object: null prototype] {
-    transitional: {
-      silentJSONParsing: true,
-      forcedJSONParsing: true,
-      clarifyTimeoutError: false,
-      legacyInterceptorReqResOrdering: true,
-      advertiseZstdAcceptEncoding: false,
-      validateStatusUndefinedResolves: true
-    },
-    adapter: [ 'xhr', 'http', 'fetch' ],
-    transformRequest: [ [Function: transformRequest] ],
-    transformResponse: [ [Function: transformResponse] ],
-    timeout: 0,
-    xsrfCookieName: 'XSRF-TOKEN',
-    xsrfHeaderName: 'X-XSRF-TOKEN',
-    maxContentLength: -1,
-    maxBodyLength: -1,
-    env: { FormData: [Function], Blob: [class Blob] },
-    validateStatus: [Function: validateStatus],
-    headers: Object [AxiosHeaders] {
-      Accept: 'application/json, text/plain, */*',
-      'Content-Type': 'application/json',
-      Authorization: 'Bearer undefined',
-      'User-Agent': 'axios/1.18.1',
-      'Content-Length': '444',
-      'Accept-Encoding': 'gzip, compress, deflate, br'
-    },
-    method: 'post',
-    url: 'https://api.groq.com/openai/v1/chat/completions',
-    data: '{"model":"openai/gpt-oss-120b","messages":[{"role":"system","content":"\\nKamu ialah Nexa AI Assistant.\\n\\nJawab dengan jelas dan padat.\\nGunakan Bahasa Melayu atau Indonesia mengikut pengguna.\\n\\n\\nSISTEM STRATEGI AKTIF (EVOLVED):\\n- Mengesan kategori tugasan secara automatik\\n- Format tindak balas dengan gaya kemas\\n- Gunakan bahasa Melayu kasual jika sesuai"},{"role":"user","content":"Hello Nexa! Sila tunjuk kod Python untuk Fibonacci"}]}',
-    allowAbsoluteUrls: true
-  },
-  request: <ref *1> ClientRequest {
-    _events: [Object: null prototype] {
-      abort: [Function (anonymous)],
-      aborted: [Function (anonymous)],
-      connect: [Function (anonymous)],
-      error: [Function (anonymous)],
-      socket: [Function (anonymous)],
-      timeout: [Function (anonymous)],
-      finish: [Function: requestOnFinish]
-    },
-    _eventsCount: 7,
-    _maxListeners: undefined,
-    outputData: [],
-    outputSize: 0,
-    writable: true,
-    destroyed: true,
-    _last: false,
-    chunkedEncoding: false,
-    shouldKeepAlive: true,
-    maxRequestsOnConnectionReached: false,
-    _defaultKeepAlive: true,
-    useChunkedEncodingByDefault: true,
-    sendDate: false,
-    _removedConnection: false,
-    _removedContLen: false,
-    _removedTE: false,
-    strictContentLength: false,
-    _contentLength: 444,
-    _hasBody: true,
-    _trailer: '',
-    finished: true,
-    _headerSent: true,
-    _closed: true,
-    _header: 'POST /openai/v1/chat/completions HTTP/1.1\r\n' +
-      'Accept: application/json, text/plain, */*\r\n' +
-      'Content-Type: application/json\r\n' +
-      'Authorization: Bearer undefined\r\n' +
-      'User-Agent: axios/1.18.1\r\n' +
-      'Content-Length: 444\r\n' +
-      'Accept-Encoding: gzip, compress, deflate, br\r\n' +
-      'Host: api.groq.com\r\n' +
-      'Connection: keep-alive\r\n' +
-      '\r\n',
-    _keepAliveTimeout: 0,
-    _onPendingData: [Function: nop],
-    agent: Agent {
-      _events: [Object: null prototype],
-      _eventsCount: 2,
-      _maxListeners: undefined,
-      options: [Object: null prototype],
-      defaultPort: 443,
-      protocol: 'https:',
-      requests: [Object: null prototype] {},
-      sockets: [Object: null prototype] {},
-      freeSockets: [Object: null prototype],
-      keepAliveMsecs: 1000,
-      keepAlive: true,
-      maxSockets: Infinity,
-      maxFreeSockets: 256,
-      scheduling: 'lifo',
-      maxTotalSockets: Infinity,
-      totalSocketCount: 1,
-      agentKeepAliveTimeoutBuffer: 1000,
-      maxCachedSessions: 100,
-      _sessionCache: [Object],
-      [Symbol(shapeMode)]: false,
-      [Symbol(kCapture)]: false
-    },
-    socketPath: undefined,
-    method: 'POST',
-    maxHeaderSize: undefined,
-    insecureHTTPParser: false,
-    joinDuplicateHeaders: undefined,
-    path: '/openai/v1/chat/completions',
-    _ended: true,
-    res: IncomingMessage {
-      _events: [Object],
-      _readableState: [ReadableState],
-      _maxListeners: undefined,
-      socket: null,
-      httpVersionMajor: 1,
-      httpVersionMinor: 1,
-      httpVersion: '1.1',
-      complete: true,
-      rawHeaders: [Array],
-      rawTrailers: [],
-      joinDuplicateHeaders: undefined,
-      aborted: false,
-      upgrade: false,
-      url: '',
-      method: null,
-      statusCode: 401,
-      statusMessage: 'Unauthorized',
-      client: [TLSSocket],
-      _consuming: false,
-      _dumped: false,
-      req: [Circular *1],
-      _eventsCount: 4,
-      responseUrl: 'https://api.groq.com/openai/v1/chat/completions',
-      redirects: [],
-      [Symbol(shapeMode)]: true,
-      [Symbol(kCapture)]: false,
-      [Symbol(kHeaders)]: [Object],
-      [Symbol(kHeadersCount)]: 28,
+      [Symbol(kHeadersCount)]: 24,
       [Symbol(kTrailers)]: null,
       [Symbol(kTrailersCount)]: 0
     },
@@ -1454,7 +1411,7 @@ AxiosError: Request failed with status code 401
     parser: null,
     maxHeadersCount: null,
     reusedSocket: true,
-    host: 'api.groq.com',
+    host: 'openrouter.ai',
     protocol: 'https:',
     _redirectable: Writable {
       _events: [Object],
@@ -1465,13 +1422,13 @@ AxiosError: Request failed with status code 401
       _ending: true,
       _redirectCount: 0,
       _redirects: [],
-      _requestBodyLength: 444,
+      _requestBodyLength: 1957,
       _requestBodyBuffers: [],
       _eventsCount: 4,
       _onNativeResponse: [Function (anonymous)],
       _headerFilter: /^(?:Authorization|Proxy-Authorization|Cookie)$/i,
       _currentRequest: [Circular *1],
-      _currentUrl: 'https://api.groq.com/openai/v1/chat/completions',
+      _currentUrl: 'https://openrouter.ai/api/v1/chat/completions',
       _timeout: null,
       [Symbol(shapeMode)]: true,
       [Symbol(kCapture)]: false
@@ -1491,7 +1448,7 @@ AxiosError: Request failed with status code 401
       _controlReleased: true,
       secureConnecting: false,
       _SNICallback: null,
-      servername: 'api.groq.com',
+      servername: 'openrouter.ai',
       alpnProtocol: false,
       authorized: true,
       authorizationError: null,
@@ -1501,7 +1458,7 @@ AxiosError: Request failed with status code 401
       connecting: false,
       _hadError: false,
       _parent: null,
-      _host: 'api.groq.com',
+      _host: 'openrouter.ai',
       _closeAfterHandlingError: false,
       _readableState: [ReadableState],
       _writableState: [WritableState],
@@ -1530,15 +1487,15 @@ AxiosError: Request failed with status code 401
         _idleTimeout: 5000,
         _idlePrev: [TimersList],
         _idleNext: [TimersList],
-        _idleStart: 705357,
+        _idleStart: 929657,
         _onTimeout: [Function: bound ],
         _timerArgs: undefined,
         _repeat: null,
         _destroyed: false,
         [Symbol(refed)]: false,
         [Symbol(kHasPrimitive)]: false,
-        [Symbol(asyncId)]: 127,
-        [Symbol(triggerId)]: 125,
+        [Symbol(asyncId)]: 426,
+        [Symbol(triggerId)]: 424,
         [Symbol(kAsyncContextFrame)]: undefined
       },
       [Symbol(kBuffer)]: null,
@@ -1559,6 +1516,8 @@ AxiosError: Request failed with status code 401
       accept: [Array],
       'content-type': [Array],
       authorization: [Array],
+      'http-referer': [Array],
+      'x-title': [Array],
       'user-agent': [Array],
       'content-length': [Array],
       'accept-encoding': [Array],
@@ -1573,20 +1532,18 @@ AxiosError: Request failed with status code 401
     status: 401,
     statusText: 'Unauthorized',
     headers: Object [AxiosHeaders] {
-      date: 'Thu, 06 Aug 2026 01:55:07 GMT',
+      date: 'Wed, 12 Aug 2026 15:46:05 GMT',
       'content-type': 'application/json',
-      'content-length': '96',
+      'transfer-encoding': 'chunked',
       connection: 'keep-alive',
-      'cache-control': 'private, max-age=0, no-store, no-cache, must-revalidate',
-      server: 'cloudflare',
-      vary: 'Origin',
-      'x-groq-region': 'msp',
-      'x-request-id': 'req_01kzacg2afe74t3gpkj3hfzfm4',
-      'cf-cache-status': 'DYNAMIC',
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'X-Generation-Id,X-Provider-Name,cf-ray',
       'set-cookie': [Array],
-      'strict-transport-security': 'max-age=15552000',
-      'cf-ray': 'a26a6ae1ff14e270-ORD',
-      'alt-svc': 'h3=":443"; ma=86400'
+      'permissions-policy': 'payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")',
+      'referrer-policy': 'no-referrer, strict-origin-when-cross-origin',
+      'x-content-type-options': 'nosniff',
+      server: 'cloudflare',
+      'cf-ray': 'a2a09c5e8a9f356a-ORD'
     },
     config: [Object: null prototype] {
       transitional: [Object],
@@ -1602,8 +1559,8 @@ AxiosError: Request failed with status code 401
       validateStatus: [Function: validateStatus],
       headers: [Object [AxiosHeaders]],
       method: 'post',
-      url: 'https://api.groq.com/openai/v1/chat/completions',
-      data: '{"model":"openai/gpt-oss-120b","messages":[{"role":"system","content":"\\nKamu ialah Nexa AI Assistant.\\n\\nJawab dengan jelas dan padat.\\nGunakan Bahasa Melayu atau Indonesia mengikut pengguna.\\n\\n\\nSISTEM STRATEGI AKTIF (EVOLVED):\\n- Mengesan kategori tugasan secara automatik\\n- Format tindak balas dengan gaya kemas\\n- Gunakan bahasa Melayu kasual jika sesuai"},{"role":"user","content":"Hello Nexa! Sila tunjuk kod Python untuk Fibonacci"}]}',
+      url: 'https://openrouter.ai/api/v1/chat/completions',
+      data: '{"model":"openrouter/free","messages":[{"role":"system","content":"Anda adalah feedback analyzer. Sila balas dengan JSON format sahaja tanpa sebarang markdown hiasan."},{"role":"user","content":"\\nAnda adalah Nexa AI Feedback Analyzer. Tugas anda adalah menganalisis feedback negatif (dislike) yang diberikan oleh pengguna terhadap jawapan AI, dan mengekstrak pelajaran (lesson) atau keutamaan pengguna (user preference).\\n\\nKonteks Perbualan:\\nMesej Pengguna:\\n\\"\\"\\"\\nTulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.\\n\\"\\"\\"\\n\\nJawapan AI:\\n\\"\\"\\"\\nMaaf, saya tak dapat balas sekarang: Request failed with status code 401\\n\\"\\"\\"\\n\\nAlasan Dislike Pengguna (jika ada): \\"Tiada alasan khusus\\"\\n\\nSila kategorikan isu ini kepada salah satu daripada yang berikut:\\n- wrong_information (maklumat fakta salah)\\n- wrong_code (kod salah/tidak boleh run)\\n- incomplete_answer (jawapan tergantung atau tidak lengkap)\\n- instruction_not_followed (tidak mengikut arahan/prompt)\\n- reasoning_error (kesalahan logik/pemikiran)\\n- outdated_information (maklumat lapuk/deprecated)\\n- formatting_problem (masalah visual/format markdown)\\n- style_problem (gaya penulisan tidak sesuai)\\n- other (lain-lain)\\n\\nTentukan sama ada ini adalah:\\n1. \\"preference\\" (pilihan/gaya/bahasa kegemaran pengguna, contoh: mahukan jawapan pendek, lebih suka kod sahaja, mahu bahasa Melayu, dsb.)\\n2. \\"error\\" (kesalahan teknikal, fakta salah, kod salah, arahan dilanggar)\\n\\nSila berikan jawapan dalam format JSON sahaja seperti berikut:\\n{\\n  \\"type\\": \\"error\\" atau \\"preference\\",\\n  \\"category\\": \\"salah satu kategori di atas\\",\\n  \\"lesson_or_preference\\": \\"Satu pengajaran atau keutamaan yang ringkas, pendek, padat dan boleh diguna semula untuk masa hadapan (Maksimum 1-2 ayat)\\",\\n  \\"confidence\\": \\"low\\" atau \\"medium\\" atau \\"high\\"\\n}\\n\\nPastikan anda hanya mengembalikan JSON yang sah. Jangan sertakan markdown, penulisan hiasan atau pembuka ```json.\\n"}]}',
       allowAbsoluteUrls: true
     },
     request: <ref *1> ClientRequest {
@@ -1625,20 +1582,22 @@ AxiosError: Request failed with status code 401
       _removedContLen: false,
       _removedTE: false,
       strictContentLength: false,
-      _contentLength: 444,
+      _contentLength: 1957,
       _hasBody: true,
       _trailer: '',
       finished: true,
       _headerSent: true,
       _closed: true,
-      _header: 'POST /openai/v1/chat/completions HTTP/1.1\r\n' +
+      _header: 'POST /api/v1/chat/completions HTTP/1.1\r\n' +
         'Accept: application/json, text/plain, */*\r\n' +
         'Content-Type: application/json\r\n' +
         'Authorization: Bearer undefined\r\n' +
+        'HTTP-Referer: https://render.com\r\n' +
+        'X-Title: Nexa AI\r\n' +
         'User-Agent: axios/1.18.1\r\n' +
-        'Content-Length: 444\r\n' +
+        'Content-Length: 1957\r\n' +
         'Accept-Encoding: gzip, compress, deflate, br\r\n' +
-        'Host: api.groq.com\r\n' +
+        'Host: openrouter.ai\r\n' +
         'Connection: keep-alive\r\n' +
         '\r\n',
       _keepAliveTimeout: 0,
@@ -1649,7 +1608,7 @@ AxiosError: Request failed with status code 401
       maxHeaderSize: undefined,
       insecureHTTPParser: false,
       joinDuplicateHeaders: undefined,
-      path: '/openai/v1/chat/completions',
+      path: '/api/v1/chat/completions',
       _ended: true,
       res: [IncomingMessage],
       aborted: false,
@@ -1658,7 +1617,7 @@ AxiosError: Request failed with status code 401
       parser: null,
       maxHeadersCount: null,
       reusedSocket: true,
-      host: 'api.groq.com',
+      host: 'openrouter.ai',
       protocol: 'https:',
       _redirectable: [Writable],
       [Symbol(shapeMode)]: false,
@@ -1679,7 +1638,8 @@ AxiosError: Request failed with status code 401
   },
   status: 401
 }
-AxiosError: Request failed with status code 401
+[feedbackController] Maklum balas diproses secara tak senkron: processed_lesson
+[feedbackAnalyzer] Gagal menganalisis maklum balas dengan LLM: AxiosError: Request failed with status code 401
     at settle (/app/backend/node_modules/axios/dist/node/axios.cjs:2216:12)
     at IncomingMessage.handleStreamEnd (/app/backend/node_modules/axios/dist/node/axios.cjs:4062:11)
     at IncomingMessage.emit (node:events:531:35)
@@ -1687,16 +1647,385 @@ AxiosError: Request failed with status code 401
     at process.processTicksAndRejections (node:internal/process/task_queues:89:21)
     at Axios.request (/app/backend/node_modules/axios/dist/node/axios.cjs:5517:41)
     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async askGroq (/app/backend/groq.js:16:20)
-    at async coder (/app/backend/pipeline/coder.js:25:20)
-    at async runPipeline (/app/backend/pipeline/pipeline.js:60:12)
-    at async /app/backend/server.js:79:20
-HTTP Status : 401
-Response : {
-  error: {
-    message: 'Invalid API Key',
-    type: 'invalid_request_error',
-    code: 'invalid_api_key'
-  }
+    at async askOpenRouter (/app/backend/openrouter.js:16:20)
+    at async analyzeFeedback (/app/backend/feedback/feedbackAnalyzer.js:49:23)
+    at async processUserFeedback (/app/backend/feedback/lessonGenerator.js:19:24) {
+  isAxiosError: true,
+  code: 'ERR_BAD_REQUEST',
+  config: [Object: null prototype] {
+    transitional: {
+      silentJSONParsing: true,
+      forcedJSONParsing: true,
+      clarifyTimeoutError: false,
+      legacyInterceptorReqResOrdering: true,
+      advertiseZstdAcceptEncoding: false,
+      validateStatusUndefinedResolves: true
+    },
+    adapter: [ 'xhr', 'http', 'fetch' ],
+    transformRequest: [ [Function: transformRequest] ],
+    transformResponse: [ [Function: transformResponse] ],
+    timeout: 0,
+    xsrfCookieName: 'XSRF-TOKEN',
+    xsrfHeaderName: 'X-XSRF-TOKEN',
+    maxContentLength: -1,
+    maxBodyLength: -1,
+    env: { FormData: [Function], Blob: [class Blob] },
+    validateStatus: [Function: validateStatus],
+    headers: Object [AxiosHeaders] {
+      Accept: 'application/json, text/plain, */*',
+      'Content-Type': 'application/json',
+      Authorization: 'Bearer undefined',
+      'HTTP-Referer': 'https://render.com',
+      'X-Title': 'Nexa AI',
+      'User-Agent': 'axios/1.18.1',
+      'Content-Length': '1946',
+      'Accept-Encoding': 'gzip, compress, deflate, br'
+    },
+    method: 'post',
+    url: 'https://openrouter.ai/api/v1/chat/completions',
+    data: '{"model":"openrouter/free","messages":[{"role":"system","content":"Anda adalah feedback analyzer. Sila balas dengan JSON format sahaja tanpa sebarang markdown hiasan."},{"role":"user","content":"\\nAnda adalah Nexa AI Feedback Analyzer. Tugas anda adalah menganalisis feedback negatif (dislike) yang diberikan oleh pengguna terhadap jawapan AI, dan mengekstrak pelajaran (lesson) atau keutamaan pengguna (user preference).\\n\\nKonteks Perbualan:\\nMesej Pengguna:\\n\\"\\"\\"\\nTulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.\\n\\"\\"\\"\\n\\nJawapan AI:\\n\\"\\"\\"\\nMaaf, saya tak dapat balas sekarang: Request failed with status code 401\\n\\"\\"\\"\\n\\nAlasan Dislike Pengguna (jika ada): \\"Bad code\\"\\n\\nSila kategorikan isu ini kepada salah satu daripada yang berikut:\\n- wrong_information (maklumat fakta salah)\\n- wrong_code (kod salah/tidak boleh run)\\n- incomplete_answer (jawapan tergantung atau tidak lengkap)\\n- instruction_not_followed (tidak mengikut arahan/prompt)\\n- reasoning_error (kesalahan logik/pemikiran)\\n- outdated_information (maklumat lapuk/deprecated)\\n- formatting_problem (masalah visual/format markdown)\\n- style_problem (gaya penulisan tidak sesuai)\\n- other (lain-lain)\\n\\nTentukan sama ada ini adalah:\\n1. \\"preference\\" (pilihan/gaya/bahasa kegemaran pengguna, contoh: mahukan jawapan pendek, lebih suka kod sahaja, mahu bahasa Melayu, dsb.)\\n2. \\"error\\" (kesalahan teknikal, fakta salah, kod salah, arahan dilanggar)\\n\\nSila berikan jawapan dalam format JSON sahaja seperti berikut:\\n{\\n  \\"type\\": \\"error\\" atau \\"preference\\",\\n  \\"category\\": \\"salah satu kategori di atas\\",\\n  \\"lesson_or_preference\\": \\"Satu pengajaran atau keutamaan yang ringkas, pendek, padat dan boleh diguna semula untuk masa hadapan (Maksimum 1-2 ayat)\\",\\n  \\"confidence\\": \\"low\\" atau \\"medium\\" atau \\"high\\"\\n}\\n\\nPastikan anda hanya mengembalikan JSON yang sah. Jangan sertakan markdown, penulisan hiasan atau pembuka ```json.\\n"}]}',
+    allowAbsoluteUrls: true
+  },
+  request: <ref *1> ClientRequest {
+    _events: [Object: null prototype] {
+      abort: [Function (anonymous)],
+      aborted: [Function (anonymous)],
+      connect: [Function (anonymous)],
+      error: [Function (anonymous)],
+      socket: [Function (anonymous)],
+      timeout: [Function (anonymous)],
+      finish: [Function: requestOnFinish]
+    },
+    _eventsCount: 7,
+    _maxListeners: undefined,
+    outputData: [],
+    outputSize: 0,
+    writable: true,
+    destroyed: true,
+    _last: false,
+    chunkedEncoding: false,
+    shouldKeepAlive: true,
+    maxRequestsOnConnectionReached: false,
+    _defaultKeepAlive: true,
+    useChunkedEncodingByDefault: true,
+    sendDate: false,
+    _removedConnection: false,
+    _removedContLen: false,
+    _removedTE: false,
+    strictContentLength: false,
+    _contentLength: 1946,
+    _hasBody: true,
+    _trailer: '',
+    finished: true,
+    _headerSent: true,
+    _closed: true,
+    _header: 'POST /api/v1/chat/completions HTTP/1.1\r\n' +
+      'Accept: application/json, text/plain, */*\r\n' +
+      'Content-Type: application/json\r\n' +
+      'Authorization: Bearer undefined\r\n' +
+      'HTTP-Referer: https://render.com\r\n' +
+      'X-Title: Nexa AI\r\n' +
+      'User-Agent: axios/1.18.1\r\n' +
+      'Content-Length: 1946\r\n' +
+      'Accept-Encoding: gzip, compress, deflate, br\r\n' +
+      'Host: openrouter.ai\r\n' +
+      'Connection: keep-alive\r\n' +
+      '\r\n',
+    _keepAliveTimeout: 0,
+    _onPendingData: [Function: nop],
+    agent: Agent {
+      _events: [Object: null prototype],
+      _eventsCount: 2,
+      _maxListeners: undefined,
+      options: [Object: null prototype],
+      defaultPort: 443,
+      protocol: 'https:',
+      requests: [Object: null prototype] {},
+      sockets: [Object: null prototype] {},
+      freeSockets: [Object: null prototype],
+      keepAliveMsecs: 1000,
+      keepAlive: true,
+      maxSockets: Infinity,
+      maxFreeSockets: 256,
+      scheduling: 'lifo',
+      maxTotalSockets: Infinity,
+      totalSocketCount: 1,
+      agentKeepAliveTimeoutBuffer: 1000,
+      maxCachedSessions: 100,
+      _sessionCache: [Object],
+      [Symbol(shapeMode)]: false,
+      [Symbol(kCapture)]: false
+    },
+    socketPath: undefined,
+    method: 'POST',
+    maxHeaderSize: undefined,
+    insecureHTTPParser: false,
+    joinDuplicateHeaders: undefined,
+    path: '/api/v1/chat/completions',
+    _ended: true,
+    res: IncomingMessage {
+      _events: [Object],
+      _readableState: [ReadableState],
+      _maxListeners: undefined,
+      socket: null,
+      httpVersionMajor: 1,
+      httpVersionMinor: 1,
+      httpVersion: '1.1',
+      complete: true,
+      rawHeaders: [Array],
+      rawTrailers: [],
+      joinDuplicateHeaders: undefined,
+      aborted: false,
+      upgrade: false,
+      url: '',
+      method: null,
+      statusCode: 401,
+      statusMessage: 'Unauthorized',
+      client: [TLSSocket],
+      _consuming: true,
+      _dumped: false,
+      req: [Circular *1],
+      _eventsCount: 4,
+      responseUrl: 'https://openrouter.ai/api/v1/chat/completions',
+      redirects: [],
+      [Symbol(shapeMode)]: true,
+      [Symbol(kCapture)]: false,
+      [Symbol(kHeaders)]: [Object],
+      [Symbol(kHeadersCount)]: 24,
+      [Symbol(kTrailers)]: null,
+      [Symbol(kTrailersCount)]: 0
+    },
+    aborted: false,
+    timeoutCb: null,
+    upgradeOrConnect: false,
+    parser: null,
+    maxHeadersCount: null,
+    reusedSocket: true,
+    host: 'openrouter.ai',
+    protocol: 'https:',
+    _redirectable: Writable {
+      _events: [Object],
+      _writableState: [WritableState],
+      _maxListeners: undefined,
+      _options: [Object],
+      _ended: true,
+      _ending: true,
+      _redirectCount: 0,
+      _redirects: [],
+      _requestBodyLength: 1946,
+      _requestBodyBuffers: [],
+      _eventsCount: 4,
+      _onNativeResponse: [Function (anonymous)],
+      _headerFilter: /^(?:Authorization|Proxy-Authorization|Cookie)$/i,
+      _currentRequest: [Circular *1],
+      _currentUrl: 'https://openrouter.ai/api/v1/chat/completions',
+      _timeout: null,
+      [Symbol(shapeMode)]: true,
+      [Symbol(kCapture)]: false
+    },
+    [Symbol(shapeMode)]: false,
+    [Symbol(kCapture)]: false,
+    [Symbol(kBytesWritten)]: 0,
+    [Symbol(kNeedDrain)]: false,
+    [Symbol(corked)]: 0,
+    [Symbol(kChunkedBuffer)]: [],
+    [Symbol(kChunkedLength)]: 0,
+    [Symbol(kSocket)]: TLSSocket {
+      _tlsOptions: [Object],
+      _secureEstablished: true,
+      _securePending: false,
+      _newSessionPending: false,
+      _controlReleased: true,
+      secureConnecting: false,
+      _SNICallback: null,
+      servername: 'openrouter.ai',
+      alpnProtocol: false,
+      authorized: true,
+      authorizationError: null,
+      encrypted: true,
+      _events: [Object: null prototype],
+      _eventsCount: 9,
+      connecting: false,
+      _hadError: false,
+      _parent: null,
+      _host: 'openrouter.ai',
+      _closeAfterHandlingError: false,
+      _readableState: [ReadableState],
+      _writableState: [WritableState],
+      allowHalfOpen: false,
+      _maxListeners: undefined,
+      _sockname: null,
+      _pendingData: null,
+      _pendingEncoding: '',
+      server: undefined,
+      _server: null,
+      ssl: [TLSWrap],
+      _requestCert: true,
+      _rejectUnauthorized: true,
+      timeout: 5000,
+      parser: null,
+      _httpMessage: null,
+      autoSelectFamilyAttemptedAddresses: [Array],
+      [Symbol(alpncallback)]: null,
+      [Symbol(res)]: [TLSWrap],
+      [Symbol(verified)]: true,
+      [Symbol(pendingSession)]: null,
+      [Symbol(async_id_symbol)]: -1,
+      [Symbol(kHandle)]: [TLSWrap],
+      [Symbol(lastWriteQueueSize)]: 0,
+      [Symbol(timeout)]: Timeout {
+        _idleTimeout: 5000,
+        _idlePrev: [TimersList],
+        _idleNext: [TimersList],
+        _idleStart: 931857,
+        _onTimeout: [Function: bound ],
+        _timerArgs: undefined,
+        _repeat: null,
+        _destroyed: false,
+        [Symbol(refed)]: false,
+        [Symbol(kHasPrimitive)]: false,
+        [Symbol(asyncId)]: 451,
+        [Symbol(triggerId)]: 449,
+        [Symbol(kAsyncContextFrame)]: undefined
+      },
+      [Symbol(kBuffer)]: null,
+      [Symbol(kBufferCb)]: null,
+      [Symbol(kBufferGen)]: null,
+      [Symbol(shapeMode)]: true,
+      [Symbol(kCapture)]: false,
+      [Symbol(kSetNoDelay)]: false,
+      [Symbol(kSetKeepAlive)]: true,
+      [Symbol(kSetKeepAliveInitialDelay)]: 1,
+      [Symbol(kBytesRead)]: 0,
+      [Symbol(kBytesWritten)]: 0,
+      [Symbol(connect-options)]: [Object],
+      [Symbol(axios.http.socketListener)]: true,
+      [Symbol(axios.http.currentReq)]: [Writable]
+    },
+    [Symbol(kOutHeaders)]: [Object: null prototype] {
+      accept: [Array],
+      'content-type': [Array],
+      authorization: [Array],
+      'http-referer': [Array],
+      'x-title': [Array],
+      'user-agent': [Array],
+      'content-length': [Array],
+      'accept-encoding': [Array],
+      host: [Array]
+    },
+    [Symbol(errored)]: null,
+    [Symbol(kHighWaterMark)]: 65536,
+    [Symbol(kRejectNonStandardBodyWrites)]: false,
+    [Symbol(kUniqueHeaders)]: null
+  },
+  response: {
+    status: 401,
+    statusText: 'Unauthorized',
+    headers: Object [AxiosHeaders] {
+      date: 'Wed, 12 Aug 2026 15:46:07 GMT',
+      'content-type': 'application/json',
+      'transfer-encoding': 'chunked',
+      connection: 'keep-alive',
+      'access-control-allow-origin': '*',
+      'access-control-expose-headers': 'X-Generation-Id,X-Provider-Name,cf-ray',
+      'set-cookie': [Array],
+      'permissions-policy': 'payment=(self "https://checkout.stripe.com" "https://connect-js.stripe.com" "https://js.stripe.com" "https://*.js.stripe.com" "https://hooks.stripe.com")',
+      'referrer-policy': 'no-referrer, strict-origin-when-cross-origin',
+      'x-content-type-options': 'nosniff',
+      server: 'cloudflare',
+      'cf-ray': 'a2a09c6c4fd2356a-ORD'
+    },
+    config: [Object: null prototype] {
+      transitional: [Object],
+      adapter: [Array],
+      transformRequest: [Array],
+      transformResponse: [Array],
+      timeout: 0,
+      xsrfCookieName: 'XSRF-TOKEN',
+      xsrfHeaderName: 'X-XSRF-TOKEN',
+      maxContentLength: -1,
+      maxBodyLength: -1,
+      env: [Object],
+      validateStatus: [Function: validateStatus],
+      headers: [Object [AxiosHeaders]],
+      method: 'post',
+      url: 'https://openrouter.ai/api/v1/chat/completions',
+      data: '{"model":"openrouter/free","messages":[{"role":"system","content":"Anda adalah feedback analyzer. Sila balas dengan JSON format sahaja tanpa sebarang markdown hiasan."},{"role":"user","content":"\\nAnda adalah Nexa AI Feedback Analyzer. Tugas anda adalah menganalisis feedback negatif (dislike) yang diberikan oleh pengguna terhadap jawapan AI, dan mengekstrak pelajaran (lesson) atau keutamaan pengguna (user preference).\\n\\nKonteks Perbualan:\\nMesej Pengguna:\\n\\"\\"\\"\\nTulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.\\n\\"\\"\\"\\n\\nJawapan AI:\\n\\"\\"\\"\\nMaaf, saya tak dapat balas sekarang: Request failed with status code 401\\n\\"\\"\\"\\n\\nAlasan Dislike Pengguna (jika ada): \\"Bad code\\"\\n\\nSila kategorikan isu ini kepada salah satu daripada yang berikut:\\n- wrong_information (maklumat fakta salah)\\n- wrong_code (kod salah/tidak boleh run)\\n- incomplete_answer (jawapan tergantung atau tidak lengkap)\\n- instruction_not_followed (tidak mengikut arahan/prompt)\\n- reasoning_error (kesalahan logik/pemikiran)\\n- outdated_information (maklumat lapuk/deprecated)\\n- formatting_problem (masalah visual/format markdown)\\n- style_problem (gaya penulisan tidak sesuai)\\n- other (lain-lain)\\n\\nTentukan sama ada ini adalah:\\n1. \\"preference\\" (pilihan/gaya/bahasa kegemaran pengguna, contoh: mahukan jawapan pendek, lebih suka kod sahaja, mahu bahasa Melayu, dsb.)\\n2. \\"error\\" (kesalahan teknikal, fakta salah, kod salah, arahan dilanggar)\\n\\nSila berikan jawapan dalam format JSON sahaja seperti berikut:\\n{\\n  \\"type\\": \\"error\\" atau \\"preference\\",\\n  \\"category\\": \\"salah satu kategori di atas\\",\\n  \\"lesson_or_preference\\": \\"Satu pengajaran atau keutamaan yang ringkas, pendek, padat dan boleh diguna semula untuk masa hadapan (Maksimum 1-2 ayat)\\",\\n  \\"confidence\\": \\"low\\" atau \\"medium\\" atau \\"high\\"\\n}\\n\\nPastikan anda hanya mengembalikan JSON yang sah. Jangan sertakan markdown, penulisan hiasan atau pembuka ```json.\\n"}]}',
+      allowAbsoluteUrls: true
+    },
+    request: <ref *1> ClientRequest {
+      _events: [Object: null prototype],
+      _eventsCount: 7,
+      _maxListeners: undefined,
+      outputData: [],
+      outputSize: 0,
+      writable: true,
+      destroyed: true,
+      _last: false,
+      chunkedEncoding: false,
+      shouldKeepAlive: true,
+      maxRequestsOnConnectionReached: false,
+      _defaultKeepAlive: true,
+      useChunkedEncodingByDefault: true,
+      sendDate: false,
+      _removedConnection: false,
+      _removedContLen: false,
+      _removedTE: false,
+      strictContentLength: false,
+      _contentLength: 1946,
+      _hasBody: true,
+      _trailer: '',
+      finished: true,
+      _headerSent: true,
+      _closed: true,
+      _header: 'POST /api/v1/chat/completions HTTP/1.1\r\n' +
+        'Accept: application/json, text/plain, */*\r\n' +
+        'Content-Type: application/json\r\n' +
+        'Authorization: Bearer undefined\r\n' +
+        'HTTP-Referer: https://render.com\r\n' +
+        'X-Title: Nexa AI\r\n' +
+        'User-Agent: axios/1.18.1\r\n' +
+        'Content-Length: 1946\r\n' +
+        'Accept-Encoding: gzip, compress, deflate, br\r\n' +
+        'Host: openrouter.ai\r\n' +
+        'Connection: keep-alive\r\n' +
+        '\r\n',
+      _keepAliveTimeout: 0,
+      _onPendingData: [Function: nop],
+      agent: [Agent],
+      socketPath: undefined,
+      method: 'POST',
+      maxHeaderSize: undefined,
+      insecureHTTPParser: false,
+      joinDuplicateHeaders: undefined,
+      path: '/api/v1/chat/completions',
+      _ended: true,
+      res: [IncomingMessage],
+      aborted: false,
+      timeoutCb: null,
+      upgradeOrConnect: false,
+      parser: null,
+      maxHeadersCount: null,
+      reusedSocket: true,
+      host: 'openrouter.ai',
+      protocol: 'https:',
+      _redirectable: [Writable],
+      [Symbol(shapeMode)]: false,
+      [Symbol(kCapture)]: false,
+      [Symbol(kBytesWritten)]: 0,
+      [Symbol(kNeedDrain)]: false,
+      [Symbol(corked)]: 0,
+      [Symbol(kChunkedBuffer)]: [],
+      [Symbol(kChunkedLength)]: 0,
+      [Symbol(kSocket)]: [TLSSocket],
+      [Symbol(kOutHeaders)]: [Object: null prototype],
+      [Symbol(errored)]: null,
+      [Symbol(kHighWaterMark)]: 65536,
+      [Symbol(kRejectNonStandardBodyWrites)]: false,
+      [Symbol(kUniqueHeaders)]: null
+    },
+    data: { error: [Object] }
+  },
+  status: 401
 }
-=================================
+[feedbackController] Maklum balas diproses secara tak senkron: processed_lesson
