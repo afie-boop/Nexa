@@ -21,7 +21,7 @@ async function askCoding(question, history = [], onProgress = () => {}) {
   let draft;
   try {
     draft = await askOpenRouter(contextPrompt, {
-      model: "openrouter/free",
+      model: "nvidia/nemotron-3-ultra-550b-a55b:free",
       history,
       system:
         "Kamu pakar coding. Tulis code dengan format kemas (indent betul, satu statement satu baris). " +
