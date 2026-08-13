@@ -14,7 +14,7 @@ ${question}
 
   try {
     const result = await askOpenRouter(prompt, {
-      model: "openai/gpt-oss-20b:fre",
+      model: "openai/gpt-oss-20b:free",
       system: "Balas hanya 'code' atau 'general'. Jangan beri penjelasan."
     });
 
