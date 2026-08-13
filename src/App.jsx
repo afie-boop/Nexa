@@ -82,10 +82,8 @@ function App() {
   const [copiedIdx, setCopiedIdx] = useState(null);
   const chatEndRef = useRef(null);
 
-  // Like/Dislike state track for messages
-  const [likes, setLikes] = useState({});
-  const [dislikes, setDislikes] = useState({});
-  const [dislikeReasonMsgIdx, setDislikeReasonMsgIdx] = useState(null);
+  // Feedback popup state based on message ID
+  const [dislikeReasonMsgId, setDislikeReasonMsgId] = useState(null);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -223,7 +221,9 @@ function App() {
     setMsg(promptText);
   };
 
-  const getUserMessageBeforeIndex = (idx) => {
+  const getUserMessageBeforeId = (msgId) => {
+    const idx = chat.findIndex(m => m.id === msgId);
+    if (idx === -1) return "";
     for (let k = idx - 1; k >= 0; k--) {
       if (chat[k].type === "user") {
         return chat[k].text;
@@ -232,10 +232,11 @@ function App() {
     return "";
   };
 
-  const sendFeedbackToBackend = async (msgIdx, type, reason = "") => {
+  const sendFeedbackToBackend = async (msgId, type, reason = "") => {
     try {
-      const userMessageText = getUserMessageBeforeIndex(msgIdx);
-      const aiResponseText = chat[msgIdx]?.text || "";
+      const userMessageText = getUserMessageBeforeId(msgId);
+      const targetMsg = chat.find(m => m.id === msgId);
+      const aiResponseText = targetMsg?.text || "";
       const isCode = userMessageText.toLowerCase().includes("kod") || userMessageText.toLowerCase().includes("code") || aiResponseText.includes("```");
       const model = isCode ? "openrouter/free" : "qwen/qwen3-235b-a22b-2507";
 
@@ -244,7 +245,7 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversation_id: activeId,
-          message_id: `ai-${msgIdx}`,
+          message_id: msgId,
           user_message: userMessageText,
           ai_response: aiResponseText,
           provider: "openrouter",
@@ -258,43 +259,68 @@ function App() {
     }
   };
 
-  const handleLike = (msgIdx) => {
-    const isLikedNow = !likes[msgIdx];
-    setLikes(prev => ({ ...prev, [msgIdx]: isLikedNow }));
-    setDislikes(prev => ({ ...prev, [msgIdx]: false }));
-    setDislikeReasonMsgIdx(null);
+  const updateMessageFeedback = (msgId, type, reason = "") => {
+    setConversations(prevConvs => {
+      return prevConvs.map(conv => {
+        if (conv.id === activeId) {
+          const updatedMessages = conv.messages.map(m => {
+            if (m.id === msgId || (m.id === undefined && msgId.startsWith("msg_legacy_"))) {
+              return { ...m, feedback: type, feedbackReason: reason };
+            }
+            return m;
+          });
+          return { ...conv, messages: updatedMessages };
+        }
+        return conv;
+      });
+    });
+  };
 
-    if (isLikedNow) {
-      sendFeedbackToBackend(msgIdx, "positive");
+  const handleLike = (msgId) => {
+    const targetMsg = chat.find(m => m.id === msgId);
+    const isCurrentlyLiked = targetMsg?.feedback === "like";
+    const nextFeedback = isCurrentlyLiked ? null : "like";
+
+    updateMessageFeedback(msgId, nextFeedback);
+    setDislikeReasonMsgId(null);
+
+    if (nextFeedback === "like") {
+      sendFeedbackToBackend(msgId, "positive");
     }
   };
 
-  const handleDislike = (msgIdx) => {
-    const isDislikedNow = !dislikes[msgIdx];
-    setDislikes(prev => ({ ...prev, [msgIdx]: isDislikedNow }));
-    setLikes(prev => ({ ...prev, [msgIdx]: false }));
+  const handleDislike = (msgId) => {
+    const targetMsg = chat.find(m => m.id === msgId);
+    const isCurrentlyDisliked = targetMsg?.feedback === "dislike";
+    const nextFeedback = isCurrentlyDisliked ? null : "dislike";
 
-    if (isDislikedNow) {
-      setDislikeReasonMsgIdx(msgIdx);
-      sendFeedbackToBackend(msgIdx, "negative");
+    updateMessageFeedback(msgId, nextFeedback);
+
+    if (nextFeedback === "dislike") {
+      setDislikeReasonMsgId(msgId);
+      sendFeedbackToBackend(msgId, "negative");
     } else {
-      setDislikeReasonMsgIdx(null);
+      setDislikeReasonMsgId(null);
     }
   };
 
-  const handleSelectReason = (msgIdx, option) => {
-    sendFeedbackToBackend(msgIdx, "negative", option);
-    setDislikeReasonMsgIdx(null);
+  const handleSelectReason = (msgId, option) => {
+    updateMessageFeedback(msgId, "dislike", option);
+    sendFeedbackToBackend(msgId, "negative", option);
+    setDislikeReasonMsgId(null);
   };
 
-  const handleRegenerate = async (msgIdx) => {
+  const handleRegenerate = async (msgId) => {
+    const msgIdx = chat.findIndex(m => m.id === msgId);
+    if (msgIdx === -1) return;
+
     // Find the last user message before this AI response
     const lastUserMsgIdx = chat.slice(0, msgIdx).reduce((lastIdx, m, i) => m.type === "user" ? i : lastIdx, -1);
     if (lastUserMsgIdx !== -1) {
       const userText = chat[lastUserMsgIdx].text;
       // Slice history up to that user message
       const historyToKeep = chat.slice(0, lastUserMsgIdx);
-      updateActiveMessages([...historyToKeep, { type: "user", text: userText }]);
+      updateActiveMessages([...historyToKeep, { id: chat[lastUserMsgIdx].id, type: "user", text: userText }]);
       setTimeout(() => {
         send(userText, historyToKeep);
       }, 50);
@@ -313,7 +339,8 @@ function App() {
       : [];
 
     if (!overrideMsg) {
-      updateActiveMessages((prev) => [...prev, { type: "user", text: textToSend }]);
+      const userMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+      updateActiveMessages((prev) => [...prev, { id: userMsgId, type: "user", text: textToSend }]);
       setMsg("");
     }
 
@@ -367,7 +394,8 @@ function App() {
       setConversations(prevConvs => {
         return prevConvs.map(c => {
           if (c.id === activeId) {
-            const nextChat = [...c.messages, { type: "ai", text: finalAnswer, process: processLog }];
+            const aiMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+            const nextChat = [...c.messages, { id: aiMsgId, type: "ai", text: finalAnswer, process: processLog, feedback: null, feedbackReason: "" }];
             return { ...c, messages: nextChat };
           }
           return c;
@@ -375,9 +403,10 @@ function App() {
       });
     } catch (err) {
       setError(err.message || "Gagal hubungi server. Cuba refresh.");
+      const errMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
       updateActiveMessages((prev) => [
         ...prev,
-        { type: "ai", text: "Maaf, saya tak dapat balas sekarang: " + (err.message || "Gagal hubungi server.") }
+        { id: errMsgId, type: "ai", text: "Maaf, saya tak dapat balas sekarang: " + (err.message || "Gagal hubungi server."), feedback: null, feedbackReason: "" }
       ]);
       console.error(err);
     } finally {
@@ -734,15 +763,16 @@ function App() {
               <div className="conversation-area">
                 <div className="conversation-inner">
                   {chat.map((c, i) => {
+                    const messageId = c.id || `msg_legacy_${i}`;
                     if (c.type === "user") {
                       return (
-                        <div key={i} className="user-message-row animate-slide">
+                        <div key={messageId} className="user-message-row animate-slide">
                           <div className="user-message-content">{c.text}</div>
                         </div>
                       );
                     } else {
                       return (
-                        <div key={i} className="ai-card animate-slide">
+                        <div key={messageId} className="ai-card animate-slide">
                           <div className="ai-card-header">
                             <div className="ai-card-avatar">N</div>
                             <div className="ai-card-meta">
@@ -764,34 +794,34 @@ function App() {
                           <div className="ai-card-actions">
                             <button
                               className="card-action-btn"
-                              onClick={() => copyCode(c.text, `ai-${i}`)}
+                              onClick={() => copyCode(c.text, `ai-${messageId}`)}
                             >
-                              {copiedIdx === `ai-${i}` ? "Disalin" : "Salin Respon"}
+                              {copiedIdx === `ai-${messageId}` ? "Disalin" : "Salin Respon"}
                             </button>
                             <button
                               className="card-action-btn"
-                              onClick={() => handleLike(i)}
-                              style={likes[i] ? { color: "var(--accent)", borderColor: "var(--accent)", backgroundColor: "var(--accent-light)" } : {}}
+                              onClick={() => handleLike(messageId)}
+                              style={c.feedback === "like" ? { color: "var(--accent)", borderColor: "var(--accent)", backgroundColor: "var(--accent-light)" } : {}}
                             >
                               Like
                             </button>
                             <button
                               className="card-action-btn"
-                              onClick={() => handleDislike(i)}
-                              style={dislikes[i] ? { color: "#EF4444", borderColor: "#EF4444", backgroundColor: "rgba(239, 68, 68, 0.08)" } : {}}
+                              onClick={() => handleDislike(messageId)}
+                              style={c.feedback === "dislike" ? { color: "#EF4444", borderColor: "#EF4444", backgroundColor: "rgba(239, 68, 68, 0.08)" } : {}}
                             >
                               Dislike
                             </button>
                             <button
                               className="card-action-btn"
-                              onClick={() => handleRegenerate(i)}
+                              onClick={() => handleRegenerate(messageId)}
                             >
                               Regenerate
                             </button>
                           </div>
 
                           {/* Dislike reason picker */}
-                          {dislikes[i] && dislikeReasonMsgIdx === i && (
+                          {c.feedback === "dislike" && dislikeReasonMsgId === messageId && (
                             <div className="dislike-reason-popup animate-slide">
                               <span className="reason-title">Sila pilih alasan (pilihan):</span>
                               <div className="reason-options">
@@ -799,13 +829,13 @@ function App() {
                                   <button
                                     key={opt}
                                     className="reason-opt-btn"
-                                    onClick={() => handleSelectReason(i, opt)}
+                                    onClick={() => handleSelectReason(messageId, opt)}
                                   >
                                     {opt}
                                   </button>
                                 ))}
                               </div>
-                              <button className="reason-close-btn" onClick={() => setDislikeReasonMsgIdx(null)}>
+                              <button className="reason-close-btn" onClick={() => setDislikeReasonMsgId(null)}>
                                 Tutup
                               </button>
                             </div>

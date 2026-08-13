@@ -22,5 +22,41 @@
     "type": "negative",
     "reason": "Bad code",
     "created_at": "2026-08-12T15:46:07.172Z"
+  },
+  {
+    "id": "fb_1786614777330_8dixm",
+    "conversation_id": "conv_1786614772644",
+    "message_id": "msg_1786614774472_5lfdv",
+    "user_message": "Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.",
+    "ai_response": "Maaf, saya tak dapat balas sekarang: Request failed with status code 401",
+    "provider": "openrouter",
+    "model": "qwen/qwen3-235b-a22b-2507",
+    "type": "negative",
+    "reason": "",
+    "created_at": "2026-08-13T09:52:57.330Z"
+  },
+  {
+    "id": "fb_1786614938839_9el8a",
+    "conversation_id": "conv_1786614934166",
+    "message_id": "msg_1786614935870_uvtxx",
+    "user_message": "Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.",
+    "ai_response": "Maaf, saya tak dapat balas sekarang: Request failed with status code 401",
+    "provider": "openrouter",
+    "model": "qwen/qwen3-235b-a22b-2507",
+    "type": "negative",
+    "reason": "",
+    "created_at": "2026-08-13T09:55:38.840Z"
+  },
+  {
+    "id": "fb_1786615278043_f6cj8",
+    "conversation_id": "conv_1786615272901",
+    "message_id": "msg_1786615275087_8dqfe",
+    "user_message": "Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.",
+    "ai_response": "Maaf, saya tak dapat balas sekarang: Request failed with status code 401",
+    "provider": "openrouter",
+    "model": "qwen/qwen3-235b-a22b-2507",
+    "type": "negative",
+    "reason": "",
+    "created_at": "2026-08-13T10:01:18.043Z"
   }
 ]
