@@ -58,5 +58,17 @@
     "type": "negative",
     "reason": "",
     "created_at": "2026-08-13T10:01:18.043Z"
+  },
+  {
+    "id": "fb_1786761395694_cepc7",
+    "conversation_id": "conv_1786761388331",
+    "message_id": "msg_1786761390708_1klvk",
+    "user_message": "Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.",
+    "ai_response": "Maaf, saya tak dapat balas sekarang: Request failed with status code 401",
+    "provider": "openrouter",
+    "model": "qwen/qwen3-235b-a22b-2507",
+    "type": "negative",
+    "reason": "Bad code",
+    "created_at": "2026-08-15T02:36:35.694Z"
   }
 ]

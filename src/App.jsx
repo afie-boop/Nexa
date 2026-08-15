@@ -11,11 +11,6 @@ function App() {
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
 
-  // Theme State: 'light' | 'dark'
-  const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("nexa_theme") || "light";
-  });
-
   // Online / Offline state tracking
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -86,6 +81,10 @@ function App() {
   const [dislikeReasonMsgId, setDislikeReasonMsgId] = useState(null);
 
   useEffect(() => {
+    document.documentElement.setAttribute("data-theme", "dark");
+  }, []);
+
+  useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener("online", handleOnline);
@@ -123,11 +122,6 @@ function App() {
       console.error(err);
     }
   }, [memoryEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem("nexa_theme", theme);
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -211,10 +205,6 @@ function App() {
   const handlePinConversation = (id, e) => {
     if (e) e.stopPropagation();
     setConversations(prev => prev.map(c => c.id === id ? { ...c, pinned: !c.pinned } : c));
-  };
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === "light" ? "dark" : "light");
   };
 
   const handleSuggestionClick = (promptText) => {
@@ -724,9 +714,6 @@ function App() {
           </div>
 
           <div className="top-bar-actions">
-            <button className="theme-toggle-btn" onClick={toggleTheme}>
-              {theme === "light" ? "Dark Mode" : "Light Mode"}
-            </button>
           </div>
         </header>
 

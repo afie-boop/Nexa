@@ -1,34 +1,8 @@
-/* NEXA Clean Flat UI Stylesheet */
+/* NEXA Clean Flat UI Stylesheet (Dark Mode Default) */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  /* Default Theme (Light) */
-  --bg: #F7F8FA;
-  --surface: #FFFFFF;
-  --border: #E5E7EB;
-  --primary-text: #111827;
-  --secondary-text: #6B7280;
-  --accent: #2563EB;
-  --accent-hover: #1D4ED8;
-  --accent-light: rgba(37, 99, 235, 0.06);
-  --radius: 12px;
-
-  /* Code blocks dark mode is specified as "background kelabu gelap" */
-  --code-bg: #18181B;
-  --code-text: #F4F4F5;
-  --code-border: #27272A;
-
-  /* Liquid Glass Styles (Light Mode) - Smoked Glass for high contrast with OneDark code syntax */
-  --code-glass-bg: rgba(20, 20, 25, 0.82);
-  --code-glass-header-bg: rgba(35, 35, 45, 0.9);
-  --code-glass-border: rgba(255, 255, 255, 0.08);
-  --code-glass-text: #e1e1e8;
-  --code-glass-highlight: rgba(255, 255, 255, 0.12);
-  --code-glass-shadow: rgba(0, 0, 0, 0.15);
-}
-
-[data-theme="dark"] {
-  /* Flat Premium Dark Theme */
+  /* Default Theme (Dark Obsidian) */
   --bg: #0D1117;
   --surface: #161B22;
   --border: #30363D;
@@ -37,12 +11,14 @@
   --accent: #2F81F7;
   --accent-hover: #58A6FF;
   --accent-light: rgba(47, 129, 247, 0.12);
+  --radius: 12px;
 
+  /* Code blocks dark mode */
   --code-bg: #0d1117;
   --code-text: #F0F6FC;
   --code-border: #30363D;
 
-  /* Liquid Glass Styles (Dark Mode) - Dark Obsidian Glass */
+  /* Liquid Glass Styles (Dark Obsidian Glass) */
   --code-glass-bg: rgba(10, 12, 16, 0.75);
   --code-glass-header-bg: rgba(20, 22, 28, 0.85);
   --code-glass-border: rgba(255, 255, 255, 0.06);
@@ -449,25 +425,6 @@ body {
   gap: 12px;
 }
 
-.theme-toggle-btn {
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  color: var(--primary-text);
-  font-size: 13px;
-  font-weight: 500;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: background-color 120ms ease;
-}
-
-.theme-toggle-btn:hover {
-  background-color: var(--border);
-}
-
 /* Mobile Sidebar Toggle (visible < 768px) */
 .mobile-toggle {
   display: none;
@@ -811,19 +768,14 @@ body {
 }
 
 .inline-code {
-  background-color: rgba(0, 0, 0, 0.05);
-  color: #eb5757;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #f2afab;
   padding: 2px 4px;
   border-radius: 4px;
   font-family: "JetBrains Mono", monospace;
   font-size: 0.875em;
   font-weight: 500;
   display: inline !important;
-}
-
-[data-theme="dark"] .inline-code {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #f2afab;
 }
 
 /* 5. Composer (Sticky Bottom) */

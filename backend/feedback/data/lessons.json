@@ -38,15 +38,17 @@
       "fb_1786549567172_q7v62",
       "fb_1786614777330_8dixm",
       "fb_1786614938839_9el8a",
-      "fb_1786615278043_f6cj8"
+      "fb_1786615278043_f6cj8",
+      "fb_1786761393519_1c3mc",
+      "fb_1786761395694_cepc7"
     ],
     "confidence": "high",
     "positive_count": 0,
-    "negative_count": 5,
+    "negative_count": 7,
     "original_context": "Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.",
-    "frequency": 5,
+    "frequency": 7,
     "created_at": "2026-08-12T15:46:04.998Z",
-    "updated_at": "2026-08-13T10:01:18.066Z",
-    "last_seen": "2026-08-13T10:01:18.066Z"
+    "updated_at": "2026-08-15T02:36:35.728Z",
+    "last_seen": "2026-08-15T02:36:35.728Z"
   }
 ]
