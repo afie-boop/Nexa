@@ -885,20 +885,16 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">Nexa AI Models</h2>
-              <p className="panel-subtitle">Available high performance intelligence units routing through Nexa Evolution Engine.</p>
+              <p className="panel-subtitle">Senarai model AI yang digunakan mengikut konfigurasi sistem Nexa AI.</p>
 
               <div className="grid-container">
                 <div className="flat-card">
-                  <span className="flat-card-title">llama-3.3-70b-versatile</span>
-                  <p className="flat-card-desc">Our highly versatile model optimized for complex logical thinking, creative content generation, and long conversations.</p>
+                  <span className="flat-card-title">Qwen (qwen/qwen3-235b-a22b-2507)</span>
+                  <p className="flat-card-desc">Model utama yang digunakan untuk tugasan am (General).</p>
                 </div>
                 <div className="flat-card">
-                  <span className="flat-card-title">cohere/north-mini-code</span>
-                  <p className="flat-card-desc">Specialized coding unit tuned to construct precise, beautiful structures, clear markdown listings, and directory frameworks.</p>
-                </div>
-                <div className="flat-card">
-                  <span className="flat-card-title">llama-3.1-8b-instant</span>
-                  <p className="flat-card-desc">Ultra-fast general response model deployed primarily for automated error repairs, cognitive analysis, and simple tasks.</p>
+                  <span className="flat-card-title">Free Router (openrouter/free)</span>
+                  <p className="flat-card-desc">Router yang di dalamnya boleh menggunakan model seperti Cohere, NVIDIA Ultra, dan model lain untuk tugasan pengkodan (Code).</p>
                 </div>
               </div>
             </div>
@@ -951,8 +947,8 @@ function App() {
         {activeNav === "settings" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <h2 className="panel-title">Settings & Cognitive Evolution Engine</h2>
-              <p className="panel-subtitle">Fine-tune the Nexa AI behavior memory parameters and control the live performance routers.</p>
+              <h2 className="panel-title">Settings</h2>
+              <p className="panel-subtitle">Fine-tune the Nexa AI behavior memory parameters.</p>
 
               <div className="ai-card">
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
