@@ -72,6 +72,24 @@ function App() {
     }
   });
 
+  const [generalModel, setGeneralModel] = useState(() => {
+    try {
+      const saved = localStorage.getItem("nexa_general_model");
+      return saved ? saved : "qwen/qwen3-235b-a22b-2507";
+    } catch {
+      return "qwen/qwen3-235b-a22b-2507";
+    }
+  });
+
+  const [codingModel, setCodingModel] = useState(() => {
+    try {
+      const saved = localStorage.getItem("nexa_coding_model");
+      return saved ? saved : "openrouter/free";
+    } catch {
+      return "openrouter/free";
+    }
+  });
+
   const [load, setLoad] = useState(false);
   const [error, setError] = useState(null);
   const [copiedIdx, setCopiedIdx] = useState(null);
@@ -122,6 +140,22 @@ function App() {
       console.error(err);
     }
   }, [memoryEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("nexa_general_model", generalModel);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [generalModel]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("nexa_coding_model", codingModel);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [codingModel]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -228,7 +262,7 @@ function App() {
       const targetMsg = chat.find(m => m.id === msgId);
       const aiResponseText = targetMsg?.text || "";
       const isCode = userMessageText.toLowerCase().includes("kod") || userMessageText.toLowerCase().includes("code") || aiResponseText.includes("```");
-      const model = isCode ? "openrouter/free" : "qwen/qwen3-235b-a22b-2507";
+      const model = isCode ? codingModel : generalModel;
 
       await fetch("/api/feedback", {
         method: "POST",
@@ -321,6 +355,11 @@ function App() {
     const textToSend = overrideMsg || msg;
     if (!textToSend.trim() || load) return;
 
+    if (!generalModel.trim() || !codingModel.trim()) {
+      setError("Model ID untuk General AI dan Coding AI tidak boleh kosong.");
+      return;
+    }
+
     const historyForRequest = memoryEnabled
       ? (overrideHistory || chat).map((m) => ({
           role: m.type === "user" ? "user" : "assistant",
@@ -343,7 +382,9 @@ function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question: textToSend,
-          history: historyForRequest
+          history: historyForRequest,
+          generalModel: generalModel.trim(),
+          codingModel: codingModel.trim()
         }),
       });
 
@@ -885,16 +926,50 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">Nexa AI Models</h2>
-              <p className="panel-subtitle">Senarai model AI yang digunakan mengikut konfigurasi sistem Nexa AI.</p>
+              <p className="panel-subtitle">Tetapkan Model ID tersuai untuk General AI dan Coding AI.</p>
 
               <div className="grid-container">
                 <div className="flat-card">
-                  <span className="flat-card-title">Qwen (qwen/qwen3-235b-a22b-2507)</span>
-                  <p className="flat-card-desc">Model utama yang digunakan untuk tugasan am (General).</p>
+                  <span className="flat-card-title">General AI</span>
+                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model ID untuk tugasan am / general conversation.</p>
+                  <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Model ID</label>
+                  <input
+                    type="text"
+                    value={generalModel}
+                    onChange={(e) => setGeneralModel(e.target.value)}
+                    placeholder="Contoh: openrouter/free"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      color: "inherit",
+                      fontSize: "14px",
+                      outline: "none"
+                    }}
+                  />
                 </div>
                 <div className="flat-card">
-                  <span className="flat-card-title">Free Router (openrouter/free)</span>
-                  <p className="flat-card-desc">Router yang di dalamnya boleh menggunakan model seperti Cohere, NVIDIA Ultra, dan model lain untuk tugasan pengkodan (Code).</p>
+                  <span className="flat-card-title">Coding AI</span>
+                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model ID untuk tugasan pengkodan / coding tasks.</p>
+                  <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Model ID</label>
+                  <input
+                    type="text"
+                    value={codingModel}
+                    onChange={(e) => setCodingModel(e.target.value)}
+                    placeholder="Contoh: qwen/qwen3-coder:free"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      color: "inherit",
+                      fontSize: "14px",
+                      outline: "none"
+                    }}
+                  />
                 </div>
               </div>
             </div>

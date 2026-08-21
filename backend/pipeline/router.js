@@ -8,6 +8,8 @@ async function router(data) {
     task,
     question,
     history = [],
+    generalModel,
+    codingModel,
     sendStatus = () => {}
   } = data;
 
@@ -16,10 +18,10 @@ async function router(data) {
   let provider, model;
   if (task === "code") {
     provider = "openrouter";
-    model = "openrouter/free";
+    model = codingModel || "openrouter/free";
   } else {
     provider = "openrouter";
-    model = "qwen/qwen3-235b-a22b-2507";
+    model = generalModel || "qwen/qwen3-235b-a22b-2507";
   }
   let system;
 

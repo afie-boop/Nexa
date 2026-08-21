@@ -70,6 +70,8 @@ app.post("/chat", async (req, res) => {
       return sendError("Mesej tak boleh kosong.");
     }
 
+    const { generalModel, codingModel } = req.body;
+
     sendStatus("Mengelaskan permintaan...");
 
     const task = await classifyTask(
@@ -81,6 +83,8 @@ app.post("/chat", async (req, res) => {
       task,
       question,
       history: history || [],
+      generalModel,
+      codingModel,
       sendStatus
     });
 
