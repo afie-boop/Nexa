@@ -801,14 +801,6 @@ function App() {
                     } else {
                       return (
                         <div key={messageId} className="ai-card animate-slide">
-                          <div className="ai-card-header">
-                            <div className="ai-card-avatar">N</div>
-                            <div className="ai-card-meta">
-                              <span className="ai-card-title">Nexa AI</span>
-                              <span className="ai-card-subtitle">AI Response</span>
-                            </div>
-                          </div>
-
                           <div className="ai-card-body">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
@@ -876,13 +868,6 @@ function App() {
                   {/* Active Loading response card */}
                   {load && (
                     <div className="ai-card animate-slide">
-                      <div className="ai-card-header">
-                        <div className="ai-card-avatar">N</div>
-                        <div className="ai-card-meta">
-                          <span className="ai-card-title">Nexa AI</span>
-                          <span className="ai-card-subtitle">Thinking...</span>
-                        </div>
-                      </div>
                       <div className="ai-card-body">
                         <div className="loading-card">
                           <span className="loading-text">Nexa sedang berfikir dan menyusun jawapan terbaik...</span>

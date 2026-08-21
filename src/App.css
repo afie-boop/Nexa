@@ -669,8 +669,8 @@ body {
   flex-wrap: wrap; /* Prevent button overflow on smart phones */
   gap: 8px;
   margin-top: 8px;
-  border-top: 1px solid var(--border);
-  padding-top: 12px;
+  border-top: none;
+  padding-top: 0;
 }
 
 .card-action-btn {
