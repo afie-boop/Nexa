@@ -1387,7 +1387,7 @@ function App() {
               <h2 className="panel-title">Settings</h2>
               <p className="panel-subtitle">Fine-tune the Nexa AI behavior memory parameters.</p>
 
-              <div className="ai-card">
+              <div className="flat-card">
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" }}>
                   <div>
@@ -1423,9 +1423,13 @@ function App() {
               <h2 className="panel-title">About NEXA AI</h2>
               <p className="panel-subtitle">Nexa is a minimalist, clean, and highly productive workspace designed from the ground up for developer efficiency.</p>
 
-              <div className="ai-card">
-                <p>Nexa is built upon a dual-column flat structural philosophy: an organized sidebar navigation for immediate interaction and a broad central workspace providing a clean layout with zero visual clutter.</p>
-                <p style={{ marginTop: "16px", fontWeight: "500" }}>Made with focus, clarity, and precision for professional builders.</p>
+              <div className="flat-card">
+                <p style={{ lineHeight: "1.6", color: "var(--primary-text)" }}>
+                  Nexa is built upon a dual-column flat structural philosophy: an organized sidebar navigation for immediate interaction and a broad central workspace providing a clean layout with zero visual clutter.
+                </p>
+                <p style={{ marginTop: "16px", fontWeight: "500", color: "var(--secondary-text)" }}>
+                  Made with focus, clarity, and precision for professional builders.
+                </p>
               </div>
             </div>
           </div>
