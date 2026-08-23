@@ -701,34 +701,15 @@ body {
    AGENT MODE AGENT CARD & PERMISSION REQUEST COMPONENT STYLES
    ========================================================================== */
 .agent-card {
-  background-color: var(--surface);
-  border: 1px solid var(--border);
+  background-color: transparent;
+  border: none;
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 0;
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   gap: 16px;
   width: 100%;
-}
-
-.agent-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 12px;
-}
-
-.agent-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background-color: var(--accent-light);
-  color: var(--accent);
-  padding: 4px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
 }
 
 .agent-operation-status {

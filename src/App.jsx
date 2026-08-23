@@ -982,14 +982,9 @@ function App() {
                       // RENDER AGENT MODE CARD
                       return (
                         <div key={messageId} className="agent-card animate-slide">
-                          <div className="agent-header">
-                            <div className="agent-badge">
-                              <span>🤖 Nexa Agent</span>
-                            </div>
-                            {c.operation && (
-                              <span className="agent-operation-status">{c.operation}</span>
-                            )}
-                          </div>
+                          {c.operation && (
+                            <span className="agent-operation-status">{c.operation}</span>
+                          )}
 
                           {/* Action Plan */}
                           {c.plan && (
