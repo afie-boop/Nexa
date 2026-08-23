@@ -542,12 +542,14 @@ body {
   color: var(--primary-text);
   border-radius: 0;
   padding: 0;
+  padding-left: 24px;
   max-width: 85%;
   font-size: 15px;
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: break-word;
+  text-align: right;
 }
 
 /* AI Answer - Transparent response block without background, border, or shadow */
