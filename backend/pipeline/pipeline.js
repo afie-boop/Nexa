@@ -16,7 +16,10 @@ async function runPipeline(data) {
   logger.start(data.question);
   let currentModule = "";
 
+  const emitStep = data.sendProcessStep || (() => {});
+
   try {
+    emitStep({ id: "analyze_request", label: "Analyzing request", status: "active" });
 
     // ===========================
     // Router
@@ -31,6 +34,7 @@ async function runPipeline(data) {
     taskCategory = data.task;
 
     logger.moduleSuccess("Router");
+    emitStep({ id: "analyze_request", label: "Analyzing request", status: "completed" });
 
     logger.pipelineInfo({
       task: data.task,
@@ -55,6 +59,7 @@ async function runPipeline(data) {
 
     currentModule = "Coder";
     logger.moduleStart("Coder");
+    emitStep({ id: "generate_response", label: "Generating response", status: "active" });
 
     data = await coder(data);
 
@@ -62,6 +67,7 @@ async function runPipeline(data) {
       "Coder",
       `Response Length : ${data.response.length}`
     );
+    emitStep({ id: "generate_response", label: "Generating response", status: "completed" });
 
     // ===========================
     // Reviewer
@@ -69,6 +75,7 @@ async function runPipeline(data) {
 
     currentModule = "Reviewer";
     logger.moduleStart("Reviewer");
+    emitStep({ id: "review_response", label: "Reviewing response", status: "active" });
 
     data = await reviewer(data);
 
@@ -76,6 +83,7 @@ async function runPipeline(data) {
       "Reviewer",
       `Passed : ${data.review.passed}`
     );
+    emitStep({ id: "review_response", label: "Reviewing response", status: "completed" });
 
     // ===========================
     // Validator
@@ -110,6 +118,7 @@ async function runPipeline(data) {
     logger.moduleSuccess("Formatter");
 
     logger.finish();
+    emitStep({ id: "completed", label: "Completed", status: "completed" });
 
     return output;
 

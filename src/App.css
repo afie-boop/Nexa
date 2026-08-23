@@ -568,6 +568,63 @@ body {
   overflow-x: hidden;
 }
 
+/* Process Tracker Styles */
+.process-tracker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.process-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--secondary-text);
+  transition: color 120ms ease;
+}
+
+.process-step.completed {
+  color: #10B981;
+}
+
+.process-step.active {
+  color: var(--primary-text);
+  font-weight: 500;
+}
+
+.process-step.failed {
+  color: #EF4444;
+}
+
+.process-step.pending {
+  color: #6B7280;
+}
+
+.process-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-weight: bold;
+}
+
+.process-step.active .process-icon {
+  animation: spinProcess 1.5s linear infinite;
+}
+
+@keyframes spinProcess {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .ai-card-body {
   font-size: 15px;
   line-height: 1.65;

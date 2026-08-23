@@ -137,6 +137,7 @@ async function runAgentTask({
   let isCompleted = false;
 
   sendEvent("agent_start", { sessionId, question });
+  sendEvent("process_step", { id: "analyze_request", label: "Analyze request", status: "active" });
   sendEvent("operation", { text: "Meneliti tugasan dan menganalisis projek..." });
 
   while (currentStep < MAX_LOOP_STEPS && !isCompleted) {
@@ -168,9 +169,17 @@ async function runAgentTask({
     const toolCall = extractToolCall(llmResponseText);
 
     if (!toolCall) {
+      // Mark analyze request as completed if not done yet
+      sendEvent("process_step", { id: "analyze_request", label: "Analyze request", status: "completed" });
+      sendEvent("process_step", { id: "organize_findings", label: "Organize findings", status: "completed" });
+      sendEvent("process_step", { id: "prepare_response", label: "Prepare response", status: "active" });
+
       // No tool call -> Model finished task or produced final text answer
       finalSummary = llmResponseText;
       isCompleted = true;
+
+      sendEvent("process_step", { id: "prepare_response", label: "Prepare response", status: "completed" });
+      sendEvent("process_step", { id: "completed", label: "Completed", status: "completed" });
 
       sendEvent("final_answer", {
         summary: finalSummary,
@@ -183,6 +192,43 @@ async function runAgentTask({
     // Tool call detected
     const { tool, args } = toolCall;
     const filePath = args.path || args.filePath;
+
+    // Transition analysis to completed
+    sendEvent("process_step", { id: "analyze_request", label: "Analyze request", status: "completed" });
+
+    // Derive high-level event step label from real tool and args
+    let stepId = `tool_${tool}`;
+    let stepLabel = `Executing ${tool}`;
+
+    if (tool === "list_files") {
+      stepId = "inspect_project_structure";
+      stepLabel = "Inspect project structure";
+    } else if (tool === "read_file") {
+      if (filePath && (filePath.includes("frontend") || filePath.includes("src") || filePath.endsWith(".jsx") || filePath.endsWith(".tsx"))) {
+        stepId = "inspect_frontend";
+        stepLabel = `Inspect frontend (${filePath})`;
+      } else if (filePath && (filePath.includes("backend") || filePath.endsWith(".js") || filePath.includes("server"))) {
+        stepId = "inspect_backend";
+        stepLabel = `Inspect backend (${filePath})`;
+      } else if (filePath && (filePath.includes("router") || filePath.includes("pipeline") || filePath.includes("model"))) {
+        stepId = "inspect_ai_router";
+        stepLabel = `Inspect AI router (${filePath})`;
+      } else {
+        stepId = `read_${filePath ? filePath.replace(/[^a-zA-Z0-9]/g, "_") : "file"}`;
+        stepLabel = `Reading file ${filePath || ""}`.trim();
+      }
+    } else if (tool === "search_code") {
+      stepId = "search_code";
+      stepLabel = `Searching code: "${args.query || ""}"`;
+    } else if (tool === "create_file" || tool === "edit_file" || tool === "delete_file") {
+      stepId = `modify_${filePath ? filePath.replace(/[^a-zA-Z0-9]/g, "_") : "file"}`;
+      stepLabel = `Modifying file ${filePath || ""}`.trim();
+    } else if (tool === "run_command") {
+      stepId = `command_${args.command ? args.command.replace(/[^a-zA-Z0-9]/g, "_") : "exec"}`;
+      stepLabel = `Running command: ${args.command || ""}`;
+    }
+
+    sendEvent("process_step", { id: stepId, label: stepLabel, status: "active" });
 
     // Send plan update if detected
     const planText = parsePlanFromText(llmResponseText);
@@ -264,6 +310,12 @@ async function runAgentTask({
       args,
       result: toolResultText,
       success: toolExecutionSuccess
+    });
+
+    sendEvent("process_step", {
+      id: stepId,
+      label: stepLabel,
+      status: toolExecutionSuccess ? "completed" : "failed"
     });
 
     // Handle Autonomous Fix Loop for validation commands (npm run build, npm test, etc.)

@@ -104,6 +104,15 @@ app.post("/chat", async (req, res) => {
     );
   }
 
+  function sendProcessStep(step) {
+    res.write(
+      `data: ${JSON.stringify({
+        type: "process_step",
+        ...step
+      })}\n\n`
+    );
+  }
+
   function sendAnswer(text) {
     res.write(
       `data: ${JSON.stringify({
@@ -144,7 +153,8 @@ app.post("/chat", async (req, res) => {
       history: history || [],
       generalModel,
       codingModel,
-      sendStatus
+      sendStatus,
+      sendProcessStep
     });
 
     sendAnswer(answer);

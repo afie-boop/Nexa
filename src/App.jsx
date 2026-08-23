@@ -445,7 +445,8 @@ function App() {
         validationStatus: null,
         finalAnswer: "",
         feedback: null,
-        feedbackReason: ""
+        feedbackReason: "",
+        processSteps: []
       };
 
       updateActiveMessages(prev => [...prev, initialAgentMsg]);
@@ -490,7 +491,17 @@ function App() {
                 if (m.id === aiMsgId) {
                   let nextMsg = { ...m };
 
-                  if (data.type === "plan") {
+                  if (data.type === "process_step") {
+                    const currentSteps = nextMsg.processSteps || [];
+                    const existingIdx = currentSteps.findIndex(s => s.id === data.id);
+                    if (existingIdx !== -1) {
+                      const updated = [...currentSteps];
+                      updated[existingIdx] = { ...updated[existingIdx], status: data.status, label: data.label || updated[existingIdx].label };
+                      nextMsg.processSteps = updated;
+                    } else {
+                      nextMsg.processSteps = [...currentSteps, { id: data.id, label: data.label, status: data.status }];
+                    }
+                  } else if (data.type === "plan") {
                     nextMsg.plan = data.text;
                   } else if (data.type === "operation") {
                     nextMsg.operation = data.text;
@@ -562,6 +573,15 @@ function App() {
         let finalAnswer = null;
         let serverError = null;
         const processLog = [];
+        let processSteps = [];
+
+        const aiMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+
+        // Pre-insert AI message container to hold real-time processSteps
+        updateActiveMessages((prev) => [
+          ...prev,
+          { id: aiMsgId, type: "ai", text: "", process: [], processSteps: [], feedback: null, feedbackReason: "" }
+        ]);
 
         while (true) {
           const { done, value } = await reader.read();
@@ -575,7 +595,29 @@ function App() {
             if (!part.startsWith("data: ")) continue;
             const data = JSON.parse(part.slice(6));
 
-            if (data.type === "status") {
+            if (data.type === "process_step") {
+              const existingIdx = processSteps.findIndex(s => s.id === data.id);
+              if (existingIdx !== -1) {
+                processSteps[existingIdx] = { ...processSteps[existingIdx], status: data.status, label: data.label || processSteps[existingIdx].label };
+              } else {
+                processSteps.push({ id: data.id, label: data.label, status: data.status });
+              }
+
+              updateActiveMessages(prevConvs => {
+                return prevConvs.map(c => {
+                  if (c.id === activeId) {
+                    const updatedMsgs = c.messages.map(m => {
+                      if (m.id === aiMsgId) {
+                        return { ...m, processSteps: [...processSteps] };
+                      }
+                      return m;
+                    });
+                    return { ...c, messages: updatedMsgs };
+                  }
+                  return c;
+                });
+              });
+            } else if (data.type === "status") {
               processLog.push(data.text);
             } else if (data.type === "answer") {
               finalAnswer = data.text;
@@ -588,16 +630,12 @@ function App() {
         if (serverError) throw new Error(serverError);
         if (finalAnswer === null) throw new Error("Tiada jawapan diterima.");
 
-        setConversations(prevConvs => {
-          return prevConvs.map(c => {
-            if (c.id === activeId) {
-              const aiMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-              const nextChat = [...c.messages, { id: aiMsgId, type: "ai", text: finalAnswer, process: processLog, feedback: null, feedbackReason: "" }];
-              return { ...c, messages: nextChat };
-            }
-            return c;
-          });
-        });
+        updateActiveMessages(prev => prev.map(m => {
+          if (m.id === aiMsgId) {
+            return { ...m, text: finalAnswer, process: processLog };
+          }
+          return m;
+        }));
       } catch (err) {
         setError(err.message || "Gagal hubungi server. Cuba refresh.");
         const errMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
@@ -966,10 +1004,27 @@ function App() {
                       );
                     } else if (c.isAgent) {
                       // RENDER AGENT MODE CARD (ChatGPT Minimalist & Clean Style)
-                      if (!c.finalAnswer && !c.pendingPermission) return null;
+                      if (!c.finalAnswer && !c.pendingPermission && (!c.processSteps || c.processSteps.length === 0) && !c.operation) return null;
 
                       return (
                         <div key={messageId} className="ai-card agent-card animate-slide">
+                          {/* Real-Time Process Tracking Box */}
+                          {c.processSteps && c.processSteps.length > 0 && (
+                            <div className="process-tracker">
+                              {c.processSteps.map((step) => (
+                                <div key={step.id} className={`process-step ${step.status}`}>
+                                  <span className="process-icon">
+                                    {step.status === "completed" && "✓"}
+                                    {step.status === "active" && "⟳"}
+                                    {step.status === "failed" && "✕"}
+                                    {step.status === "pending" && "○"}
+                                  </span>
+                                  <span className="process-label">{step.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
                           {/* Interactive Permission Request Card */}
                           {c.pendingPermission && (
                             <div className="permission-card animate-slide">
@@ -1055,6 +1110,23 @@ function App() {
                       // RENDER REGULAR CHAT AI CARD
                       return (
                         <div key={messageId} className="ai-card animate-slide">
+                          {/* Real-Time Process Tracking Box */}
+                          {c.processSteps && c.processSteps.length > 0 && (
+                            <div className="process-tracker">
+                              {c.processSteps.map((step) => (
+                                <div key={step.id} className={`process-step ${step.status}`}>
+                                  <span className="process-icon">
+                                    {step.status === "completed" && "✓"}
+                                    {step.status === "active" && "⟳"}
+                                    {step.status === "failed" && "✕"}
+                                    {step.status === "pending" && "○"}
+                                  </span>
+                                  <span className="process-label">{step.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
                           <div className="ai-card-body">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
