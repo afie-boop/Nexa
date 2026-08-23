@@ -8,6 +8,9 @@ import "./App.css";
 function App() {
   const [msg, setMsg] = useState("");
 
+  // Mode state: 'chat' | 'agent'
+  const [mode, setMode] = useState("chat");
+
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
 
@@ -260,7 +263,7 @@ function App() {
     try {
       const userMessageText = getUserMessageBeforeId(msgId);
       const targetMsg = chat.find(m => m.id === msgId);
-      const aiResponseText = targetMsg?.text || "";
+      const aiResponseText = targetMsg?.text || targetMsg?.finalAnswer || "";
       const isCode = userMessageText.toLowerCase().includes("kod") || userMessageText.toLowerCase().includes("code") || aiResponseText.includes("```");
       const model = isCode ? codingModel : generalModel;
 
@@ -338,11 +341,9 @@ function App() {
     const msgIdx = chat.findIndex(m => m.id === msgId);
     if (msgIdx === -1) return;
 
-    // Find the last user message before this AI response
     const lastUserMsgIdx = chat.slice(0, msgIdx).reduce((lastIdx, m, i) => m.type === "user" ? i : lastIdx, -1);
     if (lastUserMsgIdx !== -1) {
       const userText = chat[lastUserMsgIdx].text;
-      // Slice history up to that user message
       const historyToKeep = chat.slice(0, lastUserMsgIdx);
       updateActiveMessages([...historyToKeep, { id: chat[lastUserMsgIdx].id, type: "user", text: userText }]);
       setTimeout(() => {
@@ -351,6 +352,28 @@ function App() {
     }
   };
 
+  // Agent Permission Response Handler
+  const handlePermissionDecision = async (messageId, sessionId, requestId, approved) => {
+    try {
+      await fetch("/api/agent/permission", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId, requestId, approved })
+      });
+
+      // Clear pending permission in message state
+      updateActiveMessages(prev => prev.map(m => {
+        if (m.id === messageId) {
+          return { ...m, pendingPermission: null };
+        }
+        return m;
+      }));
+    } catch (err) {
+      console.error("Gagal menghantar keputusan kelulusan:", err);
+    }
+  };
+
+  // Main Send Function (handles Chat Mode and Agent Mode)
   async function send(overrideMsg, overrideHistory) {
     const textToSend = overrideMsg || msg;
     if (!textToSend.trim() || load) return;
@@ -363,7 +386,7 @@ function App() {
     const historyForRequest = memoryEnabled
       ? (overrideHistory || chat).map((m) => ({
           role: m.type === "user" ? "user" : "assistant",
-          content: m.text,
+          content: m.text || m.finalAnswer || "",
         }))
       : [];
 
@@ -376,72 +399,189 @@ function App() {
     setLoad(true);
     setError(null);
 
-    try {
-      const res = await fetch("/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: textToSend,
-          history: historyForRequest,
-          generalModel: generalModel.trim(),
-          codingModel: codingModel.trim()
-        }),
-      });
+    if (mode === "agent") {
+      // AGENT MODE EXECUTION
+      const sessionId = `agent_session_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      const aiMsgId = "msg_agent_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
 
-      if (!res.ok || !res.body) throw new Error(`Server balas status ${res.status}`);
+      const initialAgentMsg = {
+        id: aiMsgId,
+        type: "ai",
+        isAgent: true,
+        sessionId,
+        task: textToSend,
+        operation: "Meneliti tugasan dan menganalisis projek...",
+        plan: "",
+        toolLogs: [],
+        pendingPermission: null,
+        changedFiles: [],
+        validationStatus: null,
+        finalAnswer: "",
+        feedback: null,
+        feedbackReason: ""
+      };
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let finalAnswer = null;
-      let serverError = null;
-      const processLog = [];
+      updateActiveMessages(prev => [...prev, initialAgentMsg]);
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      try {
+        const res = await fetch("/api/agent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: textToSend,
+            history: historyForRequest,
+            codingModel: codingModel.trim(),
+            sessionId
+          })
+        });
 
-        buffer += decoder.decode(value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop();
+        if (!res.ok || !res.body) throw new Error(`Server Ejen balas status ${res.status}`);
 
-        for (const part of parts) {
-          if (!part.startsWith("data: ")) continue;
-          const data = JSON.parse(part.slice(6));
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
 
-          if (data.type === "status") {
-            processLog.push(data.text);
-          } else if (data.type === "answer") {
-            finalAnswer = data.text;
-          } else if (data.type === "error") {
-            serverError = data.text;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop();
+
+          for (const part of parts) {
+            if (!part.startsWith("data: ")) continue;
+            let data;
+            try {
+              data = JSON.parse(part.slice(6));
+            } catch {
+              continue;
+            }
+
+            updateActiveMessages(prevConvs => {
+              return prevConvs.map(m => {
+                if (m.id === aiMsgId) {
+                  let nextMsg = { ...m };
+
+                  if (data.type === "plan") {
+                    nextMsg.plan = data.text;
+                  } else if (data.type === "operation") {
+                    nextMsg.operation = data.text;
+                  } else if (data.type === "tool_executing") {
+                    nextMsg.toolLogs = [...(nextMsg.toolLogs || []), { tool: data.tool, args: data.args, status: "executing" }];
+                  } else if (data.type === "permission_request") {
+                    nextMsg.pendingPermission = {
+                      requestId: data.requestId,
+                      tool: data.tool,
+                      args: data.args,
+                      reason: data.reason,
+                      diff: data.diff
+                    };
+                  } else if (data.type === "tool_result") {
+                    const logs = [...(nextMsg.toolLogs || [])];
+                    if (logs.length > 0) {
+                      logs[logs.length - 1] = {
+                        ...logs[logs.length - 1],
+                        result: data.result,
+                        status: data.success ? "success" : "failed"
+                      };
+                    }
+                    nextMsg.toolLogs = logs;
+                  } else if (data.type === "changed_files") {
+                    nextMsg.changedFiles = data.files;
+                  } else if (data.type === "validation_status") {
+                    nextMsg.validationStatus = data;
+                  } else if (data.type === "final_answer") {
+                    nextMsg.finalAnswer = data.summary;
+                    nextMsg.operation = "";
+                    if (data.changedFiles) nextMsg.changedFiles = data.changedFiles;
+                  } else if (data.type === "error") {
+                    nextMsg.operation = `Ralat: ${data.text}`;
+                  }
+
+                  return nextMsg;
+                }
+                return m;
+              });
+            });
           }
         }
+      } catch (err) {
+        setError(err.message || "Gagal hubungi server ejen.");
+        console.error(err);
+      } finally {
+        setLoad(false);
       }
 
-      if (serverError) throw new Error(serverError);
-      if (finalAnswer === null) throw new Error("Tiada jawapan diterima.");
-
-      setConversations(prevConvs => {
-        return prevConvs.map(c => {
-          if (c.id === activeId) {
-            const aiMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-            const nextChat = [...c.messages, { id: aiMsgId, type: "ai", text: finalAnswer, process: processLog, feedback: null, feedbackReason: "" }];
-            return { ...c, messages: nextChat };
-          }
-          return c;
+    } else {
+      // CHAT MODE EXECUTION (Standard Nexa Chat)
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: textToSend,
+            history: historyForRequest,
+            generalModel: generalModel.trim(),
+            codingModel: codingModel.trim()
+          }),
         });
-      });
-    } catch (err) {
-      setError(err.message || "Gagal hubungi server. Cuba refresh.");
-      const errMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-      updateActiveMessages((prev) => [
-        ...prev,
-        { id: errMsgId, type: "ai", text: "Maaf, saya tak dapat balas sekarang: " + (err.message || "Gagal hubungi server."), feedback: null, feedbackReason: "" }
-      ]);
-      console.error(err);
-    } finally {
-      setLoad(false);
+
+        if (!res.ok || !res.body) throw new Error(`Server balas status ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let finalAnswer = null;
+        let serverError = null;
+        const processLog = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop();
+
+          for (const part of parts) {
+            if (!part.startsWith("data: ")) continue;
+            const data = JSON.parse(part.slice(6));
+
+            if (data.type === "status") {
+              processLog.push(data.text);
+            } else if (data.type === "answer") {
+              finalAnswer = data.text;
+            } else if (data.type === "error") {
+              serverError = data.text;
+            }
+          }
+        }
+
+        if (serverError) throw new Error(serverError);
+        if (finalAnswer === null) throw new Error("Tiada jawapan diterima.");
+
+        setConversations(prevConvs => {
+          return prevConvs.map(c => {
+            if (c.id === activeId) {
+              const aiMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+              const nextChat = [...c.messages, { id: aiMsgId, type: "ai", text: finalAnswer, process: processLog, feedback: null, feedbackReason: "" }];
+              return { ...c, messages: nextChat };
+            }
+            return c;
+          });
+        });
+      } catch (err) {
+        setError(err.message || "Gagal hubungi server. Cuba refresh.");
+        const errMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+        updateActiveMessages((prev) => [
+          ...prev,
+          { id: errMsgId, type: "ai", text: "Maaf, saya tak dapat balas sekarang: " + (err.message || "Gagal hubungi server."), feedback: null, feedbackReason: "" }
+        ]);
+        console.error(err);
+      } finally {
+        setLoad(false);
+      }
     }
   }
 
@@ -569,7 +709,7 @@ function App() {
 
   const filteredConversations = conversations.filter(c => {
     const matchesTitle = c.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesContent = c.messages.some(m => m.text.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesContent = c.messages.some(m => (m.text || m.finalAnswer || "").toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesTitle || matchesContent;
   });
 
@@ -739,22 +879,37 @@ function App() {
       <div className="workspace">
         {/* 1. Top Bar */}
         <header className="top-bar">
-          <button
-            className="mobile-toggle"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            ☰
-          </button>
+          <div className="top-bar-left">
+            <button
+              className="mobile-toggle"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+            >
+              ☰
+            </button>
 
-          <div className="ai-status-container">
-            <span className="ai-name">Nexa AI</span>
-            <div className="status-indicator">
-              <span className={`status-dot ${currentStatus === "Thinking" ? "thinking" : ""}`} />
-              <span>{currentStatus}</span>
+            <div className="ai-status-container">
+              <span className="ai-name">Nexa AI</span>
+              <div className="status-indicator">
+                <span className={`status-dot ${currentStatus === "Thinking" ? "thinking" : ""}`} />
+                <span>{currentStatus}</span>
+              </div>
             </div>
           </div>
 
-          <div className="top-bar-actions">
+          {/* Mode Switcher Pill */}
+          <div className="mode-switcher">
+            <button
+              className={`mode-btn ${mode === "chat" ? "active" : ""}`}
+              onClick={() => setMode("chat")}
+            >
+              Chat Mode
+            </button>
+            <button
+              className={`mode-btn ${mode === "agent" ? "active" : ""}`}
+              onClick={() => setMode("agent")}
+            >
+              Agent Mode (Jules)
+            </button>
           </div>
         </header>
 
@@ -768,22 +923,47 @@ function App() {
             {chat.length === 0 && !load ? (
               <div className="hero-section animate-fade">
                 <div className="hero-logo">N</div>
-                <h2 className="hero-title">Hello, I'm Nexa.</h2>
-                <p className="hero-tagline">Build. Think. Create.</p>
+                <h2 className="hero-title">
+                  {mode === "agent" ? "Nexa Agent Mode (Jules)" : "Hello, I'm Nexa."}
+                </h2>
+                <p className="hero-tagline">
+                  {mode === "agent"
+                    ? "Autonomous AI Coding Agent. Inspect, code, test & fix."
+                    : "Build. Think. Create."}
+                </p>
 
                 <div className="suggestion-prompts-container">
-                  <button
-                    className="suggestion-btn"
-                    onClick={() => handleSuggestionClick("Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.")}
-                  >
-                    Tulis Kod Fibonacci
-                  </button>
-                  <button
-                    className="suggestion-btn"
-                    onClick={() => handleSuggestionClick("Bina satu strategi pemasaran digital ringkas untuk permulaan teknologi.")}
-                  >
-                    Strategi Pemasaran
-                  </button>
+                  {mode === "agent" ? (
+                    <>
+                      <button
+                        className="suggestion-btn"
+                        onClick={() => handleSuggestionClick("Periksa fail package.json dan jalankan npm run build untuk mengesahkan projek.")}
+                      >
+                        Jalankan Pengesahan Build
+                      </button>
+                      <button
+                        className="suggestion-btn"
+                        onClick={() => handleSuggestionClick("Cari semua fungsi dalam backend/server.js dan jelaskan strukturnya.")}
+                      >
+                        Analisis Kod Server
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="suggestion-btn"
+                        onClick={() => handleSuggestionClick("Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.")}
+                      >
+                        Tulis Kod Fibonacci
+                      </button>
+                      <button
+                        className="suggestion-btn"
+                        onClick={() => handleSuggestionClick("Bina satu strategi pemasaran digital ringkas untuk permulaan teknologi.")}
+                      >
+                        Strategi Pemasaran
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
@@ -798,7 +978,165 @@ function App() {
                           <div className="user-message-content">{c.text}</div>
                         </div>
                       );
+                    } else if (c.isAgent) {
+                      // RENDER AGENT MODE CARD
+                      return (
+                        <div key={messageId} className="agent-card animate-slide">
+                          <div className="agent-header">
+                            <div className="agent-badge">
+                              <span>🤖 Nexa Agent</span>
+                            </div>
+                            {c.operation && (
+                              <span className="agent-operation-status">{c.operation}</span>
+                            )}
+                          </div>
+
+                          {/* Action Plan */}
+                          {c.plan && (
+                            <div>
+                              <div className="agent-section-title">Perancangan Tindakan (Action Plan)</div>
+                              <div className="agent-plan-box">{c.plan}</div>
+                            </div>
+                          )}
+
+                          {/* Operations Timeline / Tools Log */}
+                          {c.toolLogs && c.toolLogs.length > 0 && (
+                            <div>
+                              <div className="agent-section-title">Log Operasi Ejen</div>
+                              <div className="agent-tools-timeline">
+                                {c.toolLogs.map((tl, idx) => (
+                                  <div key={idx} className="agent-tool-item">
+                                    <span className="agent-tool-name">[{tl.tool}]</span>
+                                    <span>
+                                      {tl.args ? JSON.stringify(tl.args) : ""} -{" "}
+                                      {tl.status === "executing"
+                                        ? "Sedang dijalankan..."
+                                        : tl.status === "success"
+                                        ? "Berjaya ✓"
+                                        : "Gagal ✗"}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Interactive Permission Request Card */}
+                          {c.pendingPermission && (
+                            <div className="permission-card animate-slide">
+                              <div className="permission-header">
+                                <span>⚠️ Kebenaran Diperlukan (Permission Request)</span>
+                              </div>
+                              <div className="permission-reason">
+                                <strong>Tindakan:</strong> {c.pendingPermission.tool} (
+                                {JSON.stringify(c.pendingPermission.args)})
+                                <br />
+                                <strong>Alasan:</strong> {c.pendingPermission.reason}
+                              </div>
+
+                              {c.pendingPermission.diff && (
+                                <div>
+                                  <div className="agent-section-title" style={{ marginTop: "8px" }}>
+                                    Pratonton Perubahan (Diff Preview)
+                                  </div>
+                                  <div className="permission-diff">
+                                    {c.pendingPermission.diff.split("\n").map((line, dIdx) => (
+                                      <div
+                                        key={dIdx}
+                                        className={
+                                          line.startsWith("+")
+                                            ? "diff-add"
+                                            : line.startsWith("-")
+                                            ? "diff-del"
+                                            : ""
+                                        }
+                                      >
+                                        {line}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="permission-actions">
+                                <button
+                                  className="btn-approve"
+                                  onClick={() =>
+                                    handlePermissionDecision(
+                                      messageId,
+                                      c.sessionId,
+                                      c.pendingPermission.requestId,
+                                      true
+                                    )
+                                  }
+                                >
+                                  Luluskan (Approve)
+                                </button>
+                                <button
+                                  className="btn-reject"
+                                  onClick={() =>
+                                    handlePermissionDecision(
+                                      messageId,
+                                      c.sessionId,
+                                      c.pendingPermission.requestId,
+                                      false
+                                    )
+                                  }
+                                >
+                                  Tolak (Reject)
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Changed Files */}
+                          {c.changedFiles && c.changedFiles.length > 0 && (
+                            <div>
+                              <div className="agent-section-title">Fail Diubah</div>
+                              <div className="agent-changed-files">
+                                {c.changedFiles.map((file, fIdx) => (
+                                  <span key={fIdx} className="file-chip">
+                                    {file}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Build / Validation Status */}
+                          {c.validationStatus && (
+                            <div>
+                              <div className="agent-section-title">Status Pengesahan (Validation)</div>
+                              <div
+                                className={`validation-badge ${
+                                  c.validationStatus.success ? "success" : "failed"
+                                }`}
+                              >
+                                {c.validationStatus.success
+                                  ? `✓ ${c.validationStatus.command} (Lulus)`
+                                  : `✗ ${c.validationStatus.command} (Percubaan ${c.validationStatus.attempt}/${c.validationStatus.maxAttempts})`}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Final Answer Summary */}
+                          {c.finalAnswer && (
+                            <div>
+                              <div className="agent-section-title">Keputusan Akhir</div>
+                              <div className="ai-card-body">
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  components={MarkdownComponents}
+                                >
+                                  {c.finalAnswer}
+                                </ReactMarkdown>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
                     } else {
+                      // RENDER REGULAR CHAT AI CARD
                       return (
                         <div key={messageId} className="ai-card animate-slide">
                           <div className="ai-card-body">
@@ -870,7 +1208,11 @@ function App() {
                     <div className="ai-card animate-slide">
                       <div className="ai-card-body">
                         <div className="loading-card">
-                          <span className="loading-text">Nexa sedang berfikir dan menyusun jawapan terbaik...</span>
+                          <span className="loading-text">
+                            {mode === "agent"
+                              ? "Nexa Agent sedang menganalisis dan menjalankan tugasan..."
+                              : "Nexa sedang berfikir dan menyusun jawapan terbaik..."}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -880,7 +1222,7 @@ function App() {
               </div>
             )}
 
-            {/* 5. Composer Workspace (Sticky Bottom) - NO TOOLBAR BUTTONS */}
+            {/* 5. Composer Workspace (Sticky Bottom) */}
             <div className="composer-sticky-container">
               <div className="composer-workspace">
                 <div className="composer-input-row">
@@ -889,7 +1231,11 @@ function App() {
                     value={msg}
                     onChange={(e) => setMsg(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
+                    placeholder={
+                      mode === "agent"
+                        ? "Berikan tugasan pengkodan untuk Nexa Agent... (Shift+Enter untuk baris baru)"
+                        : "Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
+                    }
                     disabled={load}
                   />
                   <button
@@ -1002,7 +1348,6 @@ function App() {
             </div>
           </div>
         )}
-
 
         {activeNav === "settings" && (
           <div className="sub-panel-container animate-fade">
