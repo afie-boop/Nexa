@@ -966,85 +966,10 @@ function App() {
                       );
                     } else if (c.isAgent) {
                       // RENDER AGENT MODE CARD (ChatGPT Minimalist & Clean Style)
-                      const hasProcessInfo = (c.plan || (c.toolLogs && c.toolLogs.length > 0) || (c.changedFiles && c.changedFiles.length > 0) || c.validationStatus);
-                      const isWorking = c.operation && !c.finalAnswer;
+                      if (!c.finalAnswer && !c.pendingPermission) return null;
 
                       return (
                         <div key={messageId} className="ai-card agent-card animate-slide">
-                          {/* Live Status indicator when working */}
-                          {isWorking && (
-                            <div className="agent-live-status">
-                              <span className="status-dot thinking" />
-                              <span className="agent-operation-status">{c.operation}</span>
-                            </div>
-                          )}
-
-                          {/* Collapsible Execution Process / Logs */}
-                          {hasProcessInfo && (
-                            <details className="agent-details">
-                              <summary className="agent-details-summary">
-                                <span>{c.finalAnswer ? "Langkah-langkah & Proses Ejen" : "Proses Ejen Sedang Berjalan..."}</span>
-                              </summary>
-                              <div className="agent-details-content">
-                                {c.plan && (
-                                  <div className="agent-details-section">
-                                    <div className="agent-section-title">Perancangan Tindakan (Action Plan)</div>
-                                    <div className="agent-plan-box">{c.plan}</div>
-                                  </div>
-                                )}
-
-                                {c.toolLogs && c.toolLogs.length > 0 && (
-                                  <div className="agent-details-section">
-                                    <div className="agent-section-title">Log Operasi Alat</div>
-                                    <div className="agent-tools-timeline">
-                                      {c.toolLogs.map((tl, idx) => (
-                                        <div key={idx} className="agent-tool-item">
-                                          <span className="agent-tool-name">[{tl.tool}]</span>
-                                          <span>
-                                            {tl.args ? JSON.stringify(tl.args) : ""} -{" "}
-                                            {tl.status === "executing"
-                                              ? "Sedang dijalankan..."
-                                              : tl.status === "success"
-                                              ? "Berjaya ✓"
-                                              : "Gagal ✗"}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {c.changedFiles && c.changedFiles.length > 0 && (
-                                  <div className="agent-details-section">
-                                    <div className="agent-section-title">Fail Diubah</div>
-                                    <div className="agent-changed-files">
-                                      {c.changedFiles.map((file, fIdx) => (
-                                        <span key={fIdx} className="file-chip">
-                                          {file}
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {c.validationStatus && (
-                                  <div className="agent-details-section">
-                                    <div className="agent-section-title">Status Pengesahan</div>
-                                    <div
-                                      className={`validation-badge ${
-                                        c.validationStatus.success ? "success" : "failed"
-                                      }`}
-                                    >
-                                      {c.validationStatus.success
-                                        ? `✓ ${c.validationStatus.command} (Lulus)`
-                                        : `✗ ${c.validationStatus.command} (Percubaan ${c.validationStatus.attempt}/${c.validationStatus.maxAttempts})`}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </details>
-                          )}
-
                           {/* Interactive Permission Request Card */}
                           {c.pendingPermission && (
                             <div className="permission-card animate-slide">
