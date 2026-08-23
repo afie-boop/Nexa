@@ -934,47 +934,22 @@ function App() {
             {chat.length === 0 && !load ? (
               <div className="hero-section animate-fade">
                 <div className="hero-logo">N</div>
-                <h2 className="hero-title">
-                  {mode === "agent" ? "Nexa Agent Mode (Jules)" : "Hello, I'm Nexa."}
-                </h2>
-                <p className="hero-tagline">
-                  {mode === "agent"
-                    ? "Autonomous AI Coding Agent. Inspect, code, test & fix."
-                    : "Build. Think. Create."}
-                </p>
+                <h2 className="hero-title">Hello, I'm Nexa.</h2>
+                <p className="hero-tagline">Build. Think. Create.</p>
 
                 <div className="suggestion-prompts-container">
-                  {mode === "agent" ? (
-                    <>
-                      <button
-                        className="suggestion-btn"
-                        onClick={() => handleSuggestionClick("Periksa fail package.json dan jalankan npm run build untuk mengesahkan projek.")}
-                      >
-                        Jalankan Pengesahan Build
-                      </button>
-                      <button
-                        className="suggestion-btn"
-                        onClick={() => handleSuggestionClick("Cari semua fungsi dalam backend/server.js dan jelaskan strukturnya.")}
-                      >
-                        Analisis Kod Server
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        className="suggestion-btn"
-                        onClick={() => handleSuggestionClick("Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.")}
-                      >
-                        Tulis Kod Fibonacci
-                      </button>
-                      <button
-                        className="suggestion-btn"
-                        onClick={() => handleSuggestionClick("Bina satu strategi pemasaran digital ringkas untuk permulaan teknologi.")}
-                      >
-                        Strategi Pemasaran
-                      </button>
-                    </>
-                  )}
+                  <button
+                    className="suggestion-btn"
+                    onClick={() => handleSuggestionClick("Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.")}
+                  >
+                    Tulis Kod Fibonacci
+                  </button>
+                  <button
+                    className="suggestion-btn"
+                    onClick={() => handleSuggestionClick("Bina satu strategi pemasaran digital ringkas untuk permulaan teknologi.")}
+                  >
+                    Strategi Pemasaran
+                  </button>
                 </div>
               </div>
             ) : (
@@ -1127,16 +1102,13 @@ function App() {
 
                           {/* Final Answer Summary */}
                           {c.finalAnswer && (
-                            <div>
-                              <div className="agent-section-title">Keputusan Akhir</div>
-                              <div className="ai-card-body">
-                                <ReactMarkdown
-                                  remarkPlugins={[remarkGfm]}
-                                  components={MarkdownComponents}
-                                >
-                                  {c.finalAnswer}
-                                </ReactMarkdown>
-                              </div>
+                            <div className="ai-card-body">
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={MarkdownComponents}
+                              >
+                                {c.finalAnswer}
+                              </ReactMarkdown>
                             </div>
                           )}
                         </div>
@@ -1215,9 +1187,7 @@ function App() {
                       <div className="ai-card-body">
                         <div className="loading-card">
                           <span className="loading-text">
-                            {mode === "agent"
-                              ? "Nexa Agent sedang menganalisis dan menjalankan tugasan..."
-                              : "Nexa sedang berfikir dan menyusun jawapan terbaik..."}
+                            Nexa sedang berfikir dan menyusun jawapan terbaik...
                           </span>
                         </div>
                       </div>
@@ -1236,11 +1206,7 @@ function App() {
                   value={msg}
                   onChange={(e) => setMsg(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={
-                    mode === "agent"
-                      ? "Berikan tugasan pengkodan untuk Nexa Agent... (Shift+Enter untuk baris baru)"
-                      : "Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
-                  }
+                  placeholder="Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
                   disabled={load}
                 />
 
