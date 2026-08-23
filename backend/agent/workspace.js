@@ -140,6 +140,10 @@ function search_code(query, dirPath = "") {
 function create_file(filePath, content = "") {
   const targetPath = resolveWorkspacePath(filePath);
 
+  if (targetPath === WORKSPACE_ROOT) {
+    throw new Error("Akses dinafikan: Tidak boleh menggantikan direktori utama ruang kerja.");
+  }
+
   // Ensure parent directory exists
   const parentDir = path.dirname(targetPath);
   if (!fs.existsSync(parentDir)) {
@@ -153,6 +157,10 @@ function create_file(filePath, content = "") {
 function edit_file(filePath, content) {
   const targetPath = resolveWorkspacePath(filePath);
 
+  if (targetPath === WORKSPACE_ROOT) {
+    throw new Error("Akses dinafikan: Tidak boleh menggantikan direktori utama ruang kerja.");
+  }
+
   const parentDir = path.dirname(targetPath);
   if (!fs.existsSync(parentDir)) {
     fs.mkdirSync(parentDir, { recursive: true });
@@ -164,6 +172,11 @@ function edit_file(filePath, content) {
 
 function delete_file(filePath) {
   const targetPath = resolveWorkspacePath(filePath);
+
+  // Safety Guard: Never delete WORKSPACE_ROOT
+  if (targetPath === WORKSPACE_ROOT) {
+    throw new Error("Akses dinafikan: Tidak boleh memadamkan direktori utama ruang kerja (WORKSPACE_ROOT).");
+  }
 
   if (!fs.existsSync(targetPath)) {
     throw new Error(`Fail '${filePath}' tidak wujud.`);

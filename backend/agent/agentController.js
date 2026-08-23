@@ -77,16 +77,20 @@ function extractToolCall(text) {
         return { tool: parsed.tool, args: parsed.args || {} };
       }
     } catch {
-      // Ignore JSON parse error and try next
+      // Ignore
     }
   }
 
-  // 2. Try raw JSON object string extraction
-  const rawMatch = text.match(/\{\s*"tool"\s*:\s*"([^"]+)"\s*,\s*"args"\s*:\s*(\{[\s\S]*?\})\s*\}/);
-  if (rawMatch) {
+  // 2. Try parsing whole string or balanced brace JSON substring
+  const firstBrace = text.indexOf("{");
+  const lastBrace = text.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    const candidate = text.slice(firstBrace, lastBrace + 1);
     try {
-      const args = JSON.parse(rawMatch[2]);
-      return { tool: rawMatch[1], args };
+      const parsed = JSON.parse(candidate);
+      if (parsed.tool) {
+        return { tool: parsed.tool, args: parsed.args || {} };
+      }
     } catch {
       // Ignore
     }
@@ -112,12 +116,10 @@ async function runAgentTask({
 }) {
   const messages = [];
 
-  // System instruction
-  messages.push({ role: "system", content: SYSTEM_PROMPT });
-
-  // Conversation history if any
-  if (history && history.length) {
-    messages.push(...history);
+  // Filter history to ensure system prompts aren't duplicated
+  const cleanHistory = (history || []).filter(m => m.role !== "system");
+  if (cleanHistory.length > 0) {
+    messages.push(...cleanHistory);
   }
 
   // Current user task
@@ -142,12 +144,14 @@ async function runAgentTask({
 
     let llmResponseText = "";
     try {
+      const historyToPass = messages.slice(0, -1);
+
       llmResponseText = await askOpenRouter(
         messages[messages.length - 1].content,
         {
           model: model || "openrouter/free",
           system: SYSTEM_PROMPT,
-          history: messages.slice(0, -1)
+          history: historyToPass
         }
       );
     } catch (err) {
