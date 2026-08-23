@@ -426,38 +426,6 @@ body {
   to { opacity: 1; transform: scale(1.1); }
 }
 
-/* Mode Switcher Pill */
-.mode-switcher {
-  display: flex;
-  align-items: center;
-  background-color: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 3px;
-  gap: 2px;
-}
-
-.mode-btn {
-  background: none;
-  border: none;
-  color: var(--secondary-text);
-  padding: 5px 12px;
-  border-radius: 16px;
-  font-size: 12.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 120ms ease;
-}
-
-.mode-btn:hover {
-  color: var(--primary-text);
-}
-
-.mode-btn.active {
-  background-color: var(--accent);
-  color: #FFFFFF;
-  font-weight: 600;
-}
 
 .top-bar-actions {
   display: flex;
@@ -994,15 +962,8 @@ body {
   max-width: 100%;
 }
 
-.composer-input-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  max-width: 100%;
-}
-
 .composer-textarea {
-  flex: 1;
+  width: 100%;
   background: none;
   border: none;
   color: var(--primary-text);
@@ -1014,7 +975,117 @@ body {
   max-height: 160px;
   outline: none;
   padding: 4px 0;
-  min-width: 0;
+}
+
+.composer-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Compact Mode Selector inside Composer */
+.composer-mode-container {
+  position: relative;
+  display: inline-block;
+}
+
+.composer-mode-btn {
+  background-color: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--primary-text);
+  padding: 6px 12px;
+  border-radius: 18px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.composer-mode-btn:hover {
+  border-color: var(--accent);
+  background-color: var(--accent-light);
+}
+
+.dropdown-arrow {
+  font-size: 11px;
+  color: var(--secondary-text);
+}
+
+.composer-mode-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: 240px;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mode-menu-header {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--secondary-text);
+  padding: 6px 8px;
+  letter-spacing: 0.5px;
+}
+
+.mode-menu-item {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: background-color 120ms ease;
+}
+
+.mode-menu-item:hover {
+  background-color: var(--bg);
+}
+
+.mode-menu-item.selected {
+  background-color: var(--accent-light);
+}
+
+.mode-item-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-item-checkmark {
+  width: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.mode-item-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--primary-text);
+}
+
+.mode-item-desc {
+  font-size: 11.5px;
+  color: var(--secondary-text);
+  padding-left: 22px;
 }
 
 .composer-textarea::placeholder {

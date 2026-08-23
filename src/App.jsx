@@ -8,8 +8,35 @@ import "./App.css";
 function App() {
   const [msg, setMsg] = useState("");
 
-  // Mode state: 'chat' | 'agent'
-  const [mode, setMode] = useState("chat");
+  // Mode state: 'chat' | 'agent' with persistence
+  const [mode, setMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem("nexa_ai_mode");
+      return saved === "agent" ? "agent" : "chat";
+    } catch {
+      return "chat";
+    }
+  });
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+  const modeMenuRef = useRef(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("nexa_ai_mode", mode);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (modeMenuRef.current && !modeMenuRef.current.contains(event.target)) {
+        setModeMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
@@ -895,22 +922,6 @@ function App() {
               </div>
             </div>
           </div>
-
-          {/* Mode Switcher Pill */}
-          <div className="mode-switcher">
-            <button
-              className={`mode-btn ${mode === "chat" ? "active" : ""}`}
-              onClick={() => setMode("chat")}
-            >
-              Chat Mode
-            </button>
-            <button
-              className={`mode-btn ${mode === "agent" ? "active" : ""}`}
-              onClick={() => setMode("agent")}
-            >
-              Agent Mode (Jules)
-            </button>
-          </div>
         </header>
 
         {/* Display Banner Errors if present */}
@@ -1220,19 +1231,69 @@ function App() {
             {/* 5. Composer Workspace (Sticky Bottom) */}
             <div className="composer-sticky-container">
               <div className="composer-workspace">
-                <div className="composer-input-row">
-                  <textarea
-                    className="composer-textarea"
-                    value={msg}
-                    onChange={(e) => setMsg(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={
-                      mode === "agent"
-                        ? "Berikan tugasan pengkodan untuk Nexa Agent... (Shift+Enter untuk baris baru)"
-                        : "Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
-                    }
-                    disabled={load}
-                  />
+                <textarea
+                  className="composer-textarea"
+                  value={msg}
+                  onChange={(e) => setMsg(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={
+                    mode === "agent"
+                      ? "Berikan tugasan pengkodan untuk Nexa Agent... (Shift+Enter untuk baris baru)"
+                      : "Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
+                  }
+                  disabled={load}
+                />
+
+                <div className="composer-bottom-row">
+                  {/* Compact Mode Selector */}
+                  <div className="composer-mode-container" ref={modeMenuRef}>
+                    <button
+                      type="button"
+                      className="composer-mode-btn"
+                      onClick={() => setModeMenuOpen(!modeMenuOpen)}
+                      aria-haspopup="true"
+                      aria-expanded={modeMenuOpen}
+                    >
+                      <span>{mode === "agent" ? "Agent" : "Chat"}</span>
+                      <span className="dropdown-arrow">▾</span>
+                    </button>
+
+                    {modeMenuOpen && (
+                      <div className="composer-mode-menu animate-fade">
+                        <div className="mode-menu-header">Select mode</div>
+                        <button
+                          type="button"
+                          className={`mode-menu-item ${mode === "chat" ? "selected" : ""}`}
+                          onClick={() => {
+                            setMode("chat");
+                            setModeMenuOpen(false);
+                          }}
+                        >
+                          <div className="mode-item-title-row">
+                            <span className="mode-item-checkmark">{mode === "chat" ? "✓" : ""}</span>
+                            <span className="mode-item-name">Chat</span>
+                          </div>
+                          <div className="mode-item-desc">Normal conversations with Nexa</div>
+                        </button>
+
+                        <button
+                          type="button"
+                          className={`mode-menu-item ${mode === "agent" ? "selected" : ""}`}
+                          onClick={() => {
+                            setMode("agent");
+                            setModeMenuOpen(false);
+                          }}
+                        >
+                          <div className="mode-item-title-row">
+                            <span className="mode-item-checkmark">{mode === "agent" ? "✓" : ""}</span>
+                            <span className="mode-item-name">Agent</span>
+                          </div>
+                          <div className="mode-item-desc">Work on projects and perform actions</div>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     className="send-btn-round"
                     onClick={() => send()}
