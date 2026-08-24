@@ -121,6 +121,7 @@ function App() {
   });
 
   const [load, setLoad] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState("Nexa sedang berfikir...");
   const [error, setError] = useState(null);
   const [copiedIdx, setCopiedIdx] = useState(null);
   const chatEndRef = useRef(null);
@@ -424,6 +425,7 @@ function App() {
     }
 
     setLoad(true);
+    setLoadingStatus("Nexa sedang berfikir...");
     setError(null);
 
     if (mode === "agent") {
@@ -437,7 +439,7 @@ function App() {
         isAgent: true,
         sessionId,
         task: textToSend,
-        operation: "Meneliti tugasan dan menganalisis projek...",
+        operation: "",
         plan: "",
         toolLogs: [],
         pendingPermission: null,
@@ -445,8 +447,7 @@ function App() {
         validationStatus: null,
         finalAnswer: "",
         feedback: null,
-        feedbackReason: "",
-        processSteps: []
+        feedbackReason: ""
       };
 
       updateActiveMessages(prev => [...prev, initialAgentMsg]);
@@ -492,21 +493,9 @@ function App() {
                   let nextMsg = { ...m };
 
                   if (data.type === "process_step") {
-                    const currentSteps = nextMsg.processSteps || [];
-                    const existingIdx = currentSteps.findIndex(s => s.id === data.id);
-                    if (existingIdx !== -1) {
-                      const updated = [...currentSteps];
-                      updated[existingIdx] = { ...updated[existingIdx], status: data.status, label: data.label || updated[existingIdx].label };
-                      nextMsg.processSteps = updated;
-                    } else {
-                      nextMsg.processSteps = [...currentSteps, { id: data.id, label: data.label, status: data.status }];
-                    }
-                  } else if (data.type === "plan") {
-                    nextMsg.plan = data.text;
+                    if (data.label) setLoadingStatus(data.label);
                   } else if (data.type === "operation") {
-                    nextMsg.operation = data.text;
-                  } else if (data.type === "tool_executing") {
-                    nextMsg.toolLogs = [...(nextMsg.toolLogs || []), { tool: data.tool, args: data.args, status: "executing" }];
+                    if (data.text) setLoadingStatus(data.text);
                   } else if (data.type === "permission_request") {
                     nextMsg.pendingPermission = {
                       requestId: data.requestId,
@@ -515,26 +504,10 @@ function App() {
                       reason: data.reason,
                       diff: data.diff
                     };
-                  } else if (data.type === "tool_result") {
-                    const logs = [...(nextMsg.toolLogs || [])];
-                    if (logs.length > 0) {
-                      logs[logs.length - 1] = {
-                        ...logs[logs.length - 1],
-                        result: data.result,
-                        status: data.success ? "success" : "failed"
-                      };
-                    }
-                    nextMsg.toolLogs = logs;
-                  } else if (data.type === "changed_files") {
-                    nextMsg.changedFiles = data.files;
-                  } else if (data.type === "validation_status") {
-                    nextMsg.validationStatus = data;
                   } else if (data.type === "final_answer") {
                     nextMsg.finalAnswer = data.summary;
-                    nextMsg.operation = "";
-                    if (data.changedFiles) nextMsg.changedFiles = data.changedFiles;
                   } else if (data.type === "error") {
-                    nextMsg.operation = `Ralat: ${data.text}`;
+                    setError(`Ralat: ${data.text}`);
                   }
 
                   return nextMsg;
@@ -572,16 +545,6 @@ function App() {
         let buffer = "";
         let finalAnswer = null;
         let serverError = null;
-        const processLog = [];
-        let processSteps = [];
-
-        const aiMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-
-        // Pre-insert AI message container to hold real-time processSteps
-        updateActiveMessages((prev) => [
-          ...prev,
-          { id: aiMsgId, type: "ai", text: "", process: [], processSteps: [], feedback: null, feedbackReason: "" }
-        ]);
 
         while (true) {
           const { done, value } = await reader.read();
@@ -596,29 +559,9 @@ function App() {
             const data = JSON.parse(part.slice(6));
 
             if (data.type === "process_step") {
-              const existingIdx = processSteps.findIndex(s => s.id === data.id);
-              if (existingIdx !== -1) {
-                processSteps[existingIdx] = { ...processSteps[existingIdx], status: data.status, label: data.label || processSteps[existingIdx].label };
-              } else {
-                processSteps.push({ id: data.id, label: data.label, status: data.status });
-              }
-
-              updateActiveMessages(prevConvs => {
-                return prevConvs.map(c => {
-                  if (c.id === activeId) {
-                    const updatedMsgs = c.messages.map(m => {
-                      if (m.id === aiMsgId) {
-                        return { ...m, processSteps: [...processSteps] };
-                      }
-                      return m;
-                    });
-                    return { ...c, messages: updatedMsgs };
-                  }
-                  return c;
-                });
-              });
+              if (data.label) setLoadingStatus(data.label);
             } else if (data.type === "status") {
-              processLog.push(data.text);
+              if (data.text) setLoadingStatus(data.text);
             } else if (data.type === "answer") {
               finalAnswer = data.text;
             } else if (data.type === "error") {
@@ -630,12 +573,11 @@ function App() {
         if (serverError) throw new Error(serverError);
         if (finalAnswer === null) throw new Error("Tiada jawapan diterima.");
 
-        updateActiveMessages(prev => prev.map(m => {
-          if (m.id === aiMsgId) {
-            return { ...m, text: finalAnswer, process: processLog };
-          }
-          return m;
-        }));
+        const aiMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+        updateActiveMessages(prev => [
+          ...prev,
+          { id: aiMsgId, type: "ai", text: finalAnswer, feedback: null, feedbackReason: "" }
+        ]);
       } catch (err) {
         setError(err.message || "Gagal hubungi server. Cuba refresh.");
         const errMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
@@ -1004,27 +946,10 @@ function App() {
                       );
                     } else if (c.isAgent) {
                       // RENDER AGENT MODE CARD (ChatGPT Minimalist & Clean Style)
-                      if (!c.finalAnswer && !c.pendingPermission && (!c.processSteps || c.processSteps.length === 0) && !c.operation) return null;
+                      if (!c.finalAnswer && !c.pendingPermission) return null;
 
                       return (
                         <div key={messageId} className="ai-card agent-card animate-slide">
-                          {/* Real-Time Process Tracking Box */}
-                          {c.processSteps && c.processSteps.length > 0 && (
-                            <div className="process-tracker">
-                              {c.processSteps.map((step) => (
-                                <div key={step.id} className={`process-step ${step.status}`}>
-                                  <span className="process-icon">
-                                    {step.status === "completed" && "✓"}
-                                    {step.status === "active" && "⟳"}
-                                    {step.status === "failed" && "✕"}
-                                    {step.status === "pending" && "○"}
-                                  </span>
-                                  <span className="process-label">{step.label}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
                           {/* Interactive Permission Request Card */}
                           {c.pendingPermission && (
                             <div className="permission-card animate-slide">
@@ -1095,38 +1020,54 @@ function App() {
 
                           {/* Final Answer Summary */}
                           {c.finalAnswer && (
-                            <div className="ai-card-body">
-                              <ReactMarkdown
-                                remarkPlugins={[remarkGfm]}
-                                components={MarkdownComponents}
-                              >
-                                {c.finalAnswer}
-                              </ReactMarkdown>
-                            </div>
+                            <>
+                              <div className="ai-card-body">
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  components={MarkdownComponents}
+                                >
+                                  {c.finalAnswer}
+                                </ReactMarkdown>
+                              </div>
+                              {/* Control actions toolbar only when answer exists */}
+                              <div className="ai-card-actions">
+                                <button
+                                  className="card-action-btn"
+                                  onClick={() => copyCode(c.finalAnswer, `ai-${messageId}`)}
+                                >
+                                  {copiedIdx === `ai-${messageId}` ? "Disalin" : "Salin Respon"}
+                                </button>
+                                <button
+                                  className="card-action-btn"
+                                  onClick={() => handleLike(messageId)}
+                                  style={c.feedback === "like" ? { color: "var(--accent)", borderColor: "var(--accent)", backgroundColor: "var(--accent-light)" } : {}}
+                                >
+                                  Like
+                                </button>
+                                <button
+                                  className="card-action-btn"
+                                  onClick={() => handleDislike(messageId)}
+                                  style={c.feedback === "dislike" ? { color: "#EF4444", borderColor: "#EF4444", backgroundColor: "rgba(239, 68, 68, 0.08)" } : {}}
+                                >
+                                  Dislike
+                                </button>
+                                <button
+                                  className="card-action-btn"
+                                  onClick={() => handleRegenerate(messageId)}
+                                >
+                                  Regenerate
+                                </button>
+                              </div>
+                            </>
                           )}
                         </div>
                       );
                     } else {
                       // RENDER REGULAR CHAT AI CARD
+                      if (!c.text) return null;
+
                       return (
                         <div key={messageId} className="ai-card animate-slide">
-                          {/* Real-Time Process Tracking Box */}
-                          {c.processSteps && c.processSteps.length > 0 && (
-                            <div className="process-tracker">
-                              {c.processSteps.map((step) => (
-                                <div key={step.id} className={`process-step ${step.status}`}>
-                                  <span className="process-icon">
-                                    {step.status === "completed" && "✓"}
-                                    {step.status === "active" && "⟳"}
-                                    {step.status === "failed" && "✕"}
-                                    {step.status === "pending" && "○"}
-                                  </span>
-                                  <span className="process-label">{step.label}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
                           <div className="ai-card-body">
                             <ReactMarkdown
                               remarkPlugins={[remarkGfm]}
@@ -1136,7 +1077,7 @@ function App() {
                             </ReactMarkdown>
                           </div>
 
-                          {/* Control actions for AI response: Copy, Like, Dislike, Regenerate */}
+                          {/* Control actions for AI response: Copy, Like, Dislike, Regenerate (Toolbar only when response exists) */}
                           <div className="ai-card-actions">
                             <button
                               className="card-action-btn"
@@ -1191,13 +1132,13 @@ function App() {
                     }
                   })}
 
-                  {/* Active Loading response card */}
+                  {/* Active Loading response card using single existing loading container */}
                   {load && (
                     <div className="ai-card animate-slide">
                       <div className="ai-card-body">
                         <div className="loading-card">
                           <span className="loading-text">
-                            Nexa sedang berfikir dan menyusun jawapan terbaik...
+                            {loadingStatus}
                           </span>
                         </div>
                       </div>
