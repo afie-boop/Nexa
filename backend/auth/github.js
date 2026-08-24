@@ -1,18 +1,49 @@
 const express = require("express");
 const axios = require("axios");
+const fs = require("fs");
+const path = require("path");
 const router = express.Router();
 
-// In-memory GitHub session state (server-side)
-let currentSession = {
-  connected: false,
-  username: null,
-  accessToken: null,
-  user: null,
-  selectedRepo: null
-};
+const SESSION_FILE = path.join(__dirname, "..", "feedback", "data", "github_session.json");
 
-// GET /api/auth/github - Initiate GitHub OAuth flow
-router.get("/", (req, res) => {
+// Ensure data directory exists
+const dataDir = path.dirname(SESSION_FILE);
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// Helper to load session state from JSON file
+function loadSession() {
+  try {
+    if (fs.existsSync(SESSION_FILE)) {
+      const data = fs.readFileSync(SESSION_FILE, "utf-8");
+      return JSON.parse(data);
+    }
+  } catch (err) {
+    console.error("[GitHub Auth] Gagal membaca session file:", err.message);
+  }
+  return {
+    connected: false,
+    username: null,
+    accessToken: null,
+    user: null
+  };
+}
+
+// Helper to save session state to JSON file
+function saveSession(sessionData) {
+  try {
+    fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionData, null, 2), "utf-8");
+  } catch (err) {
+    console.error("[GitHub Auth] Gagal menyimpan session file:", err.message);
+  }
+}
+
+// GET /api/github/login or /api/auth/github - Initiate GitHub OAuth flow
+router.get("/login", (req, res) => handleOAuthRedirect(req, res));
+router.get("/", (req, res) => handleOAuthRedirect(req, res));
+
+function handleOAuthRedirect(req, res) {
   const clientId = process.env.GITHUB_CLIENT_ID;
   const callbackUrl = process.env.GITHUB_CALLBACK_URL || "http://localhost:3000/api/auth/github/callback";
 
@@ -22,10 +53,9 @@ router.get("/", (req, res) => {
     });
   }
 
-  // Request repo scope to allow reading user's public and private repositories
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=read:user%20repo`;
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=read:user`;
   res.redirect(githubAuthUrl);
-});
+}
 
 // GET /api/auth/github/callback - Handle GitHub OAuth callback
 router.get("/callback", async (req, res) => {
@@ -78,8 +108,8 @@ router.get("/callback", async (req, res) => {
 
     const userData = userResponse.data;
 
-    // Save session state securely in backend
-    currentSession = {
+    // Save session state securely in backend JSON file
+    const sessionData = {
       connected: true,
       username: userData.login,
       accessToken: accessToken,
@@ -88,9 +118,10 @@ router.get("/callback", async (req, res) => {
         name: userData.name,
         avatar_url: userData.avatar_url,
         id: userData.id
-      },
-      selectedRepo: currentSession.selectedRepo || null
+      }
     };
+
+    saveSession(sessionData);
 
     res.cookie("nexa_github_connected", "true", { httpOnly: false, maxAge: 30 * 24 * 60 * 60 * 1000 });
     return res.redirect(`/?github_auth=success&username=${encodeURIComponent(userData.login)}`);
@@ -100,109 +131,43 @@ router.get("/callback", async (req, res) => {
   }
 });
 
-// GET /api/auth/github/user - Fetch current GitHub connection status and user info
-router.get("/user", (req, res) => {
-  if (currentSession.connected) {
+// GET /api/github/status or /api/auth/github/user - Fetch current GitHub connection status and user info
+router.get("/status", (req, res) => handleGetStatus(req, res));
+router.get("/user", (req, res) => handleGetStatus(req, res));
+
+function handleGetStatus(req, res) {
+  const session = loadSession();
+  if (session && session.connected) {
     return res.json({
       connected: true,
-      username: currentSession.username,
-      user: currentSession.user,
-      selectedRepo: currentSession.selectedRepo
+      username: session.username,
+      user: session.user
     });
   }
 
   return res.json({
     connected: false,
     username: null,
-    user: null,
-    selectedRepo: null
+    user: null
   });
-});
+}
 
-// GET /api/auth/github/repos - Fetch repositories for authenticated GitHub user
-router.get("/repos", async (req, res) => {
-  if (!currentSession.connected || !currentSession.accessToken) {
-    return res.status(401).json({ error: "Sila log masuk dengan GitHub terlebih dahulu." });
-  }
+// POST /api/github/disconnect or /api/auth/github/disconnect - Disconnect GitHub account
+router.post("/disconnect", (req, res) => handleDisconnect(req, res));
 
-  try {
-    const reposResponse = await axios.get("https://api.github.com/user/repos?sort=updated&per_page=100", {
-      headers: {
-        Authorization: `Bearer ${currentSession.accessToken}`,
-        "User-Agent": "Nexa-AI-App"
-      }
-    });
-
-    // Format repository list cleanly without exposing sensitive tokens
-    const repos = reposResponse.data.map((repo) => ({
-      id: repo.id,
-      name: repo.name,
-      full_name: repo.full_name,
-      owner: {
-        login: repo.owner.login,
-        avatar_url: repo.owner.avatar_url
-      },
-      private: repo.private,
-      description: repo.description,
-      html_url: repo.html_url,
-      default_branch: repo.default_branch,
-      updated_at: repo.updated_at
-    }));
-
-    return res.json({
-      success: true,
-      repositories: repos
-    });
-  } catch (err) {
-    console.error("[GitHub Repos Error]", err.response?.data || err.message);
-    return res.status(500).json({
-      error: err.response?.data?.message || "Gagal mengambil senarai repositori dari GitHub."
-    });
-  }
-});
-
-// POST /api/auth/github/select-repo - Select a repository as current active session repository
-router.post("/select-repo", (req, res) => {
-  if (!currentSession.connected) {
-    return res.status(401).json({ error: "Sila log masuk dengan GitHub terlebih dahulu." });
-  }
-
-  const { repo } = req.body;
-  if (!repo || !repo.full_name) {
-    return res.status(400).json({ error: "Maklumat repositori tidak sah." });
-  }
-
-  currentSession.selectedRepo = {
-    id: repo.id,
-    name: repo.name,
-    full_name: repo.full_name,
-    owner: repo.owner?.login || repo.owner,
-    private: !!repo.private,
-    html_url: repo.html_url,
-    default_branch: repo.default_branch
-  };
-
-  return res.json({
-    success: true,
-    selectedRepo: currentSession.selectedRepo
-  });
-});
-
-// POST /api/auth/github/disconnect - Disconnect GitHub account
-router.post("/disconnect", (req, res) => {
-  currentSession = {
+function handleDisconnect(req, res) {
+  saveSession({
     connected: false,
     username: null,
     accessToken: null,
-    user: null,
-    selectedRepo: null
-  };
+    user: null
+  });
 
   res.clearCookie("nexa_github_connected");
   return res.json({
     success: true,
     connected: false
   });
-});
+}
 
 module.exports = router;

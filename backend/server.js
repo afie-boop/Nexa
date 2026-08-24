@@ -27,6 +27,7 @@ app.use(express.static(distPath));
 
 // Mount GitHub Auth Routes
 app.use("/api/auth/github", githubAuthRouter);
+app.use("/api/github", githubAuthRouter);
 
 app.post("/api/feedback", handlePostFeedback);
 
