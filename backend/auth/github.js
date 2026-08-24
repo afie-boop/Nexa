@@ -17,10 +17,11 @@ function loadSession() {
   try {
     if (fs.existsSync(SESSION_FILE)) {
       const data = fs.readFileSync(SESSION_FILE, "utf-8");
-      return JSON.parse(data);
+      const parsed = JSON.parse(data);
+      return parsed;
     }
   } catch (err) {
-    console.error("[GitHub Auth] Gagal membaca session file:", err.message);
+    console.error("[GitHub Auth] Error reading session file:", err.message);
   }
   return {
     connected: false,
@@ -34,8 +35,9 @@ function loadSession() {
 function saveSession(sessionData) {
   try {
     fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionData, null, 2), "utf-8");
+    console.log("[GitHub Auth] Session state saved successfully for user:", sessionData.username || "none");
   } catch (err) {
-    console.error("[GitHub Auth] Gagal menyimpan session file:", err.message);
+    console.error("[GitHub Auth] Error saving session file:", err.message);
   }
 }
 
@@ -47,7 +49,10 @@ function handleOAuthRedirect(req, res) {
   const clientId = process.env.GITHUB_CLIENT_ID;
   const callbackUrl = process.env.GITHUB_CALLBACK_URL || "http://localhost:3000/api/auth/github/callback";
 
+  console.log("[GitHub OAuth Init] Client ID present:", !!clientId, "| Callback URL:", callbackUrl);
+
   if (!clientId) {
+    console.error("[GitHub OAuth Init Error] GITHUB_CLIENT_ID missing in environment variables.");
     return res.status(500).json({
       error: "GITHUB_CLIENT_ID tidak ditetapkan dalam persekitaran (environment variables)."
     });
@@ -61,8 +66,10 @@ function handleOAuthRedirect(req, res) {
 router.get("/callback", async (req, res) => {
   const { code, error } = req.query;
 
+  console.log("[GitHub OAuth Callback] Callback received | Code present:", !!code, "| Error query:", error || "none");
+
   if (error || !code) {
-    console.error("[GitHub OAuth Error]", error || "Kod kebenaran tidak ditemui.");
+    console.error("[GitHub OAuth Callback Error] Code missing or authorization denied:", error || "no_code");
     return res.redirect(`/?github_error=${encodeURIComponent(error || "no_code")}`);
   }
 
@@ -71,12 +78,12 @@ router.get("/callback", async (req, res) => {
   const callbackUrl = process.env.GITHUB_CALLBACK_URL || "http://localhost:3000/api/auth/github/callback";
 
   if (!clientId || !clientSecret) {
-    console.error("[GitHub OAuth Error] GITHUB_CLIENT_ID atau GITHUB_CLIENT_SECRET tidak wujud.");
+    console.error("[GitHub OAuth Callback Error] Client ID or Client Secret missing on server.");
     return res.redirect("/?github_error=missing_credentials");
   }
 
   try {
-    // Exchange code for access token
+    console.log("[GitHub OAuth Callback] Exchanging authorization code for access token...");
     const tokenResponse = await axios.post(
       "https://github.com/login/oauth/access_token",
       {
@@ -94,11 +101,12 @@ router.get("/callback", async (req, res) => {
 
     const accessToken = tokenResponse.data.access_token;
     if (!accessToken) {
-      console.error("[GitHub OAuth Error] Gagal mendapatkan access_token:", tokenResponse.data);
+      console.error("[GitHub OAuth Callback Error] Token exchange response did not contain access token.");
       return res.redirect("/?github_error=token_exchange_failed");
     }
 
-    // Get user details from GitHub API
+    console.log("[GitHub OAuth Callback] Access token received successfully. Fetching user profile...");
+
     const userResponse = await axios.get("https://api.github.com/user", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -107,8 +115,8 @@ router.get("/callback", async (req, res) => {
     });
 
     const userData = userResponse.data;
+    console.log("[GitHub OAuth Callback] GitHub user fetched successfully:", userData.login);
 
-    // Save session state securely in backend JSON file
     const sessionData = {
       connected: true,
       username: userData.login,
@@ -123,7 +131,16 @@ router.get("/callback", async (req, res) => {
 
     saveSession(sessionData);
 
-    res.cookie("nexa_github_connected", "true", { httpOnly: false, maxAge: 30 * 24 * 60 * 60 * 1000 });
+    const isProd = process.env.NODE_ENV === "production";
+    res.cookie("nexa_github_connected", "true", {
+      httpOnly: false,
+      secure: isProd,
+      sameSite: isProd ? "lax" : "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    });
+
+    console.log("[GitHub OAuth Callback] Redirecting client to Nexa frontend with success flag...");
     return res.redirect(`/?github_auth=success&username=${encodeURIComponent(userData.login)}`);
   } catch (err) {
     console.error("[GitHub OAuth Callback Exception]", err.message);
@@ -137,7 +154,10 @@ router.get("/user", (req, res) => handleGetStatus(req, res));
 
 function handleGetStatus(req, res) {
   const session = loadSession();
-  if (session && session.connected) {
+  const isConnected = !!(session && session.connected);
+  console.log("[GitHub Status Check] Connected:", isConnected, "| Username:", session?.username || "none");
+
+  if (isConnected) {
     return res.json({
       connected: true,
       username: session.username,
@@ -156,6 +176,7 @@ function handleGetStatus(req, res) {
 router.post("/disconnect", (req, res) => handleDisconnect(req, res));
 
 function handleDisconnect(req, res) {
+  console.log("[GitHub Disconnect] Disconnecting user session...");
   saveSession({
     connected: false,
     username: null,
@@ -163,7 +184,7 @@ function handleDisconnect(req, res) {
     user: null
   });
 
-  res.clearCookie("nexa_github_connected");
+  res.clearCookie("nexa_github_connected", { path: "/" });
   return res.json({
     success: true,
     connected: false

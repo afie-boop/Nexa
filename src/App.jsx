@@ -88,6 +88,10 @@ function App() {
   // Check GitHub Connection status on mount
   useEffect(() => {
     const checkGithubStatus = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const authSuccess = urlParams.get("github_auth");
+      const usernameParam = urlParams.get("username");
+
       try {
         const res = await fetch("/api/github/status");
         if (res.ok) {
@@ -95,17 +99,15 @@ function App() {
           if (data.connected && data.username) {
             setGithubStatus("connected");
             setGithubUser(data.username);
+            if (authSuccess || urlParams.get("github_error")) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
             return;
           }
         }
       } catch (err) {
         console.error("Gagal menyemak status GitHub:", err);
       }
-
-      // Check URL parameters for OAuth redirect callback
-      const urlParams = new URLSearchParams(window.location.search);
-      const authSuccess = urlParams.get("github_auth");
-      const usernameParam = urlParams.get("username");
 
       if (authSuccess === "success" && usernameParam) {
         setGithubStatus("connected");
