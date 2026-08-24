@@ -52,7 +52,7 @@ function App() {
   const fetchGithubRepos = async () => {
     setReposLoading(true);
     try {
-      const res = await fetch("/api/auth/github/repos");
+      const res = await fetch("/api/github/repos");
       if (res.ok) {
         const data = await res.json();
         if (data.repositories) {
@@ -69,7 +69,7 @@ function App() {
   // Select current active repository
   const handleSelectRepo = async (repo) => {
     try {
-      const res = await fetch("/api/auth/github/select-repo", {
+      const res = await fetch("/api/github/select-repo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ repo })
@@ -99,6 +99,9 @@ function App() {
           if (data.connected && data.username) {
             setGithubStatus("connected");
             setGithubUser(data.username);
+            if (data.selectedRepo) {
+              setSelectedRepo(data.selectedRepo);
+            }
             if (authSuccess || urlParams.get("github_error")) {
               window.history.replaceState({}, document.title, window.location.pathname);
             }
@@ -1494,18 +1497,76 @@ function App() {
                 )}
 
                 {githubStatus === "connected" && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <span className="github-badge">GitHub Connected ✓</span>
-                      {githubUser && (
-                        <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>
-                          @{githubUser}
-                        </span>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <span className="github-badge">🟢 GitHub Connected</span>
+                        {githubUser && (
+                          <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>
+                            @{githubUser}
+                          </span>
+                        )}
+                      </div>
+                      <button className="github-disconnect-btn" onClick={handleGitHubDisconnect}>
+                        Disconnect GitHub
+                      </button>
+                    </div>
+
+                    {/* Repository Selection Section */}
+                    <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <h4 style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>Repository</h4>
+                        <button
+                          className="card-action-btn"
+                          onClick={fetchGithubRepos}
+                          disabled={reposLoading}
+                        >
+                          {reposLoading ? "Memuatkan..." : "Select Repository"}
+                        </button>
+                      </div>
+
+                      {selectedRepo && (
+                        <div style={{ padding: "10px 14px", backgroundColor: "var(--accent-light)", border: "1px solid var(--accent)", borderRadius: "8px", fontSize: "13px", color: "var(--primary-text)" }}>
+                          <div style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "var(--secondary-text)", marginBottom: "2px" }}>
+                            Selected Repository
+                          </div>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <span style={{ fontWeight: "600", fontSize: "14px" }}>"{selectedRepo.full_name}"</span>
+                            <span className={`repo-visibility-badge ${selectedRepo.private ? "private" : "public"}`}>
+                              {selectedRepo.private ? "Private" : "Public"}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Repositories List dropdown / card list */}
+                      {githubRepos.length > 0 && (
+                        <div className="repo-list-container">
+                          {githubRepos.map((repo) => {
+                            const isSelected = selectedRepo && selectedRepo.id === repo.id;
+                            return (
+                              <div key={repo.id} className={`repo-item-card ${isSelected ? "selected" : ""}`}>
+                                <div className="repo-item-info">
+                                  <div className="repo-title-row">
+                                    <span className="repo-name">{repo.name}</span>
+                                    <span className={`repo-visibility-badge ${repo.private ? "private" : "public"}`}>
+                                      {repo.private ? "Private" : "Public"}
+                                    </span>
+                                  </div>
+                                  <span className="repo-owner">{repo.full_name}</span>
+                                </div>
+                                <button
+                                  className={`repo-select-btn ${isSelected ? "active" : ""}`}
+                                  onClick={() => handleSelectRepo(repo)}
+                                >
+                                  {isSelected ? "Selected ✓" : "Select"}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
                       )}
                     </div>
-                    <button className="github-disconnect-btn" onClick={handleGitHubDisconnect}>
-                      Disconnect GitHub
-                    </button>
                   </div>
                 )}
               </div>

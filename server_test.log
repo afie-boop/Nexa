@@ -1,9 +1,0 @@
-◇ injected env (0) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
-=================================
-Nexa Boot
-=================================
-OpenRouter Key : false
-PORT           : 3000
-=================================
-◇ injected env (0) from .env // tip: ⌘ multiple files { path: ['.env.local', '.env'] }
-Nexa Server berjalan di port 3000

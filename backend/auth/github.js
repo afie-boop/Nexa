@@ -27,7 +27,8 @@ function loadSession() {
     connected: false,
     username: null,
     accessToken: null,
-    user: null
+    user: null,
+    selectedRepo: null
   };
 }
 
@@ -58,7 +59,8 @@ function handleOAuthRedirect(req, res) {
     });
   }
 
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=read:user`;
+  // Include repo scope so public and private repos can be accessed
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=read:user%20repo`;
   res.redirect(githubAuthUrl);
 }
 
@@ -117,6 +119,8 @@ router.get("/callback", async (req, res) => {
     const userData = userResponse.data;
     console.log("[GitHub OAuth Callback] GitHub user fetched successfully:", userData.login);
 
+    const currentData = loadSession();
+
     const sessionData = {
       connected: true,
       username: userData.login,
@@ -126,7 +130,8 @@ router.get("/callback", async (req, res) => {
         name: userData.name,
         avatar_url: userData.avatar_url,
         id: userData.id
-      }
+      },
+      selectedRepo: currentData.selectedRepo || null
     };
 
     saveSession(sessionData);
@@ -161,14 +166,98 @@ function handleGetStatus(req, res) {
     return res.json({
       connected: true,
       username: session.username,
-      user: session.user
+      user: session.user,
+      selectedRepo: session.selectedRepo || null
     });
   }
 
   return res.json({
     connected: false,
     username: null,
-    user: null
+    user: null,
+    selectedRepo: null
+  });
+}
+
+// GET /api/github/repos or /api/auth/github/repos - Fetch repositories for authenticated GitHub user
+router.get("/repos", (req, res) => handleGetRepos(req, res));
+
+async function handleGetRepos(req, res) {
+  const session = loadSession();
+  if (!session || !session.connected || !session.accessToken) {
+    console.error("[GitHub Repos Error] User is not connected or token is missing.");
+    return res.status(401).json({ error: "Sila log masuk dengan GitHub terlebih dahulu." });
+  }
+
+  try {
+    console.log("[GitHub Repos] Fetching user repositories from GitHub API for user:", session.username);
+    const reposResponse = await axios.get("https://api.github.com/user/repos?sort=updated&per_page=100", {
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "User-Agent": "Nexa-AI-App"
+      }
+    });
+
+    const repos = reposResponse.data.map((repo) => ({
+      id: repo.id,
+      name: repo.name,
+      full_name: repo.full_name,
+      owner: {
+        login: repo.owner.login,
+        avatar_url: repo.owner.avatar_url
+      },
+      private: repo.private,
+      description: repo.description,
+      html_url: repo.html_url,
+      default_branch: repo.default_branch,
+      updated_at: repo.updated_at
+    }));
+
+    console.log("[GitHub Repos] Successfully fetched", repos.length, "repositories.");
+    return res.json({
+      success: true,
+      repositories: repos
+    });
+  } catch (err) {
+    console.error("[GitHub Repos Exception]", err.response?.data || err.message);
+    return res.status(500).json({
+      error: err.response?.data?.message || "Gagal mengambil senarai repositori dari GitHub."
+    });
+  }
+}
+
+// POST /api/github/select-repo or /api/auth/github/select-repo - Select active repository
+router.post("/select-repo", (req, res) => handleSelectRepo(req, res));
+
+function handleSelectRepo(req, res) {
+  const session = loadSession();
+  if (!session || !session.connected) {
+    return res.status(401).json({ error: "Sila log masuk dengan GitHub terlebih dahulu." });
+  }
+
+  const { repo } = req.body;
+  if (!repo || !repo.full_name) {
+    return res.status(400).json({ error: "Maklumat repositori tidak sah." });
+  }
+
+  const selectedRepo = {
+    id: repo.id,
+    name: repo.name,
+    full_name: repo.full_name,
+    owner: repo.owner?.login || repo.owner,
+    private: !!repo.private,
+    html_url: repo.html_url,
+    default_branch: repo.default_branch
+  };
+
+  session.selectedRepo = selectedRepo;
+  saveSession(session);
+
+  console.log("[GitHub Select Repo] Selected repository updated to:", selectedRepo.full_name);
+
+  return res.json({
+    success: true,
+    selectedRepo
   });
 }
 
@@ -181,7 +270,8 @@ function handleDisconnect(req, res) {
     connected: false,
     username: null,
     accessToken: null,
-    user: null
+    user: null,
+    selectedRepo: null
   });
 
   res.clearCookie("nexa_github_connected", { path: "/" });
