@@ -41,9 +41,49 @@ function App() {
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
 
-  // GitHub Connection State: 'not_connected' | 'connecting' | 'connected'
+  // GitHub Connection & Repository State
   const [githubStatus, setGithubStatus] = useState("not_connected");
   const [githubUser, setGithubUser] = useState(null);
+  const [githubRepos, setGithubRepos] = useState([]);
+  const [reposLoading, setReposLoading] = useState(false);
+  const [selectedRepo, setSelectedRepo] = useState(null);
+
+  // Fetch repositories from backend
+  const fetchGithubRepos = async () => {
+    setReposLoading(true);
+    try {
+      const res = await fetch("/api/auth/github/repos");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.repositories) {
+          setGithubRepos(data.repositories);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal mengambil senarai repositori:", err);
+    } finally {
+      setReposLoading(false);
+    }
+  };
+
+  // Select current active repository
+  const handleSelectRepo = async (repo) => {
+    try {
+      const res = await fetch("/api/auth/github/select-repo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.selectedRepo) {
+          setSelectedRepo(data.selectedRepo);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal memilih repositori:", err);
+    }
+  };
 
   // Check GitHub Connection status on mount
   useEffect(() => {
@@ -55,6 +95,10 @@ function App() {
           if (data.connected && data.username) {
             setGithubStatus("connected");
             setGithubUser(data.username);
+            if (data.selectedRepo) {
+              setSelectedRepo(data.selectedRepo);
+            }
+            fetchGithubRepos();
             return;
           }
         }
@@ -70,11 +114,14 @@ function App() {
       if (authSuccess === "success" && usernameParam) {
         setGithubStatus("connected");
         setGithubUser(usernameParam);
+        fetchGithubRepos();
         // Clean URL search parameters
         window.history.replaceState({}, document.title, window.location.pathname);
       } else if (urlParams.get("github_error")) {
         setGithubStatus("not_connected");
         setGithubUser(null);
+        setGithubRepos([]);
+        setSelectedRepo(null);
         window.history.replaceState({}, document.title, window.location.pathname);
       }
     };
@@ -92,6 +139,8 @@ function App() {
       await fetch("/api/auth/github/disconnect", { method: "POST" });
       setGithubStatus("not_connected");
       setGithubUser(null);
+      setGithubRepos([]);
+      setSelectedRepo(null);
     } catch (err) {
       console.error("Gagal memutuskan sambungan GitHub:", err);
     }
@@ -1453,18 +1502,68 @@ function App() {
                 )}
 
                 {githubStatus === "connected" && (
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: "12px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <span className="github-badge">GitHub Connected ✓</span>
-                      {githubUser && (
-                        <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>
-                          @{githubUser}
-                        </span>
-                      )}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: "12px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <span className="github-badge">GitHub Connected ✓</span>
+                        {githubUser && (
+                          <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>
+                            @{githubUser}
+                          </span>
+                        )}
+                      </div>
+                      <button className="github-disconnect-btn" onClick={handleGitHubDisconnect}>
+                        Disconnect
+                      </button>
                     </div>
-                    <button className="github-disconnect-btn" onClick={handleGitHubDisconnect}>
-                      Disconnect
-                    </button>
+
+                    {/* Repository List Browser and Selector */}
+                    <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                        <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>
+                          Repositori GitHub ({githubRepos.length})
+                        </span>
+                        {reposLoading && <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Memuatkan repositori...</span>}
+                      </div>
+
+                      {selectedRepo && (
+                        <div style={{ padding: "8px 12px", backgroundColor: "var(--accent-light)", border: "1px solid var(--accent)", borderRadius: "8px", fontSize: "13px", color: "var(--primary-text)", marginBottom: "12px", display: "flex", alignItems: "center", justifyBetween: "space-between" }}>
+                          <span><strong>Active Repository:</strong> {selectedRepo.full_name}</span>
+                          <span className={`repo-visibility-badge ${selectedRepo.private ? "private" : "public"}`} style={{ marginLeft: "auto" }}>
+                            {selectedRepo.private ? "Private" : "Public"}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="repo-list-container">
+                        {githubRepos.length === 0 && !reposLoading ? (
+                          <span style={{ fontSize: "13px", color: "var(--secondary-text)" }}>Tiada repositori dijumpai.</span>
+                        ) : (
+                          githubRepos.map((repo) => {
+                            const isSelected = selectedRepo && selectedRepo.id === repo.id;
+                            return (
+                              <div key={repo.id} className={`repo-item-card ${isSelected ? "selected" : ""}`}>
+                                <div className="repo-item-info">
+                                  <div className="repo-title-row">
+                                    <span className="repo-name">{repo.name}</span>
+                                    <span className={`repo-visibility-badge ${repo.private ? "private" : "public"}`}>
+                                      {repo.private ? "Private" : "Public"}
+                                    </span>
+                                  </div>
+                                  <span className="repo-owner">{repo.full_name}</span>
+                                </div>
+                                <button
+                                  className={`repo-select-btn ${isSelected ? "active" : ""}`}
+                                  onClick={() => handleSelectRepo(repo)}
+                                >
+                                  {isSelected ? "Selected ✓" : "Select"}
+                                </button>
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
