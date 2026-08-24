@@ -85,44 +85,48 @@ function App() {
     }
   };
 
-  // Check GitHub Connection status on mount
-  useEffect(() => {
-    const checkGithubStatus = async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const authSuccess = urlParams.get("github_auth");
-      const usernameParam = urlParams.get("username");
+  // Check GitHub Connection status
+  const checkGithubStatus = async () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const authSuccess = urlParams.get("github_auth");
+    const usernameParam = urlParams.get("username");
 
-      try {
-        const res = await fetch("/api/github/status");
-        if (res.ok) {
-          const data = await res.json();
-          if (data.connected && data.username) {
-            setGithubStatus("connected");
-            setGithubUser(data.username);
-            if (data.selectedRepo) {
-              setSelectedRepo(data.selectedRepo);
-            }
-            if (authSuccess || urlParams.get("github_error")) {
-              window.history.replaceState({}, document.title, window.location.pathname);
-            }
-            return;
+    try {
+      const res = await fetch("/api/github/status");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.connected && data.username) {
+          setGithubStatus("connected");
+          setGithubUser(data.username);
+          if (data.selectedRepo) {
+            setSelectedRepo(data.selectedRepo);
           }
+          if (authSuccess || urlParams.get("github_error")) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+          return;
         }
-      } catch (err) {
-        console.error("Gagal menyemak status GitHub:", err);
       }
+    } catch (err) {
+      console.error("Gagal menyemak status GitHub:", err);
+    }
 
-      if (authSuccess === "success" && usernameParam) {
-        setGithubStatus("connected");
-        setGithubUser(usernameParam);
-        window.history.replaceState({}, document.title, window.location.pathname);
-      } else if (urlParams.get("github_error")) {
-        setGithubStatus("not_connected");
-        setGithubUser(null);
+    if (authSuccess === "success" && usernameParam) {
+      setGithubStatus("connected");
+      setGithubUser(usernameParam);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else {
+      setGithubStatus("not_connected");
+      setGithubUser(null);
+      setSelectedRepo(null);
+      setGithubRepos([]);
+      if (urlParams.get("github_error")) {
         window.history.replaceState({}, document.title, window.location.pathname);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     checkGithubStatus();
   }, []);
 
@@ -134,8 +138,7 @@ function App() {
   const handleGitHubDisconnect = async () => {
     try {
       await fetch("/api/github/disconnect", { method: "POST" });
-      setGithubStatus("not_connected");
-      setGithubUser(null);
+      await checkGithubStatus();
     } catch (err) {
       console.error("Gagal memutuskan sambungan GitHub:", err);
     }
