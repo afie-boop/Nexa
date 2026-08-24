@@ -8,6 +8,7 @@ async function coder(data) {
   const {
     provider,
     model,
+    fallbackModel,
     question,
     history = [],
     system = "",
@@ -21,6 +22,7 @@ async function coder(data) {
 
     response = await askOpenRouter(question, {
       model,
+      fallbackModel,
       history,
       system
     });

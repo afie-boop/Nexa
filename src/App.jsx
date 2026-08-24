@@ -120,6 +120,15 @@ function App() {
     }
   });
 
+  const [fallbackModel, setFallbackModel] = useState(() => {
+    try {
+      const saved = localStorage.getItem("nexa_fallback_model");
+      return saved ? saved : "openrouter/free";
+    } catch {
+      return "openrouter/free";
+    }
+  });
+
   const [load, setLoad] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("Nexa sedang berfikir...");
   const [error, setError] = useState(null);
@@ -187,6 +196,14 @@ function App() {
       console.error(err);
     }
   }, [codingModel]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("nexa_fallback_model", fallbackModel);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [fallbackModel]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -406,8 +423,8 @@ function App() {
     const textToSend = overrideMsg || msg;
     if (!textToSend.trim() || load) return;
 
-    if (!generalModel.trim() || !codingModel.trim()) {
-      setError("Model ID untuk General AI dan Coding AI tidak boleh kosong.");
+    if (!generalModel.trim() || !codingModel.trim() || !fallbackModel.trim()) {
+      setError("Model ID untuk General AI, Coding AI, dan Fallback AI tidak boleh kosong.");
       return;
     }
 
@@ -460,6 +477,7 @@ function App() {
             question: textToSend,
             history: historyForRequest,
             codingModel: codingModel.trim(),
+            fallbackModel: fallbackModel.trim(),
             sessionId
           })
         });
@@ -534,7 +552,8 @@ function App() {
             question: textToSend,
             history: historyForRequest,
             generalModel: generalModel.trim(),
-            codingModel: codingModel.trim()
+            codingModel: codingModel.trim(),
+            fallbackModel: fallbackModel.trim()
           }),
         });
 
@@ -1230,18 +1249,18 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">Nexa AI Models</h2>
-              <p className="panel-subtitle">Tetapkan Model ID tersuai untuk General AI dan Coding AI.</p>
+              <p className="panel-subtitle">Tetapkan Model ID tersuai untuk General AI, Coding AI, dan Fallback AI.</p>
 
               <div className="grid-container">
                 <div className="flat-card">
                   <span className="flat-card-title">General AI</span>
-                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model ID untuk tugasan am / general conversation.</p>
-                  <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Model ID</label>
+                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model utama untuk tugasan am / sembang biasa.</p>
+                  <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>General AI Model ID</label>
                   <input
                     type="text"
                     value={generalModel}
                     onChange={(e) => setGeneralModel(e.target.value)}
-                    placeholder="Contoh: openrouter/free"
+                    placeholder="Contoh: qwen/qwen3-235b-a22b-2507"
                     style={{
                       width: "100%",
                       padding: "10px 12px",
@@ -1256,13 +1275,34 @@ function App() {
                 </div>
                 <div className="flat-card">
                   <span className="flat-card-title">Coding AI</span>
-                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model ID untuk tugasan pengkodan / coding tasks.</p>
-                  <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Model ID</label>
+                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model utama untuk tugasan pengkodan & Nexa Agent.</p>
+                  <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Code AI Model ID</label>
                   <input
                     type="text"
                     value={codingModel}
                     onChange={(e) => setCodingModel(e.target.value)}
-                    placeholder="Contoh: qwen/qwen3-coder:free"
+                    placeholder="Contoh: openrouter/free"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      color: "inherit",
+                      fontSize: "14px",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+                <div className="flat-card">
+                  <span className="flat-card-title">Fallback AI</span>
+                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model cadangan automatik jika model utama mengalami ralat sementara (429 rate limit/server error).</p>
+                  <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Fallback Model ID</label>
+                  <input
+                    type="text"
+                    value={fallbackModel}
+                    onChange={(e) => setFallbackModel(e.target.value)}
+                    placeholder="Contoh: openrouter/free"
                     style={{
                       width: "100%",
                       padding: "10px 12px",
@@ -1326,7 +1366,74 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">Settings</h2>
-              <p className="panel-subtitle">Fine-tune the Nexa AI behavior memory parameters.</p>
+              <p className="panel-subtitle">Konfigurasi tetapan model AI dan ingatan Nexa AI.</p>
+
+              <div className="flat-card" style={{ marginBottom: "16px" }}>
+                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>Konfigurasi Model AI</h3>
+
+                <div style={{ marginBottom: "14px" }}>
+                  <strong style={{ display: "block", fontSize: "14px", marginBottom: "4px" }}>General AI Model ID</strong>
+                  <span style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Model utama untuk perbualan umum dan tugas am.</span>
+                  <input
+                    type="text"
+                    value={generalModel}
+                    onChange={(e) => setGeneralModel(e.target.value)}
+                    placeholder="Contoh: qwen/qwen3-235b-a22b-2507"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      color: "inherit",
+                      fontSize: "14px",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: "14px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+                  <strong style={{ display: "block", fontSize: "14px", marginBottom: "4px" }}>Code AI Model ID</strong>
+                  <span style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Model utama untuk tugasan pengkodan dan Agent mode.</span>
+                  <input
+                    type="text"
+                    value={codingModel}
+                    onChange={(e) => setCodingModel(e.target.value)}
+                    placeholder="Contoh: openrouter/free"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      color: "inherit",
+                      fontSize: "14px",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+
+                <div style={{ paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
+                  <strong style={{ display: "block", fontSize: "14px", marginBottom: "4px" }}>Fallback Model ID</strong>
+                  <span style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Model cadangan yang digunakan secara automatik jika General AI atau Code AI mengalami ralat rantaian/had kadar (429/5xx).</span>
+                  <input
+                    type="text"
+                    value={fallbackModel}
+                    onChange={(e) => setFallbackModel(e.target.value)}
+                    placeholder="Contoh: openrouter/free"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--border)",
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      color: "inherit",
+                      fontSize: "14px",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+              </div>
 
               <div className="flat-card">
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>

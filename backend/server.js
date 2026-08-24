@@ -40,7 +40,7 @@ app.post("/api/agent/permission", (req, res) => {
 
 // Agent Execution Stream Endpoint
 app.post("/api/agent", async (req, res) => {
-  const { question, history, codingModel, sessionId: clientSessionId } = req.body;
+  const { question, history, codingModel, fallbackModel, sessionId: clientSessionId } = req.body;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -69,6 +69,7 @@ app.post("/api/agent", async (req, res) => {
       question,
       history: history || [],
       model: codingModel || "openrouter/free",
+      fallbackModel: fallbackModel || "openrouter/free",
       sendEvent
     });
 
@@ -138,7 +139,7 @@ app.post("/chat", async (req, res) => {
       return sendError("Mesej tak boleh kosong.");
     }
 
-    const { generalModel, codingModel } = req.body;
+    const { generalModel, codingModel, fallbackModel } = req.body;
 
     sendStatus("Mengelaskan permintaan...");
 
@@ -153,6 +154,7 @@ app.post("/chat", async (req, res) => {
       history: history || [],
       generalModel,
       codingModel,
+      fallbackModel,
       sendStatus,
       sendProcessStep
     });

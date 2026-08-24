@@ -112,6 +112,7 @@ async function runAgentTask({
   question,
   history = [],
   model = "openrouter/free",
+  fallbackModel = "openrouter/free",
   sendEvent
 }) {
   const messages = [];
@@ -151,6 +152,7 @@ async function runAgentTask({
         messages[messages.length - 1].content,
         {
           model: model || "openrouter/free",
+          fallbackModel: fallbackModel || "openrouter/free",
           system: SYSTEM_PROMPT,
           history: historyToPass
         }

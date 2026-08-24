@@ -10,6 +10,7 @@ async function router(data) {
     history = [],
     generalModel,
     codingModel,
+    fallbackModel,
     sendStatus = () => {}
   } = data;
 
@@ -63,6 +64,7 @@ Gunakan Bahasa Melayu atau Indonesia mengikut pengguna.
     history,
     provider,
     model,
+    fallbackModel: fallbackModel || "openrouter/free",
     system,
     retrievedMemories: memories
   };
