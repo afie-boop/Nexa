@@ -1366,74 +1366,7 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">Settings</h2>
-              <p className="panel-subtitle">Konfigurasi tetapan model AI dan ingatan Nexa AI.</p>
-
-              <div className="flat-card" style={{ marginBottom: "16px" }}>
-                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "12px" }}>Konfigurasi Model AI</h3>
-
-                <div style={{ marginBottom: "14px" }}>
-                  <strong style={{ display: "block", fontSize: "14px", marginBottom: "4px" }}>General AI Model ID</strong>
-                  <span style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Model utama untuk perbualan umum dan tugas am.</span>
-                  <input
-                    type="text"
-                    value={generalModel}
-                    onChange={(e) => setGeneralModel(e.target.value)}
-                    placeholder="Contoh: qwen/qwen3-235b-a22b-2507"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--border)",
-                      backgroundColor: "rgba(255,255,255,0.05)",
-                      color: "inherit",
-                      fontSize: "14px",
-                      outline: "none"
-                    }}
-                  />
-                </div>
-
-                <div style={{ marginBottom: "14px", paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
-                  <strong style={{ display: "block", fontSize: "14px", marginBottom: "4px" }}>Code AI Model ID</strong>
-                  <span style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Model utama untuk tugasan pengkodan dan Agent mode.</span>
-                  <input
-                    type="text"
-                    value={codingModel}
-                    onChange={(e) => setCodingModel(e.target.value)}
-                    placeholder="Contoh: openrouter/free"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--border)",
-                      backgroundColor: "rgba(255,255,255,0.05)",
-                      color: "inherit",
-                      fontSize: "14px",
-                      outline: "none"
-                    }}
-                  />
-                </div>
-
-                <div style={{ paddingTop: "12px", borderTop: "1px solid var(--border)" }}>
-                  <strong style={{ display: "block", fontSize: "14px", marginBottom: "4px" }}>Fallback Model ID</strong>
-                  <span style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Model cadangan yang digunakan secara automatik jika General AI atau Code AI mengalami ralat rantaian/had kadar (429/5xx).</span>
-                  <input
-                    type="text"
-                    value={fallbackModel}
-                    onChange={(e) => setFallbackModel(e.target.value)}
-                    placeholder="Contoh: openrouter/free"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--border)",
-                      backgroundColor: "rgba(255,255,255,0.05)",
-                      color: "inherit",
-                      fontSize: "14px",
-                      outline: "none"
-                    }}
-                  />
-                </div>
-              </div>
+              <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran Nexa AI.</p>
 
               <div className="flat-card">
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
