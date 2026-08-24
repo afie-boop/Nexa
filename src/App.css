@@ -298,6 +298,58 @@ body {
   background-color: var(--border);
 }
 
+/* GitHub Connection Styles */
+.github-connect-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background-color: #24292e;
+  color: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+  text-decoration: none;
+}
+
+.github-connect-btn:hover {
+  background-color: #2f363d;
+  border-color: var(--secondary-text);
+}
+
+.github-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: rgba(46, 160, 67, 0.15);
+  color: #3FB950;
+  border: 1px solid rgba(46, 160, 67, 0.3);
+}
+
+.github-disconnect-btn {
+  background: none;
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  color: #F85149;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.github-disconnect-btn:hover {
+  background-color: rgba(248, 81, 73, 0.1);
+}
+
 /* User Profile Section */
 .sidebar-profile {
   padding: 16px 24px;

@@ -41,6 +41,62 @@ function App() {
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
 
+  // GitHub Connection State: 'not_connected' | 'connecting' | 'connected'
+  const [githubStatus, setGithubStatus] = useState("not_connected");
+  const [githubUser, setGithubUser] = useState(null);
+
+  // Check GitHub Connection status on mount
+  useEffect(() => {
+    const checkGithubStatus = async () => {
+      try {
+        const res = await fetch("/api/auth/github/user");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.connected && data.username) {
+            setGithubStatus("connected");
+            setGithubUser(data.username);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Gagal menyemak status GitHub:", err);
+      }
+
+      // Check URL parameters for OAuth redirect callback
+      const urlParams = new URLSearchParams(window.location.search);
+      const authSuccess = urlParams.get("github_auth");
+      const usernameParam = urlParams.get("username");
+
+      if (authSuccess === "success" && usernameParam) {
+        setGithubStatus("connected");
+        setGithubUser(usernameParam);
+        // Clean URL search parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (urlParams.get("github_error")) {
+        setGithubStatus("not_connected");
+        setGithubUser(null);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    };
+
+    checkGithubStatus();
+  }, []);
+
+  const handleGitHubLogin = () => {
+    setGithubStatus("connecting");
+    window.location.href = "/api/auth/github";
+  };
+
+  const handleGitHubDisconnect = async () => {
+    try {
+      await fetch("/api/auth/github/disconnect", { method: "POST" });
+      setGithubStatus("not_connected");
+      setGithubUser(null);
+    } catch (err) {
+      console.error("Gagal memutuskan sambungan GitHub:", err);
+    }
+  };
+
   // Online / Offline state tracking
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -884,12 +940,18 @@ function App() {
           )}
         </nav>
 
-        {/* User Profile Info */}
+        {/* User Profile Info & GitHub status badge */}
         <div className="sidebar-profile">
-          <div className="profile-avatar">UX</div>
+          <div className="profile-avatar">
+            {githubStatus === "connected" && githubUser ? githubUser.substring(0, 2).toUpperCase() : "UX"}
+          </div>
           <div className="profile-info">
-            <span className="profile-name">Nexa Developer</span>
-            <span className="profile-plan">Pro Evolution Plan</span>
+            <span className="profile-name">
+              {githubStatus === "connected" && githubUser ? `@${githubUser}` : "Nexa Developer"}
+            </span>
+            <span className="profile-plan">
+              {githubStatus === "connected" ? "GitHub Connected ✓" : "Pro Evolution Plan"}
+            </span>
           </div>
         </div>
 
@@ -1367,6 +1429,45 @@ function App() {
             <div className="sub-panel-inner">
               <h2 className="panel-title">Settings</h2>
               <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran Nexa AI.</p>
+
+              {/* GitHub Connection Section */}
+              <div className="flat-card">
+                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Sambungan GitHub</h3>
+                <p style={{ fontSize: "13px", color: "var(--secondary-text)", marginBottom: "16px" }}>
+                  Sambungkan akaun GitHub anda untuk membolehkan pengesahan dan akses persekitaran pembangunan Nexa.
+                </p>
+
+                {githubStatus === "not_connected" && (
+                  <button className="github-connect-btn" onClick={handleGitHubLogin}>
+                    <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                    </svg>
+                    <span>Login with GitHub</span>
+                  </button>
+                )}
+
+                {githubStatus === "connecting" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--secondary-text)", fontSize: "14px" }}>
+                    <span>Connecting...</span>
+                  </div>
+                )}
+
+                {githubStatus === "connected" && (
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: "12px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                      <span className="github-badge">GitHub Connected ✓</span>
+                      {githubUser && (
+                        <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>
+                          @{githubUser}
+                        </span>
+                      )}
+                    </div>
+                    <button className="github-disconnect-btn" onClick={handleGitHubDisconnect}>
+                      Disconnect
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <div className="flat-card">
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>

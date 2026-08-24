@@ -15,6 +15,7 @@ const classifyTask = require("./router");
 const { runPipeline } = require("./pipeline/pipeline");
 const { handlePostFeedback } = require("./feedback/feedbackController");
 const { runAgentTask, resolvePendingPermission } = require("./agent/agentController");
+const githubAuthRouter = require("./auth/github");
 
 const app = express();
 
@@ -23,6 +24,9 @@ app.use(express.json());
 
 const distPath = path.join(__dirname, "..", "dist");
 app.use(express.static(distPath));
+
+// Mount GitHub Auth Routes
+app.use("/api/auth/github", githubAuthRouter);
 
 app.post("/api/feedback", handlePostFeedback);
 
