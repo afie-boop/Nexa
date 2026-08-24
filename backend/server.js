@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 const path = require("path");
 
 console.log("=================================");
@@ -21,6 +22,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
 
 const distPath = path.join(__dirname, "..", "dist");
 app.use(express.static(distPath));

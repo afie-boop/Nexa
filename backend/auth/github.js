@@ -4,26 +4,73 @@ const fs = require("fs");
 const path = require("path");
 const router = express.Router();
 
-const SESSION_FILE = path.join(__dirname, "..", "feedback", "data", "github_session.json");
+const SESSIONS_FILE = path.join(__dirname, "..", "feedback", "data", "github_sessions.json");
 
 // Ensure data directory exists
-const dataDir = path.dirname(SESSION_FILE);
+const dataDir = path.dirname(SESSIONS_FILE);
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Helper to load session state from JSON file
-function loadSession() {
+// Helper to load all sessions from JSON file
+function loadAllSessions() {
   try {
-    if (fs.existsSync(SESSION_FILE)) {
-      const data = fs.readFileSync(SESSION_FILE, "utf-8");
-      const parsed = JSON.parse(data);
-      return parsed;
+    if (fs.existsSync(SESSIONS_FILE)) {
+      const data = fs.readFileSync(SESSIONS_FILE, "utf-8");
+      return JSON.parse(data);
     }
   } catch (err) {
-    console.error("[GitHub Auth] Error reading session file:", err.message);
+    console.error("[GitHub Auth] Error reading sessions file:", err.message);
+  }
+  return {};
+}
+
+// Helper to save all sessions to JSON file
+function saveAllSessions(sessions) {
+  try {
+    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2), "utf-8");
+  } catch (err) {
+    console.error("[GitHub Auth] Error saving sessions file:", err.message);
+  }
+}
+
+// Helper to get session ID from request cookie or generate a new one
+function getSessionId(req, res) {
+  let sessionId = req.cookies ? req.cookies.nexa_session_id : null;
+  if (!sessionId) {
+    sessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9);
+    const isProd = process.env.NODE_ENV === "production";
+    res.cookie("nexa_session_id", sessionId, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 30 * 24 * 60 * 60 * 1000
+    });
+  }
+  return sessionId;
+}
+
+// Helper to get session data for a specific request
+function loadSession(req) {
+  const sessionId = req.cookies ? req.cookies.nexa_session_id : null;
+  if (!sessionId) {
+    return {
+      sessionId: null,
+      connected: false,
+      username: null,
+      accessToken: null,
+      user: null,
+      selectedRepo: null
+    };
+  }
+  const sessions = loadAllSessions();
+  const session = sessions[sessionId];
+  if (session) {
+    return { sessionId, ...session };
   }
   return {
+    sessionId,
     connected: false,
     username: null,
     accessToken: null,
@@ -32,14 +79,22 @@ function loadSession() {
   };
 }
 
-// Helper to save session state to JSON file
-function saveSession(sessionData) {
-  try {
-    fs.writeFileSync(SESSION_FILE, JSON.stringify(sessionData, null, 2), "utf-8");
-    console.log("[GitHub Auth] Session state saved successfully for user:", sessionData.username || "none");
-  } catch (err) {
-    console.error("[GitHub Auth] Error saving session file:", err.message);
-  }
+// Helper to save session data for a specific request
+function saveSession(sessionId, sessionData) {
+  if (!sessionId) return;
+  const sessions = loadAllSessions();
+  sessions[sessionId] = sessionData;
+  saveAllSessions(sessions);
+  console.log("[GitHub Auth] Session state saved for session:", sessionId, "| User:", sessionData.username || "none");
+}
+
+// Helper to remove session data for a specific request
+function deleteSession(sessionId) {
+  if (!sessionId) return;
+  const sessions = loadAllSessions();
+  delete sessions[sessionId];
+  saveAllSessions(sessions);
+  console.log("[GitHub Auth] Session deleted for session:", sessionId);
 }
 
 // GET /api/github/login or /api/auth/github - Initiate GitHub OAuth flow
@@ -119,7 +174,8 @@ router.get("/callback", async (req, res) => {
     const userData = userResponse.data;
     console.log("[GitHub OAuth Callback] GitHub user fetched successfully:", userData.login);
 
-    const currentData = loadSession();
+    const sessionId = getSessionId(req, res);
+    const currentData = loadSession(req);
 
     const sessionData = {
       connected: true,
@@ -134,13 +190,13 @@ router.get("/callback", async (req, res) => {
       selectedRepo: currentData.selectedRepo || null
     };
 
-    saveSession(sessionData);
+    saveSession(sessionId, sessionData);
 
     const isProd = process.env.NODE_ENV === "production";
     res.cookie("nexa_github_connected", "true", {
       httpOnly: false,
       secure: isProd,
-      sameSite: isProd ? "lax" : "lax",
+      sameSite: "lax",
       path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000
     });
@@ -158,9 +214,10 @@ router.get("/status", (req, res) => handleGetStatus(req, res));
 router.get("/user", (req, res) => handleGetStatus(req, res));
 
 function handleGetStatus(req, res) {
-  const session = loadSession();
+  const sessionId = getSessionId(req, res);
+  const session = loadSession(req);
   const isConnected = !!(session && session.connected);
-  console.log("[GitHub Status Check] Connected:", isConnected, "| Username:", session?.username || "none");
+  console.log("[GitHub Status Check] Session ID:", sessionId, "| Connected:", isConnected, "| Username:", session?.username || "none");
 
   if (isConnected) {
     return res.json({
@@ -183,7 +240,7 @@ function handleGetStatus(req, res) {
 router.get("/repos", (req, res) => handleGetRepos(req, res));
 
 async function handleGetRepos(req, res) {
-  const session = loadSession();
+  const session = loadSession(req);
   if (!session || !session.connected || !session.accessToken) {
     console.error("[GitHub Repos Error] User is not connected or token is missing.");
     return res.status(401).json({ error: "Sila log masuk dengan GitHub terlebih dahulu." });
@@ -230,7 +287,7 @@ async function handleGetRepos(req, res) {
 router.post("/select-repo", (req, res) => handleSelectRepo(req, res));
 
 function handleSelectRepo(req, res) {
-  const session = loadSession();
+  const session = loadSession(req);
   if (!session || !session.connected) {
     return res.status(401).json({ error: "Sila log masuk dengan GitHub terlebih dahulu." });
   }
@@ -251,7 +308,7 @@ function handleSelectRepo(req, res) {
   };
 
   session.selectedRepo = selectedRepo;
-  saveSession(session);
+  saveSession(session.sessionId, session);
 
   console.log("[GitHub Select Repo] Selected repository updated to:", selectedRepo.full_name);
 
@@ -265,15 +322,13 @@ function handleSelectRepo(req, res) {
 router.post("/disconnect", (req, res) => handleDisconnect(req, res));
 
 function handleDisconnect(req, res) {
-  console.log("[GitHub Disconnect] Disconnecting user session...");
-  saveSession({
-    connected: false,
-    username: null,
-    accessToken: null,
-    user: null,
-    selectedRepo: null
-  });
+  const sessionId = req.cookies ? req.cookies.nexa_session_id : null;
+  console.log("[GitHub Disconnect] Disconnecting user session ID:", sessionId);
+  if (sessionId) {
+    deleteSession(sessionId);
+  }
 
+  res.clearCookie("nexa_session_id", { path: "/" });
   res.clearCookie("nexa_github_connected", { path: "/" });
   return res.json({
     success: true,

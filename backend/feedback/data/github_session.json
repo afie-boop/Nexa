@@ -1,7 +1,9 @@
 {
-  "connected": false,
-  "username": null,
-  "accessToken": null,
-  "user": null,
+  "connected": true,
+  "username": "octocat",
+  "accessToken": "mock_token",
+  "user": {
+    "login": "octocat"
+  },
   "selectedRepo": null
 }
