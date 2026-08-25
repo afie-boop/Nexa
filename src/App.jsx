@@ -52,7 +52,7 @@ function App() {
   const fetchGithubRepos = async () => {
     setReposLoading(true);
     try {
-      const res = await fetch("/api/github/repos", { credentials: "same-origin" });
+      const res = await fetch("/api/github/repos", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         if (data.repositories) {
@@ -72,7 +72,7 @@ function App() {
       const res = await fetch("/api/github/select-repo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
+        credentials: "include",
         body: JSON.stringify({ repo })
       });
       if (res.ok) {
@@ -93,7 +93,7 @@ function App() {
     const usernameParam = urlParams.get("username");
 
     try {
-      const res = await fetch("/api/github/status", { credentials: "same-origin" });
+      const res = await fetch("/api/github/status", { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         if (data.connected && data.username) {
@@ -138,7 +138,7 @@ function App() {
 
   const handleGitHubDisconnect = async () => {
     try {
-      await fetch("/api/github/disconnect", { method: "POST", credentials: "same-origin" });
+      await fetch("/api/github/disconnect", { method: "POST", credentials: "include" });
       await checkGithubStatus();
     } catch (err) {
       console.error("Gagal memutuskan sambungan GitHub:", err);

@@ -12,21 +12,28 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Helper to load all sessions from JSON file
+// In-memory cache for fast session access
+let memorySessions = null;
+
 function loadAllSessions() {
+  if (memorySessions !== null) {
+    return memorySessions;
+  }
   try {
     if (fs.existsSync(SESSIONS_FILE)) {
       const data = fs.readFileSync(SESSIONS_FILE, "utf-8");
-      return JSON.parse(data);
+      memorySessions = JSON.parse(data);
+      return memorySessions;
     }
   } catch (err) {
     console.error("[GitHub Auth] Error reading sessions file:", err.message);
   }
-  return {};
+  memorySessions = {};
+  return memorySessions;
 }
 
-// Helper to save all sessions to JSON file
 function saveAllSessions(sessions) {
+  memorySessions = sessions;
   try {
     fs.writeFileSync(SESSIONS_FILE, JSON.stringify(sessions, null, 2), "utf-8");
   } catch (err) {
@@ -34,15 +41,19 @@ function saveAllSessions(sessions) {
   }
 }
 
+function isRequestSecure(req) {
+  return req.secure || req.headers["x-forwarded-proto"] === "https" || process.env.NODE_ENV === "production";
+}
+
 // Helper to get session ID from request cookie or generate a new one
 function getSessionId(req, res) {
   let sessionId = req.cookies ? req.cookies.nexa_session_id : null;
   if (!sessionId) {
     sessionId = "sess_" + Date.now() + "_" + Math.random().toString(36).substring(2, 9);
-    const isProd = process.env.NODE_ENV === "production";
+    const isSecure = isRequestSecure(req);
     res.cookie("nexa_session_id", sessionId, {
       httpOnly: true,
-      secure: isProd,
+      secure: isSecure,
       sameSite: "lax",
       path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000
@@ -51,9 +62,9 @@ function getSessionId(req, res) {
   return sessionId;
 }
 
-// Helper to get session data for a specific request
-function loadSession(req) {
-  const sessionId = req.cookies ? req.cookies.nexa_session_id : null;
+// Helper to load session data for a specific request or sessionId
+function loadSession(req, explicitSessionId = null) {
+  const sessionId = explicitSessionId || (req.cookies ? req.cookies.nexa_session_id : null);
   if (!sessionId) {
     return {
       sessionId: null,
@@ -175,7 +186,7 @@ router.get("/callback", async (req, res) => {
     console.log("[GitHub OAuth Callback] GitHub user fetched successfully:", userData.login);
 
     const sessionId = getSessionId(req, res);
-    const currentData = loadSession(req);
+    const currentData = loadSession(req, sessionId);
 
     const sessionData = {
       connected: true,
@@ -192,10 +203,10 @@ router.get("/callback", async (req, res) => {
 
     saveSession(sessionId, sessionData);
 
-    const isProd = process.env.NODE_ENV === "production";
+    const isSecure = isRequestSecure(req);
     res.cookie("nexa_github_connected", "true", {
       httpOnly: false,
-      secure: isProd,
+      secure: isSecure,
       sameSite: "lax",
       path: "/",
       maxAge: 30 * 24 * 60 * 60 * 1000
@@ -215,7 +226,7 @@ router.get("/user", (req, res) => handleGetStatus(req, res));
 
 function handleGetStatus(req, res) {
   const sessionId = getSessionId(req, res);
-  const session = loadSession(req);
+  const session = loadSession(req, sessionId);
   const isConnected = !!(session && session.connected);
   console.log("[GitHub Status Check] Session ID:", sessionId, "| Connected:", isConnected, "| Username:", session?.username || "none");
 
