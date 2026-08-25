@@ -1655,14 +1655,15 @@ function App() {
                           >
                             {branchesLoading ? (
                               <option value="" style={{ background: "#111" }}>Memuatkan branch...</option>
-                            ) : branches.length > 0 ? (
-                              branches.map((b) => (
-                                <option key={b.name} value={b.name} style={{ background: "#111" }}>
-                                  {b.name}
-                                </option>
-                              ))
                             ) : (
-                              <option value="main" style={{ background: "#111" }}>main ▼</option>
+                              <>
+                                <option value="" disabled style={{ background: "#111" }}>Select Branch ▼</option>
+                                {branches.map((b) => (
+                                  <option key={b.name} value={b.name} style={{ background: "#111" }}>
+                                    🌿 {b.name}
+                                  </option>
+                                ))}
+                              </>
                             )}
                           </select>
                         </div>
