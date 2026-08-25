@@ -582,6 +582,7 @@ function App() {
             history: historyForRequest,
             codingModel: codingModel.trim(),
             fallbackModel: fallbackModel.trim(),
+            selectedRepo,
             sessionId
           })
         });

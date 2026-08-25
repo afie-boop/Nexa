@@ -348,3 +348,4 @@ function handleDisconnect(req, res) {
 }
 
 module.exports = router;
+module.exports.loadSession = loadSession;

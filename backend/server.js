@@ -46,9 +46,11 @@ app.post("/api/agent/permission", (req, res) => {
   return res.json({ success: true, resolved });
 });
 
+const { loadSession } = require("./auth/github");
+
 // Agent Execution Stream Endpoint
 app.post("/api/agent", async (req, res) => {
-  const { question, history, codingModel, fallbackModel, sessionId: clientSessionId } = req.body;
+  const { question, history, codingModel, fallbackModel, sessionId: clientSessionId, selectedRepo: bodySelectedRepo } = req.body;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -72,12 +74,16 @@ app.post("/api/agent", async (req, res) => {
       return res.end();
     }
 
+    const githubSession = loadSession(req);
+    const selectedRepo = bodySelectedRepo || (githubSession && githubSession.selectedRepo ? githubSession.selectedRepo : null);
+
     await runAgentTask({
       sessionId,
       question,
       history: history || [],
       model: codingModel || "openrouter/free",
       fallbackModel: fallbackModel || "openrouter/free",
+      selectedRepo,
       sendEvent
     });
 

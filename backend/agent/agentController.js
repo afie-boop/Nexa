@@ -113,6 +113,7 @@ async function runAgentTask({
   history = [],
   model = "openrouter/free",
   fallbackModel = "openrouter/free",
+  selectedRepo = null,
   sendEvent
 }) {
   const messages = [];
@@ -121,6 +122,19 @@ async function runAgentTask({
   const cleanHistory = (history || []).filter(m => m.role !== "system");
   if (cleanHistory.length > 0) {
     messages.push(...cleanHistory);
+  }
+
+  // Dynamic system prompt including selected GitHub repository context
+  let agentSystemPrompt = SYSTEM_PROMPT;
+  if (selectedRepo && selectedRepo.full_name) {
+    agentSystemPrompt += `\n\nREPOSITORI GITHUB AKTIF (SELECTED GITHUB REPOSITORY):
+- Nama Repositori: ${selectedRepo.full_name}
+- Pemilik: ${selectedRepo.owner || "N/A"}
+- Branch Utama: ${selectedRepo.default_branch || "main"}
+- URL: ${selectedRepo.html_url || ""}
+- Status Visibilitas: ${selectedRepo.private ? "Private" : "Public"}
+
+Sila jalankan tugasan pengkodan sebagai Jules (Ejen GitHub Autonomi) untuk repositori '${selectedRepo.full_name}'.`;
   }
 
   // Current user task
@@ -153,7 +167,7 @@ async function runAgentTask({
         {
           model: model || "openrouter/free",
           fallbackModel: fallbackModel || "openrouter/free",
-          system: SYSTEM_PROMPT,
+          system: agentSystemPrompt,
           history: historyToPass
         }
       );
