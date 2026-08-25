@@ -41,12 +41,19 @@ function App() {
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
 
-  // GitHub Connection & Repository State
+  // GitHub Connection, Workspace & Repository State
   const [githubStatus, setGithubStatus] = useState("not_connected");
   const [githubUser, setGithubUser] = useState(null);
   const [githubRepos, setGithubRepos] = useState([]);
   const [reposLoading, setReposLoading] = useState(false);
   const [selectedRepo, setSelectedRepo] = useState(null);
+
+  // GitHub Workspace dropdown selection states
+  const [selectedRepoFullName, setSelectedRepoFullName] = useState("");
+  const [branches, setBranches] = useState([]);
+  const [branchesLoading, setBranchesLoading] = useState(false);
+  const [selectedBranch, setSelectedBranch] = useState("main");
+  const [currentWorkspace, setCurrentWorkspace] = useState(null);
 
   // Fetch repositories from backend
   const fetchGithubRepos = async () => {
@@ -66,23 +73,78 @@ function App() {
     }
   };
 
-  // Select current active repository
-  const handleSelectRepo = async (repo) => {
+  // Fetch branches for selected repo
+  const fetchBranches = async (fullName) => {
+    if (!fullName) return;
+    const parts = fullName.split("/");
+    if (parts.length !== 2) return;
+    const [owner, repo] = parts;
+
+    setBranchesLoading(true);
     try {
-      const res = await fetch("/api/github/select-repo", {
+      const res = await fetch(`/api/github/repos/${owner}/${repo}/branches`, { credentials: "include" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.branches) {
+          setBranches(data.branches);
+          const targetRepoObj = githubRepos.find(r => r.full_name === fullName);
+          const defaultB = targetRepoObj?.default_branch || (data.branches.length > 0 ? data.branches[0].name : "main");
+          setSelectedBranch(defaultB);
+        }
+      }
+    } catch (err) {
+      console.error("Gagal mengambil senarai branch:", err);
+    } finally {
+      setBranchesLoading(false);
+    }
+  };
+
+  // Handle dropdown change for repository
+  const handleRepoDropdownChange = (e) => {
+    const val = e.target.value;
+    setSelectedRepoFullName(val);
+    setBranches([]);
+    if (val) {
+      fetchBranches(val);
+    }
+  };
+
+  // Set as Current Workspace
+  const handleSetCurrentWorkspace = async () => {
+    if (!selectedRepoFullName || !selectedBranch) return;
+
+    const parts = selectedRepoFullName.split("/");
+    if (parts.length !== 2) return;
+    const [owner, repo] = parts;
+
+    const targetRepoObj = githubRepos.find(r => r.full_name === selectedRepoFullName);
+
+    try {
+      const res = await fetch("/api/github/select-workspace", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ repo })
+        body: JSON.stringify({
+          owner,
+          repo,
+          branch: selectedBranch,
+          full_name: selectedRepoFullName,
+          private: targetRepoObj?.private || false,
+          html_url: targetRepoObj?.html_url || `https://github.com/${owner}/${repo}`
+        })
       });
+
       if (res.ok) {
         const data = await res.json();
+        if (data.selectedWorkspace) {
+          setCurrentWorkspace(data.selectedWorkspace);
+        }
         if (data.selectedRepo) {
           setSelectedRepo(data.selectedRepo);
         }
       }
     } catch (err) {
-      console.error("Gagal memilih repositori:", err);
+      console.error("Gagal menetapkan workspace:", err);
     }
   };
 
@@ -102,6 +164,12 @@ function App() {
           if (data.selectedRepo) {
             setSelectedRepo(data.selectedRepo);
           }
+          if (data.selectedWorkspace) {
+            setCurrentWorkspace(data.selectedWorkspace);
+            setSelectedRepoFullName(data.selectedWorkspace.full_name || `${data.selectedWorkspace.owner}/${data.selectedWorkspace.repo}`);
+            setSelectedBranch(data.selectedWorkspace.branch || "main");
+          }
+          fetchGithubRepos();
           if (authSuccess || urlParams.get("github_error")) {
             window.history.replaceState({}, document.title, window.location.pathname);
           }
@@ -115,11 +183,13 @@ function App() {
     if (authSuccess === "success" && usernameParam) {
       setGithubStatus("connected");
       setGithubUser(usernameParam);
+      fetchGithubRepos();
       window.history.replaceState({}, document.title, window.location.pathname);
     } else {
       setGithubStatus("not_connected");
       setGithubUser(null);
       setSelectedRepo(null);
+      setCurrentWorkspace(null);
       setGithubRepos([]);
       if (urlParams.get("github_error")) {
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -1517,59 +1587,97 @@ function App() {
                       </button>
                     </div>
 
-                    {/* Repository Selection Section */}
-                    <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <h4 style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>Repository</h4>
-                        <button
-                          className="card-action-btn"
-                          onClick={fetchGithubRepos}
-                          disabled={reposLoading}
-                        >
-                          {reposLoading ? "Memuatkan..." : "Select Repository"}
-                        </button>
-                      </div>
+                    {/* GitHub Project Workspace Section */}
+                    <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
+                      <h4 style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>
+                        GitHub Project Workspace
+                      </h4>
 
-                      {selectedRepo && (
-                        <div style={{ padding: "10px 14px", backgroundColor: "var(--accent-light)", border: "1px solid var(--accent)", borderRadius: "8px", fontSize: "13px", color: "var(--primary-text)" }}>
-                          <div style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "var(--secondary-text)", marginBottom: "2px" }}>
-                            Selected Repository
+                      {/* Selected Workspace Card */}
+                      {currentWorkspace && (
+                        <div style={{ padding: "12px 14px", backgroundColor: "var(--accent-light)", border: "1px solid var(--accent)", borderRadius: "8px", fontSize: "13px", color: "var(--primary-text)", display: "flex", flexDirection: "column", gap: "4px" }}>
+                          <div style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "var(--secondary-text)" }}>
+                            Selected Workspace
                           </div>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            <span style={{ fontWeight: "600", fontSize: "14px" }}>"{selectedRepo.full_name}"</span>
-                            <span className={`repo-visibility-badge ${selectedRepo.private ? "private" : "public"}`}>
-                              {selectedRepo.private ? "Private" : "Public"}
-                            </span>
+                          <div style={{ fontWeight: "600", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>📁</span> {currentWorkspace.owner}/{currentWorkspace.repo}
+                          </div>
+                          <div style={{ fontSize: "13px", color: "var(--secondary-text)", display: "flex", alignItems: "center", gap: "6px" }}>
+                            <span>🌿</span> {currentWorkspace.branch}
                           </div>
                         </div>
                       )}
 
-                      {/* Repositories List dropdown / card list */}
-                      {githubRepos.length > 0 && (
-                        <div className="repo-list-container">
-                          {githubRepos.map((repo) => {
-                            const isSelected = selectedRepo && selectedRepo.id === repo.id;
-                            return (
-                              <div key={repo.id} className={`repo-item-card ${isSelected ? "selected" : ""}`}>
-                                <div className="repo-item-info">
-                                  <div className="repo-title-row">
-                                    <span className="repo-name">{repo.name}</span>
-                                    <span className={`repo-visibility-badge ${repo.private ? "private" : "public"}`}>
-                                      {repo.private ? "Private" : "Public"}
-                                    </span>
-                                  </div>
-                                  <span className="repo-owner">{repo.full_name}</span>
-                                </div>
-                                <button
-                                  className={`repo-select-btn ${isSelected ? "active" : ""}`}
-                                  onClick={() => handleSelectRepo(repo)}
-                                >
-                                  {isSelected ? "Selected ✓" : "Select"}
-                                </button>
-                              </div>
-                            );
-                          })}
+                      {/* Repository Selection Dropdown */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>GitHub Repository</label>
+                        <select
+                          value={selectedRepoFullName}
+                          onChange={handleRepoDropdownChange}
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border)",
+                            backgroundColor: "rgba(255,255,255,0.05)",
+                            color: "var(--primary-text)",
+                            fontSize: "14px",
+                            outline: "none"
+                          }}
+                        >
+                          <option value="" style={{ background: "#111" }}>Select Repository ▼</option>
+                          {githubRepos.map((repo) => (
+                            <option key={repo.id} value={repo.full_name} style={{ background: "#111" }}>
+                              {repo.full_name} {repo.private ? "(Private)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Branch Selection Dropdown */}
+                      {selectedRepoFullName && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                          <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Branch</label>
+                          <select
+                            value={selectedBranch}
+                            onChange={(e) => setSelectedBranch(e.target.value)}
+                            disabled={branchesLoading}
+                            style={{
+                              width: "100%",
+                              padding: "10px 12px",
+                              borderRadius: "8px",
+                              border: "1px solid var(--border)",
+                              backgroundColor: "rgba(255,255,255,0.05)",
+                              color: "var(--primary-text)",
+                              fontSize: "14px",
+                              outline: "none"
+                            }}
+                          >
+                            {branchesLoading ? (
+                              <option value="" style={{ background: "#111" }}>Memuatkan branch...</option>
+                            ) : branches.length > 0 ? (
+                              branches.map((b) => (
+                                <option key={b.name} value={b.name} style={{ background: "#111" }}>
+                                  {b.name}
+                                </option>
+                              ))
+                            ) : (
+                              <option value="main" style={{ background: "#111" }}>main ▼</option>
+                            )}
+                          </select>
                         </div>
+                      )}
+
+                      {/* Action Button */}
+                      {selectedRepoFullName && (
+                        <button
+                          className="github-connect-btn"
+                          onClick={handleSetCurrentWorkspace}
+                          disabled={!selectedRepoFullName || !selectedBranch || branchesLoading}
+                          style={{ marginTop: "4px" }}
+                        >
+                          Set as Current Workspace
+                        </button>
                       )}
                     </div>
                   </div>

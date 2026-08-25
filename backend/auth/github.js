@@ -72,7 +72,8 @@ function loadSession(req, explicitSessionId = null) {
       username: null,
       accessToken: null,
       user: null,
-      selectedRepo: null
+      selectedRepo: null,
+      selectedWorkspace: null
     };
   }
   const sessions = loadAllSessions();
@@ -86,7 +87,8 @@ function loadSession(req, explicitSessionId = null) {
     username: null,
     accessToken: null,
     user: null,
-    selectedRepo: null
+    selectedRepo: null,
+    selectedWorkspace: null
   };
 }
 
@@ -198,7 +200,8 @@ router.get("/callback", async (req, res) => {
         avatar_url: userData.avatar_url,
         id: userData.id
       },
-      selectedRepo: currentData.selectedRepo || null
+      selectedRepo: currentData.selectedRepo || null,
+      selectedWorkspace: currentData.selectedWorkspace || null
     };
 
     saveSession(sessionId, sessionData);
@@ -235,7 +238,8 @@ function handleGetStatus(req, res) {
       connected: true,
       username: session.username,
       user: session.user,
-      selectedRepo: session.selectedRepo || null
+      selectedRepo: session.selectedRepo || null,
+      selectedWorkspace: session.selectedWorkspace || null
     });
   }
 
@@ -243,8 +247,54 @@ function handleGetStatus(req, res) {
     connected: false,
     username: null,
     user: null,
-    selectedRepo: null
+    selectedRepo: null,
+    selectedWorkspace: null
   });
+}
+
+// GET /api/github/repos/:owner/:repo/branches or /api/auth/github/repos/:owner/:repo/branches - Fetch branches for repository
+router.get("/repos/:owner/:repo/branches", (req, res) => handleGetBranches(req, res));
+
+async function handleGetBranches(req, res) {
+  const session = loadSession(req);
+  if (!session || !session.connected || !session.accessToken) {
+    console.error("[GitHub Branches Error] User is not connected or token is missing.");
+    return res.status(401).json({ error: "Sila log masuk dengan GitHub terlebih dahulu." });
+  }
+
+  const { owner, repo } = req.params;
+  if (!owner || !repo) {
+    return res.status(400).json({ error: "Owner dan repo diperlukan." });
+  }
+
+  try {
+    console.log(`[GitHub Branches] Fetching branches for ${owner}/${repo}...`);
+    const branchesResponse = await axios.get(`https://api.github.com/repos/${owner}/${repo}/branches?per_page=100`, {
+      headers: {
+        Authorization: `Bearer ${session.accessToken}`,
+        "User-Agent": "Nexa-AI-App"
+      }
+    });
+
+    const branches = branchesResponse.data.map((b) => ({
+      name: b.name,
+      protected: b.protected,
+      sha: b.commit?.sha
+    }));
+
+    console.log(`[GitHub Branches] Successfully fetched ${branches.length} branches for ${owner}/${repo}`);
+    return res.json({
+      success: true,
+      owner,
+      repo,
+      branches
+    });
+  } catch (err) {
+    console.error("[GitHub Branches Exception]", err.response?.data || err.message);
+    return res.status(500).json({
+      error: err.response?.data?.message || "Gagal mengambil senarai branch dari GitHub."
+    });
+  }
 }
 
 // GET /api/github/repos or /api/auth/github/repos - Fetch repositories for authenticated GitHub user
@@ -294,6 +344,52 @@ async function handleGetRepos(req, res) {
   }
 }
 
+// POST /api/github/select-workspace or /api/auth/github/select-workspace - Set current workspace
+router.post("/select-workspace", (req, res) => handleSelectWorkspace(req, res));
+
+function handleSelectWorkspace(req, res) {
+  const session = loadSession(req);
+  if (!session || !session.connected) {
+    return res.status(401).json({ error: "Sila log masuk dengan GitHub terlebih dahulu." });
+  }
+
+  const { owner, repo, branch, full_name, private: isPrivate, html_url } = req.body;
+  if (!owner || !repo || !branch) {
+    return res.status(400).json({ error: "Maklumat owner, repo, dan branch diperlukan." });
+  }
+
+  const selectedWorkspace = {
+    owner,
+    repo,
+    full_name: full_name || `${owner}/${repo}`,
+    branch,
+    private: !!isPrivate,
+    html_url: html_url || `https://github.com/${owner}/${repo}`
+  };
+
+  const selectedRepo = {
+    id: req.body.id || `${owner}_${repo}`,
+    name: repo,
+    full_name: full_name || `${owner}/${repo}`,
+    owner,
+    private: !!isPrivate,
+    html_url: html_url || `https://github.com/${owner}/${repo}`,
+    default_branch: branch
+  };
+
+  session.selectedWorkspace = selectedWorkspace;
+  session.selectedRepo = selectedRepo;
+  saveSession(session.sessionId, session);
+
+  console.log(`[GitHub Select Workspace] Updated current workspace to ${owner}/${repo} on branch ${branch}`);
+
+  return res.json({
+    success: true,
+    selectedWorkspace,
+    selectedRepo
+  });
+}
+
 // POST /api/github/select-repo or /api/auth/github/select-repo - Select active repository
 router.post("/select-repo", (req, res) => handleSelectRepo(req, res));
 
@@ -308,24 +404,36 @@ function handleSelectRepo(req, res) {
     return res.status(400).json({ error: "Maklumat repositori tidak sah." });
   }
 
+  const owner = repo.owner?.login || repo.owner;
   const selectedRepo = {
     id: repo.id,
     name: repo.name,
     full_name: repo.full_name,
-    owner: repo.owner?.login || repo.owner,
+    owner: owner,
     private: !!repo.private,
     html_url: repo.html_url,
     default_branch: repo.default_branch
   };
 
+  const selectedWorkspace = {
+    owner: owner,
+    repo: repo.name,
+    full_name: repo.full_name,
+    branch: repo.default_branch || "main",
+    private: !!repo.private,
+    html_url: repo.html_url
+  };
+
   session.selectedRepo = selectedRepo;
+  session.selectedWorkspace = selectedWorkspace;
   saveSession(session.sessionId, session);
 
   console.log("[GitHub Select Repo] Selected repository updated to:", selectedRepo.full_name);
 
   return res.json({
     success: true,
-    selectedRepo
+    selectedRepo,
+    selectedWorkspace
   });
 }
 
