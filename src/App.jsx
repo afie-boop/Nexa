@@ -164,12 +164,21 @@ function App() {
           if (data.selectedRepo) {
             setSelectedRepo(data.selectedRepo);
           }
+          let targetFullName = "";
           if (data.selectedWorkspace) {
             setCurrentWorkspace(data.selectedWorkspace);
-            setSelectedRepoFullName(data.selectedWorkspace.full_name || `${data.selectedWorkspace.owner}/${data.selectedWorkspace.repo}`);
+            targetFullName = data.selectedWorkspace.full_name || `${data.selectedWorkspace.owner}/${data.selectedWorkspace.repo}`;
+            setSelectedRepoFullName(targetFullName);
             setSelectedBranch(data.selectedWorkspace.branch || "main");
+          } else if (data.selectedRepo && data.selectedRepo.full_name) {
+            targetFullName = data.selectedRepo.full_name;
+            setSelectedRepoFullName(targetFullName);
+            setSelectedBranch(data.selectedRepo.default_branch || "main");
           }
           fetchGithubRepos();
+          if (targetFullName) {
+            fetchBranches(targetFullName);
+          }
           if (authSuccess || urlParams.get("github_error")) {
             window.history.replaceState({}, document.title, window.location.pathname);
           }
@@ -1712,39 +1721,41 @@ function App() {
                       </div>
 
                       {/* Branch Selection Dropdown */}
-                      {selectedRepoFullName && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                          <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Branch</label>
-                          <select
-                            value={selectedBranch}
-                            onChange={(e) => setSelectedBranch(e.target.value)}
-                            disabled={branchesLoading}
-                            style={{
-                              width: "100%",
-                              padding: "10px 12px",
-                              borderRadius: "8px",
-                              border: "1px solid var(--border)",
-                              backgroundColor: "rgba(255,255,255,0.05)",
-                              color: "var(--primary-text)",
-                              fontSize: "14px",
-                              outline: "none"
-                            }}
-                          >
-                            {branchesLoading ? (
-                              <option value="" style={{ background: "#111" }}>Memuatkan branch...</option>
-                            ) : (
-                              <>
-                                <option value="" disabled style={{ background: "#111" }}>Select Branch ▼</option>
-                                {branches.map((b) => (
-                                  <option key={b.name} value={b.name} style={{ background: "#111" }}>
-                                    🌿 {b.name}
-                                  </option>
-                                ))}
-                              </>
-                            )}
-                          </select>
-                        </div>
-                      )}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Branch</label>
+                        <select
+                          value={selectedBranch}
+                          onChange={(e) => setSelectedBranch(e.target.value)}
+                          disabled={!selectedRepoFullName || branchesLoading}
+                          style={{
+                            width: "100%",
+                            padding: "10px 12px",
+                            borderRadius: "8px",
+                            border: "1px solid var(--border)",
+                            backgroundColor: "rgba(255,255,255,0.05)",
+                            color: "var(--primary-text)",
+                            fontSize: "14px",
+                            outline: "none",
+                            cursor: !selectedRepoFullName || branchesLoading ? "not-allowed" : "pointer"
+                          }}
+                        >
+                          {!selectedRepoFullName ? (
+                            <option value="" style={{ background: "#111" }}>Sila pilih repositori terlebih dahulu ▼</option>
+                          ) : branchesLoading ? (
+                            <option value="" style={{ background: "#111" }}>Memuatkan branch...</option>
+                          ) : branches.length > 0 ? (
+                            branches.map((b) => (
+                              <option key={b.name} value={b.name} style={{ background: "#111" }}>
+                                🌿 {b.name}
+                              </option>
+                            ))
+                          ) : (
+                            <option value={selectedBranch || "main"} style={{ background: "#111" }}>
+                              🌿 {selectedBranch || "main"}
+                            </option>
+                          )}
+                        </select>
+                      </div>
 
                       {/* Action Button */}
                       {selectedRepoFullName && (
