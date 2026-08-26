@@ -114,6 +114,7 @@ async function runAgentTask({
   model = "openrouter/free",
   fallbackModel = "openrouter/free",
   selectedRepo = null,
+  selectedWorkspace = null,
   sendEvent
 }) {
   const messages = [];
@@ -124,17 +125,23 @@ async function runAgentTask({
     messages.push(...cleanHistory);
   }
 
-  // Dynamic system prompt including selected GitHub repository context
+  // Dynamic system prompt including selected GitHub repository and branch context
   let agentSystemPrompt = SYSTEM_PROMPT;
-  if (selectedRepo && selectedRepo.full_name) {
-    agentSystemPrompt += `\n\nREPOSITORI GITHUB AKTIF (SELECTED GITHUB REPOSITORY):
-- Nama Repositori: ${selectedRepo.full_name}
-- Pemilik: ${selectedRepo.owner || "N/A"}
-- Branch Utama: ${selectedRepo.default_branch || "main"}
-- URL: ${selectedRepo.html_url || ""}
-- Status Visibilitas: ${selectedRepo.private ? "Private" : "Public"}
+  const activeRepoName = selectedWorkspace?.full_name || selectedRepo?.full_name;
+  const activeBranch = selectedWorkspace?.branch || selectedRepo?.default_branch || "main";
+  const activeOwner = selectedWorkspace?.owner || selectedRepo?.owner || "N/A";
+  const activeUrl = selectedWorkspace?.html_url || selectedRepo?.html_url || "";
+  const isPrivate = selectedWorkspace?.private ?? selectedRepo?.private ?? false;
 
-Sila jalankan tugasan pengkodan sebagai Jules (Ejen GitHub Autonomi) untuk repositori '${selectedRepo.full_name}'.`;
+  if (activeRepoName) {
+    agentSystemPrompt += `\n\nREPOSITORI GITHUB AKTIF (SELECTED GITHUB WORKSPACE):
+- Nama Repositori: ${activeRepoName}
+- Pemilik: ${activeOwner}
+- Branch Aktif: ${activeBranch}
+- URL: ${activeUrl}
+- Status Visibilitas: ${isPrivate ? "Private" : "Public"}
+
+Sila jalankan tugasan pengkodan sebagai Jules (Ejen GitHub Autonomi) untuk repositori '${activeRepoName}' pada branch '${activeBranch}'.`;
   }
 
   // Current user task

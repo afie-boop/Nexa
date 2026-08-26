@@ -644,6 +644,10 @@ function App() {
       updateActiveMessages(prev => [...prev, initialAgentMsg]);
 
       try {
+        const parts = selectedRepoFullName.split("/");
+        const repoOwner = parts.length === 2 ? parts[0] : (selectedRepo?.owner || "");
+        const repoName = parts.length === 2 ? parts[1] : (selectedRepo?.name || "");
+
         const res = await fetch("/api/agent", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -653,6 +657,12 @@ function App() {
             codingModel: codingModel.trim(),
             fallbackModel: fallbackModel.trim(),
             selectedRepo,
+            selectedWorkspace: {
+              owner: repoOwner,
+              repo: repoName,
+              full_name: selectedRepoFullName || selectedRepo?.full_name || "",
+              branch: selectedBranch
+            },
             sessionId
           })
         });
@@ -1352,61 +1362,128 @@ function App() {
             {/* 5. Composer Workspace (Sticky Bottom) */}
             <div className="composer-sticky-container">
               <div className="composer-workspace">
+                {/* Top Repository Selector Header for Agent Mode when GitHub is connected */}
+                {mode === "agent" && githubStatus === "connected" && (
+                  <div style={{ padding: "8px 12px 10px 12px", borderBottom: "1px solid var(--border)", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1, minWidth: "200px" }}>
+                      <span style={{ fontSize: "12px", color: "var(--secondary-text)", fontWeight: "600", textTransform: "uppercase" }}>Repository:</span>
+                      <select
+                        value={selectedRepoFullName}
+                        onChange={handleRepoDropdownChange}
+                        style={{
+                          flex: 1,
+                          padding: "6px 10px",
+                          borderRadius: "6px",
+                          border: "1px solid var(--border)",
+                          backgroundColor: "rgba(255,255,255,0.05)",
+                          color: "var(--primary-text)",
+                          fontSize: "13px",
+                          outline: "none",
+                          cursor: "pointer"
+                        }}
+                      >
+                        <option value="" style={{ background: "#111" }}>Select Repository ▼</option>
+                        {githubRepos.map((repo) => (
+                          <option key={repo.id} value={repo.full_name} style={{ background: "#111" }}>
+                            {repo.full_name} {repo.private ? "(Private)" : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
                 <textarea
                   className="composer-textarea"
                   value={msg}
                   onChange={(e) => setMsg(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
+                  placeholder={mode === "agent" ? "What should Nexa build? (Shift+Enter untuk baris baru)" : "Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"}
                   disabled={load}
                 />
 
                 <div className="composer-bottom-row">
-                  {/* Compact Mode Selector */}
-                  <div className="composer-mode-container" ref={modeMenuRef}>
-                    <button
-                      type="button"
-                      className="composer-mode-btn"
-                      onClick={() => setModeMenuOpen(!modeMenuOpen)}
-                      aria-haspopup="true"
-                      aria-expanded={modeMenuOpen}
-                    >
-                      <span>{mode === "agent" ? "Agent" : "Chat"}</span>
-                      <span className="dropdown-arrow">▾</span>
-                    </button>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+                    {/* Compact Mode Selector */}
+                    <div className="composer-mode-container" ref={modeMenuRef}>
+                      <button
+                        type="button"
+                        className="composer-mode-btn"
+                        onClick={() => setModeMenuOpen(!modeMenuOpen)}
+                        aria-haspopup="true"
+                        aria-expanded={modeMenuOpen}
+                      >
+                        <span>{mode === "agent" ? "Agent" : "Chat"}</span>
+                        <span className="dropdown-arrow">▾</span>
+                      </button>
 
-                    {modeMenuOpen && (
-                      <div className="composer-mode-menu animate-fade">
-                        <div className="mode-menu-header">Select mode</div>
-                        <button
-                          type="button"
-                          className={`mode-menu-item ${mode === "chat" ? "selected" : ""}`}
-                          onClick={() => {
-                            setMode("chat");
-                            setModeMenuOpen(false);
+                      {modeMenuOpen && (
+                        <div className="composer-mode-menu animate-fade">
+                          <div className="mode-menu-header">Select mode</div>
+                          <button
+                            type="button"
+                            className={`mode-menu-item ${mode === "chat" ? "selected" : ""}`}
+                            onClick={() => {
+                              setMode("chat");
+                              setModeMenuOpen(false);
+                            }}
+                          >
+                            <div className="mode-item-title-row">
+                              <span className="mode-item-checkmark">{mode === "chat" ? "✓" : ""}</span>
+                              <span className="mode-item-name">Chat</span>
+                            </div>
+                            <div className="mode-item-desc">Normal conversations with Nexa</div>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={`mode-menu-item ${mode === "agent" ? "selected" : ""}`}
+                            onClick={() => {
+                              setMode("agent");
+                              setModeMenuOpen(false);
+                            }}
+                          >
+                            <div className="mode-item-title-row">
+                              <span className="mode-item-checkmark">{mode === "agent" ? "✓" : ""}</span>
+                              <span className="mode-item-name">Agent</span>
+                            </div>
+                            <div className="mode-item-desc">Work on projects and perform actions</div>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bottom Branch Selector when in Agent Mode and Repository Selected */}
+                    {mode === "agent" && githubStatus === "connected" && selectedRepoFullName && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <select
+                          value={selectedBranch}
+                          onChange={(e) => setSelectedBranch(e.target.value)}
+                          disabled={branchesLoading}
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: "6px",
+                            border: "1px solid var(--border)",
+                            backgroundColor: "rgba(255,255,255,0.05)",
+                            color: "var(--primary-text)",
+                            fontSize: "12px",
+                            outline: "none",
+                            cursor: "pointer"
                           }}
                         >
-                          <div className="mode-item-title-row">
-                            <span className="mode-item-checkmark">{mode === "chat" ? "✓" : ""}</span>
-                            <span className="mode-item-name">Chat</span>
-                          </div>
-                          <div className="mode-item-desc">Normal conversations with Nexa</div>
-                        </button>
-
-                        <button
-                          type="button"
-                          className={`mode-menu-item ${mode === "agent" ? "selected" : ""}`}
-                          onClick={() => {
-                            setMode("agent");
-                            setModeMenuOpen(false);
-                          }}
-                        >
-                          <div className="mode-item-title-row">
-                            <span className="mode-item-checkmark">{mode === "agent" ? "✓" : ""}</span>
-                            <span className="mode-item-name">Agent</span>
-                          </div>
-                          <div className="mode-item-desc">Work on projects and perform actions</div>
-                        </button>
+                          {branchesLoading ? (
+                            <option value="" style={{ background: "#111" }}>Memuatkan branch...</option>
+                          ) : (
+                            <>
+                              <option value="" disabled style={{ background: "#111" }}>Select Branch ▼</option>
+                              {branches.map((b) => (
+                                <option key={b.name} value={b.name} style={{ background: "#111" }}>
+                                  🌿 {b.name}
+                                </option>
+                              ))}
+                            </>
+                          )}
+                        </select>
                       </div>
                     )}
                   </div>
