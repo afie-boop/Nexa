@@ -352,6 +352,23 @@ function App() {
     setDislikeReasonMsgId(null);
   };
 
+  const handleShare = async (content, key) => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Nexa AI Response",
+          text: content,
+        });
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          copyCode(content, key);
+        }
+      }
+    } else {
+      copyCode(content, key);
+    }
+  };
+
   const handleRegenerate = async (msgId) => {
     const msgIdx = chat.findIndex(m => m.id === msgId);
     if (msgIdx === -1) return;
@@ -827,7 +844,7 @@ function App() {
                             </ReactMarkdown>
                           </div>
 
-                          {/* Control actions for AI response: Copy, Like, Dislike, Regenerate (Toolbar only when response exists) */}
+                          {/* Control actions for AI response: Copy, Like, Dislike, Regenerate, Share (Toolbar only when response exists) */}
                           <div className="ai-card-actions">
                             <button
                               className="card-action-btn"
@@ -854,6 +871,12 @@ function App() {
                               onClick={() => handleRegenerate(messageId)}
                             >
                               Regenerate
+                            </button>
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleShare(c.text, `share-${messageId}`)}
+                            >
+                              {copiedIdx === `share-${messageId}` ? "Disalin" : "Share"}
                             </button>
                           </div>
 
