@@ -369,6 +369,25 @@ function App() {
     }
   };
 
+  const handleShareChat = async () => {
+    if (chat.length === 0) return;
+    const conversationText = chat.map(m => `${m.type === "user" ? "User" : "Nexa AI"}: ${m.text}`).join("\n\n");
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: activeConversation.title || "Nexa AI Chat",
+          text: conversationText,
+        });
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          copyCode(conversationText, "top-bar-share");
+        }
+      }
+    } else {
+      copyCode(conversationText, "top-bar-share");
+    }
+  };
+
   const handleRegenerate = async (msgId) => {
     const msgIdx = chat.findIndex(m => m.id === msgId);
     if (msgIdx === -1) return;
@@ -786,6 +805,16 @@ function App() {
                 <span>{currentStatus}</span>
               </div>
             </div>
+          </div>
+
+          <div className="top-bar-actions">
+            <button
+              className="card-action-btn"
+              onClick={handleShareChat}
+              disabled={chat.length === 0}
+            >
+              {copiedIdx === "top-bar-share" ? "Disalin ✓" : "Share Chat"}
+            </button>
           </div>
         </header>
 
