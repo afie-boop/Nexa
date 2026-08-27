@@ -15,8 +15,6 @@ console.log("=================================");
 const classifyTask = require("./router");
 const { runPipeline } = require("./pipeline/pipeline");
 const { handlePostFeedback } = require("./feedback/feedbackController");
-const { runAgentTask, resolvePendingPermission } = require("./agent/agentController");
-const githubAuthRouter = require("./auth/github");
 
 const app = express();
 
@@ -28,78 +26,7 @@ app.use(cookieParser());
 const distPath = path.join(__dirname, "..", "dist");
 app.use(express.static(distPath));
 
-// Mount GitHub Auth Routes
-app.use("/api/auth/github", githubAuthRouter);
-app.use("/api/github", githubAuthRouter);
-
 app.post("/api/feedback", handlePostFeedback);
-
-// Agent Permission Approval Endpoint
-app.post("/api/agent/permission", (req, res) => {
-  const { sessionId, requestId, approved } = req.body;
-
-  if (!sessionId || !requestId) {
-    return res.status(400).json({ error: "sessionId dan requestId diperlukan." });
-  }
-
-  const resolved = resolvePendingPermission(sessionId, requestId, !!approved);
-  return res.json({ success: true, resolved });
-});
-
-const { loadSession } = require("./auth/github");
-
-// Agent Execution Stream Endpoint
-app.post("/api/agent", async (req, res) => {
-  const { question, history, codingModel, fallbackModel, sessionId: clientSessionId, selectedRepo: bodySelectedRepo, selectedWorkspace: bodySelectedWorkspace } = req.body;
-
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-
-  if (res.flushHeaders) {
-    res.flushHeaders();
-  }
-
-  const sessionId = clientSessionId || `agent_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-
-  function sendEvent(type, payload = {}) {
-    if (!res.writableEnded) {
-      res.write(`data: ${JSON.stringify({ type, ...payload })}\n\n`);
-    }
-  }
-
-  try {
-    if (!question || !question.trim()) {
-      sendEvent("error", { text: "Mesej tugasan ejen tidak boleh kosong." });
-      return res.end();
-    }
-
-    const githubSession = loadSession(req);
-    const selectedRepo = bodySelectedRepo || (githubSession && githubSession.selectedRepo ? githubSession.selectedRepo : null);
-    const selectedWorkspace = bodySelectedWorkspace || (githubSession && githubSession.selectedWorkspace ? githubSession.selectedWorkspace : null);
-
-    await runAgentTask({
-      sessionId,
-      question,
-      history: history || [],
-      model: codingModel || "openrouter/free",
-      fallbackModel: fallbackModel || "openrouter/free",
-      selectedRepo,
-      selectedWorkspace,
-      sendEvent
-    });
-
-    if (!res.writableEnded) {
-      res.end();
-    }
-  } catch (error) {
-    console.error("[Agent Error]", error);
-    if (!res.writableEnded) {
-      sendEvent("error", { text: error.message || "Ada masalah semasa menjalankan Nexa Agent." });
-      res.end();
-    }
-  }
-});
 
 app.post("/chat", async (req, res) => {
   const { question, history } = req.body;

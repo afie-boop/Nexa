@@ -8,221 +8,8 @@ import "./App.css";
 function App() {
   const [msg, setMsg] = useState("");
 
-  // Mode state: 'chat' | 'agent' with persistence
-  const [mode, setMode] = useState(() => {
-    try {
-      const saved = localStorage.getItem("nexa_ai_mode");
-      return saved === "agent" ? "agent" : "chat";
-    } catch {
-      return "chat";
-    }
-  });
-  const [modeMenuOpen, setModeMenuOpen] = useState(false);
-  const modeMenuRef = useRef(null);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("nexa_ai_mode", mode);
-    } catch (e) {
-      console.error(e);
-    }
-  }, [mode]);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (modeMenuRef.current && !modeMenuRef.current.contains(event.target)) {
-        setModeMenuOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
-
-  // GitHub Connection, Workspace & Repository State
-  const [githubStatus, setGithubStatus] = useState("not_connected");
-  const [githubUser, setGithubUser] = useState(null);
-  const [githubRepos, setGithubRepos] = useState([]);
-  const [reposLoading, setReposLoading] = useState(false);
-  const [selectedRepo, setSelectedRepo] = useState(null);
-
-  // GitHub Workspace dropdown selection states
-  const [selectedRepoFullName, setSelectedRepoFullName] = useState("");
-  const [branches, setBranches] = useState([]);
-  const [branchesLoading, setBranchesLoading] = useState(false);
-  const [selectedBranch, setSelectedBranch] = useState("main");
-  const [currentWorkspace, setCurrentWorkspace] = useState(null);
-
-  // Fetch repositories from backend
-  const fetchGithubRepos = async () => {
-    setReposLoading(true);
-    try {
-      const res = await fetch("/api/github/repos", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.repositories) {
-          setGithubRepos(data.repositories);
-        }
-      }
-    } catch (err) {
-      console.error("Gagal mengambil senarai repositori:", err);
-    } finally {
-      setReposLoading(false);
-    }
-  };
-
-  // Fetch branches for selected repo
-  const fetchBranches = async (fullName) => {
-    if (!fullName) return;
-    const parts = fullName.split("/");
-    if (parts.length !== 2) return;
-    const [owner, repo] = parts;
-
-    setBranchesLoading(true);
-    try {
-      const res = await fetch(`/api/github/repos/${owner}/${repo}/branches`, { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.branches) {
-          setBranches(data.branches);
-          const targetRepoObj = githubRepos.find(r => r.full_name === fullName);
-          const defaultB = targetRepoObj?.default_branch || (data.branches.length > 0 ? data.branches[0].name : "main");
-          setSelectedBranch(defaultB);
-        }
-      }
-    } catch (err) {
-      console.error("Gagal mengambil senarai branch:", err);
-    } finally {
-      setBranchesLoading(false);
-    }
-  };
-
-  // Handle dropdown change for repository
-  const handleRepoDropdownChange = (e) => {
-    const val = e.target.value;
-    setSelectedRepoFullName(val);
-    setBranches([]);
-    if (val) {
-      fetchBranches(val);
-    }
-  };
-
-  // Set as Current Workspace
-  const handleSetCurrentWorkspace = async () => {
-    if (!selectedRepoFullName || !selectedBranch) return;
-
-    const parts = selectedRepoFullName.split("/");
-    if (parts.length !== 2) return;
-    const [owner, repo] = parts;
-
-    const targetRepoObj = githubRepos.find(r => r.full_name === selectedRepoFullName);
-
-    try {
-      const res = await fetch("/api/github/select-workspace", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          owner,
-          repo,
-          branch: selectedBranch,
-          full_name: selectedRepoFullName,
-          private: targetRepoObj?.private || false,
-          html_url: targetRepoObj?.html_url || `https://github.com/${owner}/${repo}`
-        })
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data.selectedWorkspace) {
-          setCurrentWorkspace(data.selectedWorkspace);
-        }
-        if (data.selectedRepo) {
-          setSelectedRepo(data.selectedRepo);
-        }
-      }
-    } catch (err) {
-      console.error("Gagal menetapkan workspace:", err);
-    }
-  };
-
-  // Check GitHub Connection status
-  const checkGithubStatus = async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const authSuccess = urlParams.get("github_auth");
-    const usernameParam = urlParams.get("username");
-
-    try {
-      const res = await fetch("/api/github/status", { credentials: "include" });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.connected && data.username) {
-          setGithubStatus("connected");
-          setGithubUser(data.username);
-          if (data.selectedRepo) {
-            setSelectedRepo(data.selectedRepo);
-          }
-          let targetFullName = "";
-          if (data.selectedWorkspace) {
-            setCurrentWorkspace(data.selectedWorkspace);
-            targetFullName = data.selectedWorkspace.full_name || `${data.selectedWorkspace.owner}/${data.selectedWorkspace.repo}`;
-            setSelectedRepoFullName(targetFullName);
-            setSelectedBranch(data.selectedWorkspace.branch || "main");
-          } else if (data.selectedRepo && data.selectedRepo.full_name) {
-            targetFullName = data.selectedRepo.full_name;
-            setSelectedRepoFullName(targetFullName);
-            setSelectedBranch(data.selectedRepo.default_branch || "main");
-          }
-          fetchGithubRepos();
-          if (targetFullName) {
-            fetchBranches(targetFullName);
-          }
-          if (authSuccess || urlParams.get("github_error")) {
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
-          return;
-        }
-      }
-    } catch (err) {
-      console.error("Gagal menyemak status GitHub:", err);
-    }
-
-    if (authSuccess === "success" && usernameParam) {
-      setGithubStatus("connected");
-      setGithubUser(usernameParam);
-      fetchGithubRepos();
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else {
-      setGithubStatus("not_connected");
-      setGithubUser(null);
-      setSelectedRepo(null);
-      setCurrentWorkspace(null);
-      setGithubRepos([]);
-      if (urlParams.get("github_error")) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-      }
-    }
-  };
-
-  useEffect(() => {
-    checkGithubStatus();
-  }, []);
-
-  const handleGitHubLogin = () => {
-    setGithubStatus("connecting");
-    window.location.href = "/api/github/login";
-  };
-
-  const handleGitHubDisconnect = async () => {
-    try {
-      await fetch("/api/github/disconnect", { method: "POST", credentials: "include" });
-      await checkGithubStatus();
-    } catch (err) {
-      console.error("Gagal memutuskan sambungan GitHub:", err);
-    }
-  };
 
   // Online / Offline state tracking
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -491,7 +278,7 @@ function App() {
     try {
       const userMessageText = getUserMessageBeforeId(msgId);
       const targetMsg = chat.find(m => m.id === msgId);
-      const aiResponseText = targetMsg?.text || targetMsg?.finalAnswer || "";
+      const aiResponseText = targetMsg?.text || "";
       const isCode = userMessageText.toLowerCase().includes("kod") || userMessageText.toLowerCase().includes("code") || aiResponseText.includes("```");
       const model = isCode ? codingModel : generalModel;
 
@@ -580,28 +367,7 @@ function App() {
     }
   };
 
-  // Agent Permission Response Handler
-  const handlePermissionDecision = async (messageId, sessionId, requestId, approved) => {
-    try {
-      await fetch("/api/agent/permission", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, requestId, approved })
-      });
-
-      // Clear pending permission in message state
-      updateActiveMessages(prev => prev.map(m => {
-        if (m.id === messageId) {
-          return { ...m, pendingPermission: null };
-        }
-        return m;
-      }));
-    } catch (err) {
-      console.error("Gagal menghantar keputusan kelulusan:", err);
-    }
-  };
-
-  // Main Send Function (handles Chat Mode and Agent Mode)
+  // Main Send Function
   async function send(overrideMsg, overrideHistory) {
     const textToSend = overrideMsg || msg;
     if (!textToSend.trim() || load) return;
@@ -614,7 +380,7 @@ function App() {
     const historyForRequest = memoryEnabled
       ? (overrideHistory || chat).map((m) => ({
           role: m.type === "user" ? "user" : "assistant",
-          content: m.text || m.finalAnswer || "",
+          content: m.text || "",
         }))
       : [];
 
@@ -628,180 +394,69 @@ function App() {
     setLoadingStatus("Nexa sedang berfikir...");
     setError(null);
 
-    if (mode === "agent") {
-      // AGENT MODE EXECUTION
-      const sessionId = `agent_session_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-      const aiMsgId = "msg_agent_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+    try {
+      const res = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: textToSend,
+          history: historyForRequest,
+          generalModel: generalModel.trim(),
+          codingModel: codingModel.trim(),
+          fallbackModel: fallbackModel.trim()
+        }),
+      });
 
-      const initialAgentMsg = {
-        id: aiMsgId,
-        type: "ai",
-        isAgent: true,
-        sessionId,
-        task: textToSend,
-        operation: "",
-        plan: "",
-        toolLogs: [],
-        pendingPermission: null,
-        changedFiles: [],
-        validationStatus: null,
-        finalAnswer: "",
-        feedback: null,
-        feedbackReason: ""
-      };
+      if (!res.ok || !res.body) throw new Error(`Server balas status ${res.status}`);
 
-      updateActiveMessages(prev => [...prev, initialAgentMsg]);
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalAnswer = null;
+      let serverError = null;
 
-      try {
-        const parts = selectedRepoFullName.split("/");
-        const repoOwner = parts.length === 2 ? parts[0] : (selectedRepo?.owner || "");
-        const repoName = parts.length === 2 ? parts[1] : (selectedRepo?.name || "");
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-        const res = await fetch("/api/agent", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            question: textToSend,
-            history: historyForRequest,
-            codingModel: codingModel.trim(),
-            fallbackModel: fallbackModel.trim(),
-            selectedRepo,
-            selectedWorkspace: {
-              owner: repoOwner,
-              repo: repoName,
-              full_name: selectedRepoFullName || selectedRepo?.full_name || "",
-              branch: selectedBranch
-            },
-            sessionId
-          })
-        });
+        buffer += decoder.decode(value, { stream: true });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop();
 
-        if (!res.ok || !res.body) throw new Error(`Server Ejen balas status ${res.status}`);
+        for (const part of parts) {
+          if (!part.startsWith("data: ")) continue;
+          const data = JSON.parse(part.slice(6));
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n\n");
-          buffer = parts.pop();
-
-          for (const part of parts) {
-            if (!part.startsWith("data: ")) continue;
-            let data;
-            try {
-              data = JSON.parse(part.slice(6));
-            } catch {
-              continue;
-            }
-
-            updateActiveMessages(prevConvs => {
-              return prevConvs.map(m => {
-                if (m.id === aiMsgId) {
-                  let nextMsg = { ...m };
-
-                  if (data.type === "process_step") {
-                    if (data.label) setLoadingStatus(data.label);
-                  } else if (data.type === "operation") {
-                    if (data.text) setLoadingStatus(data.text);
-                  } else if (data.type === "permission_request") {
-                    nextMsg.pendingPermission = {
-                      requestId: data.requestId,
-                      tool: data.tool,
-                      args: data.args,
-                      reason: data.reason,
-                      diff: data.diff
-                    };
-                  } else if (data.type === "final_answer") {
-                    nextMsg.finalAnswer = data.summary;
-                  } else if (data.type === "error") {
-                    setError(`Ralat: ${data.text}`);
-                  }
-
-                  return nextMsg;
-                }
-                return m;
-              });
-            });
+          if (data.type === "process_step") {
+            if (data.label) setLoadingStatus(data.label);
+          } else if (data.type === "status") {
+            if (data.text) setLoadingStatus(data.text);
+          } else if (data.type === "answer") {
+            finalAnswer = data.text;
+          } else if (data.type === "error") {
+            serverError = data.text;
           }
         }
-      } catch (err) {
-        setError(err.message || "Gagal hubungi server ejen.");
-        console.error(err);
-      } finally {
-        setLoad(false);
       }
 
-    } else {
-      // CHAT MODE EXECUTION (Standard Nexa Chat)
-      try {
-        const res = await fetch("/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            question: textToSend,
-            history: historyForRequest,
-            generalModel: generalModel.trim(),
-            codingModel: codingModel.trim(),
-            fallbackModel: fallbackModel.trim()
-          }),
-        });
+      if (serverError) throw new Error(serverError);
+      if (finalAnswer === null) throw new Error("Tiada jawapan diterima.");
 
-        if (!res.ok || !res.body) throw new Error(`Server balas status ${res.status}`);
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let finalAnswer = null;
-        let serverError = null;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const parts = buffer.split("\n\n");
-          buffer = parts.pop();
-
-          for (const part of parts) {
-            if (!part.startsWith("data: ")) continue;
-            const data = JSON.parse(part.slice(6));
-
-            if (data.type === "process_step") {
-              if (data.label) setLoadingStatus(data.label);
-            } else if (data.type === "status") {
-              if (data.text) setLoadingStatus(data.text);
-            } else if (data.type === "answer") {
-              finalAnswer = data.text;
-            } else if (data.type === "error") {
-              serverError = data.text;
-            }
-          }
-        }
-
-        if (serverError) throw new Error(serverError);
-        if (finalAnswer === null) throw new Error("Tiada jawapan diterima.");
-
-        const aiMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-        updateActiveMessages(prev => [
-          ...prev,
-          { id: aiMsgId, type: "ai", text: finalAnswer, feedback: null, feedbackReason: "" }
-        ]);
-      } catch (err) {
-        setError(err.message || "Gagal hubungi server. Cuba refresh.");
-        const errMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
-        updateActiveMessages((prev) => [
-          ...prev,
-          { id: errMsgId, type: "ai", text: "Maaf, saya tak dapat balas sekarang: " + (err.message || "Gagal hubungi server."), feedback: null, feedbackReason: "" }
-        ]);
-        console.error(err);
-      } finally {
-        setLoad(false);
-      }
+      const aiMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+      updateActiveMessages(prev => [
+        ...prev,
+        { id: aiMsgId, type: "ai", text: finalAnswer, feedback: null, feedbackReason: "" }
+      ]);
+    } catch (err) {
+      setError(err.message || "Gagal hubungi server. Cuba refresh.");
+      const errMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
+      updateActiveMessages((prev) => [
+        ...prev,
+        { id: errMsgId, type: "ai", text: "Maaf, saya tak dapat balas sekarang: " + (err.message || "Gagal hubungi server."), feedback: null, feedbackReason: "" }
+      ]);
+      console.error(err);
+    } finally {
+      setLoad(false);
     }
   }
 
@@ -929,7 +584,7 @@ function App() {
 
   const filteredConversations = conversations.filter(c => {
     const matchesTitle = c.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesContent = c.messages.some(m => (m.text || m.finalAnswer || "").toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesContent = c.messages.some(m => (m.text || "").toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesTitle || matchesContent;
   });
 
@@ -1078,18 +733,12 @@ function App() {
           )}
         </nav>
 
-        {/* User Profile Info & GitHub status badge */}
+        {/* User Profile Info */}
         <div className="sidebar-profile">
-          <div className="profile-avatar">
-            {githubStatus === "connected" && githubUser ? githubUser.substring(0, 2).toUpperCase() : "UX"}
-          </div>
+          <div className="profile-avatar">UX</div>
           <div className="profile-info">
-            <span className="profile-name">
-              {githubStatus === "connected" && githubUser ? `@${githubUser}` : "Nexa Developer"}
-            </span>
-            <span className="profile-plan">
-              {githubStatus === "connected" ? "GitHub Connected ✓" : "Pro Evolution Plan"}
-            </span>
+            <span className="profile-name">Nexa Developer</span>
+            <span className="profile-plan">Pro Evolution Plan</span>
           </div>
         </div>
 
@@ -1161,124 +810,6 @@ function App() {
                       return (
                         <div key={messageId} className="user-message-row animate-slide">
                           <div className="user-message-content">{c.text}</div>
-                        </div>
-                      );
-                    } else if (c.isAgent) {
-                      // RENDER AGENT MODE CARD (ChatGPT Minimalist & Clean Style)
-                      if (!c.finalAnswer && !c.pendingPermission) return null;
-
-                      return (
-                        <div key={messageId} className="ai-card agent-card animate-slide">
-                          {/* Interactive Permission Request Card */}
-                          {c.pendingPermission && (
-                            <div className="permission-card animate-slide">
-                              <div className="permission-header">
-                                <span>⚠️ Kebenaran Diperlukan (Permission Request)</span>
-                              </div>
-                              <div className="permission-reason">
-                                <strong>Tindakan:</strong> {c.pendingPermission.tool} (
-                                {JSON.stringify(c.pendingPermission.args)})
-                                <br />
-                                <strong>Alasan:</strong> {c.pendingPermission.reason}
-                              </div>
-
-                              {c.pendingPermission.diff && (
-                                <div>
-                                  <div className="agent-section-title" style={{ marginTop: "8px" }}>
-                                    Pratonton Perubahan (Diff Preview)
-                                  </div>
-                                  <div className="permission-diff">
-                                    {c.pendingPermission.diff.split("\n").map((line, dIdx) => (
-                                      <div
-                                        key={dIdx}
-                                        className={
-                                          line.startsWith("+")
-                                            ? "diff-add"
-                                            : line.startsWith("-")
-                                            ? "diff-del"
-                                            : ""
-                                        }
-                                      >
-                                        {line}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              <div className="permission-actions">
-                                <button
-                                  className="btn-approve"
-                                  onClick={() =>
-                                    handlePermissionDecision(
-                                      messageId,
-                                      c.sessionId,
-                                      c.pendingPermission.requestId,
-                                      true
-                                    )
-                                  }
-                                >
-                                  Luluskan (Approve)
-                                </button>
-                                <button
-                                  className="btn-reject"
-                                  onClick={() =>
-                                    handlePermissionDecision(
-                                      messageId,
-                                      c.sessionId,
-                                      c.pendingPermission.requestId,
-                                      false
-                                    )
-                                  }
-                                >
-                                  Tolak (Reject)
-                                </button>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Final Answer Summary */}
-                          {c.finalAnswer && (
-                            <>
-                              <div className="ai-card-body">
-                                <ReactMarkdown
-                                  remarkPlugins={[remarkGfm]}
-                                  components={MarkdownComponents}
-                                >
-                                  {c.finalAnswer}
-                                </ReactMarkdown>
-                              </div>
-                              {/* Control actions toolbar only when answer exists */}
-                              <div className="ai-card-actions">
-                                <button
-                                  className="card-action-btn"
-                                  onClick={() => copyCode(c.finalAnswer, `ai-${messageId}`)}
-                                >
-                                  {copiedIdx === `ai-${messageId}` ? "Disalin" : "Salin Respon"}
-                                </button>
-                                <button
-                                  className="card-action-btn"
-                                  onClick={() => handleLike(messageId)}
-                                  style={c.feedback === "like" ? { color: "var(--accent)", borderColor: "var(--accent)", backgroundColor: "var(--accent-light)" } : {}}
-                                >
-                                  Like
-                                </button>
-                                <button
-                                  className="card-action-btn"
-                                  onClick={() => handleDislike(messageId)}
-                                  style={c.feedback === "dislike" ? { color: "#EF4444", borderColor: "#EF4444", backgroundColor: "rgba(239, 68, 68, 0.08)" } : {}}
-                                >
-                                  Dislike
-                                </button>
-                                <button
-                                  className="card-action-btn"
-                                  onClick={() => handleRegenerate(messageId)}
-                                >
-                                  Regenerate
-                                </button>
-                              </div>
-                            </>
-                          )}
                         </div>
                       );
                     } else {
@@ -1371,132 +902,16 @@ function App() {
             {/* 5. Composer Workspace (Sticky Bottom) */}
             <div className="composer-sticky-container">
               <div className="composer-workspace">
-                {/* Top Repository Selector Header for Agent Mode when GitHub is connected */}
-                {mode === "agent" && githubStatus === "connected" && (
-                  <div style={{ padding: "8px 12px 10px 12px", borderBottom: "1px solid var(--border)", marginBottom: "8px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flex: 1, minWidth: "200px" }}>
-                      <span style={{ fontSize: "12px", color: "var(--secondary-text)", fontWeight: "600", textTransform: "uppercase" }}>Repository:</span>
-                      <select
-                        value={selectedRepoFullName}
-                        onChange={handleRepoDropdownChange}
-                        style={{
-                          flex: 1,
-                          padding: "6px 10px",
-                          borderRadius: "6px",
-                          border: "1px solid var(--border)",
-                          backgroundColor: "rgba(255,255,255,0.05)",
-                          color: "var(--primary-text)",
-                          fontSize: "13px",
-                          outline: "none",
-                          cursor: "pointer"
-                        }}
-                      >
-                        <option value="" style={{ background: "#111" }}>Select Repository ▼</option>
-                        {githubRepos.map((repo) => (
-                          <option key={repo.id} value={repo.full_name} style={{ background: "#111" }}>
-                            {repo.full_name} {repo.private ? "(Private)" : ""}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
                 <textarea
                   className="composer-textarea"
                   value={msg}
                   onChange={(e) => setMsg(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={mode === "agent" ? "What should Nexa build? (Shift+Enter untuk baris baru)" : "Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"}
+                  placeholder="Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
                   disabled={load}
                 />
 
                 <div className="composer-bottom-row">
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-                    {/* Compact Mode Selector */}
-                    <div className="composer-mode-container" ref={modeMenuRef}>
-                      <button
-                        type="button"
-                        className="composer-mode-btn"
-                        onClick={() => setModeMenuOpen(!modeMenuOpen)}
-                        aria-haspopup="true"
-                        aria-expanded={modeMenuOpen}
-                      >
-                        <span>{mode === "agent" ? "Agent" : "Chat"}</span>
-                        <span className="dropdown-arrow">▾</span>
-                      </button>
-
-                      {modeMenuOpen && (
-                        <div className="composer-mode-menu animate-fade">
-                          <div className="mode-menu-header">Select mode</div>
-                          <button
-                            type="button"
-                            className={`mode-menu-item ${mode === "chat" ? "selected" : ""}`}
-                            onClick={() => {
-                              setMode("chat");
-                              setModeMenuOpen(false);
-                            }}
-                          >
-                            <div className="mode-item-title-row">
-                              <span className="mode-item-checkmark">{mode === "chat" ? "✓" : ""}</span>
-                              <span className="mode-item-name">Chat</span>
-                            </div>
-                            <div className="mode-item-desc">Normal conversations with Nexa</div>
-                          </button>
-
-                          <button
-                            type="button"
-                            className={`mode-menu-item ${mode === "agent" ? "selected" : ""}`}
-                            onClick={() => {
-                              setMode("agent");
-                              setModeMenuOpen(false);
-                            }}
-                          >
-                            <div className="mode-item-title-row">
-                              <span className="mode-item-checkmark">{mode === "agent" ? "✓" : ""}</span>
-                              <span className="mode-item-name">Agent</span>
-                            </div>
-                            <div className="mode-item-desc">Work on projects and perform actions</div>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Bottom Branch Selector when in Agent Mode and Repository Selected */}
-                    {mode === "agent" && githubStatus === "connected" && selectedRepoFullName && (
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <select
-                          value={selectedBranch}
-                          onChange={(e) => setSelectedBranch(e.target.value)}
-                          disabled={branchesLoading}
-                          style={{
-                            padding: "6px 10px",
-                            borderRadius: "6px",
-                            border: "1px solid var(--border)",
-                            backgroundColor: "rgba(255,255,255,0.05)",
-                            color: "var(--primary-text)",
-                            fontSize: "12px",
-                            outline: "none",
-                            cursor: "pointer"
-                          }}
-                        >
-                          {branchesLoading ? (
-                            <option value="" style={{ background: "#111" }}>Memuatkan branch...</option>
-                          ) : (
-                            <>
-                              <option value="" disabled style={{ background: "#111" }}>Select Branch ▼</option>
-                              {branches.map((b) => (
-                                <option key={b.name} value={b.name} style={{ background: "#111" }}>
-                                  🌿 {b.name}
-                                </option>
-                              ))}
-                            </>
-                          )}
-                        </select>
-                      </div>
-                    )}
-                  </div>
-
                   <button
                     className="send-btn-round"
                     onClick={() => send()}
@@ -1542,7 +957,7 @@ function App() {
                 </div>
                 <div className="flat-card">
                   <span className="flat-card-title">Coding AI</span>
-                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model utama untuk tugasan pengkodan & Nexa Agent.</p>
+                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model utama untuk tugasan pengkodan.</p>
                   <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Code AI Model ID</label>
                   <input
                     type="text"
@@ -1634,144 +1049,6 @@ function App() {
             <div className="sub-panel-inner">
               <h2 className="panel-title">Settings</h2>
               <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran Nexa AI.</p>
-
-              {/* GitHub Connection Section */}
-              <div className="flat-card">
-                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Sambungan GitHub</h3>
-                <p style={{ fontSize: "13px", color: "var(--secondary-text)", marginBottom: "16px" }}>
-                  Sambungkan akaun GitHub anda untuk membolehkan pengesahan dan akses persekitaran pembangunan Nexa.
-                </p>
-
-                {githubStatus === "not_connected" && (
-                  <button className="github-connect-btn" onClick={handleGitHubLogin}>
-                    <svg height="18" width="18" viewBox="0 0 16 16" fill="currentColor">
-                      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.28.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-                    </svg>
-                    <span>Login with GitHub</span>
-                  </button>
-                )}
-
-                {githubStatus === "connecting" && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "var(--secondary-text)", fontSize: "14px" }}>
-                    <span>Connecting...</span>
-                  </div>
-                )}
-
-                {githubStatus === "connected" && (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap", gap: "12px" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        <span className="github-badge">🟢 GitHub Connected</span>
-                        {githubUser && (
-                          <span style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>
-                            @{githubUser}
-                          </span>
-                        )}
-                      </div>
-                      <button className="github-disconnect-btn" onClick={handleGitHubDisconnect}>
-                        Disconnect GitHub
-                      </button>
-                    </div>
-
-                    {/* GitHub Project Workspace Section */}
-                    <div style={{ borderTop: "1px solid var(--border)", paddingTop: "16px", display: "flex", flexDirection: "column", gap: "14px" }}>
-                      <h4 style={{ fontSize: "14px", fontWeight: "600", color: "var(--primary-text)" }}>
-                        GitHub Project Workspace
-                      </h4>
-
-                      {/* Selected Workspace Card */}
-                      {currentWorkspace && (
-                        <div style={{ padding: "12px 14px", backgroundColor: "var(--accent-light)", border: "1px solid var(--accent)", borderRadius: "8px", fontSize: "13px", color: "var(--primary-text)", display: "flex", flexDirection: "column", gap: "4px" }}>
-                          <div style={{ fontSize: "11px", fontWeight: "700", textTransform: "uppercase", color: "var(--secondary-text)" }}>
-                            Selected Workspace
-                          </div>
-                          <div style={{ fontWeight: "600", fontSize: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span>📁</span> {currentWorkspace.owner}/{currentWorkspace.repo}
-                          </div>
-                          <div style={{ fontSize: "13px", color: "var(--secondary-text)", display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span>🌿</span> {currentWorkspace.branch}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Repository Selection Dropdown */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>GitHub Repository</label>
-                        <select
-                          value={selectedRepoFullName}
-                          onChange={handleRepoDropdownChange}
-                          style={{
-                            width: "100%",
-                            padding: "10px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid var(--border)",
-                            backgroundColor: "rgba(255,255,255,0.05)",
-                            color: "var(--primary-text)",
-                            fontSize: "14px",
-                            outline: "none"
-                          }}
-                        >
-                          <option value="" style={{ background: "#111" }}>Select Repository ▼</option>
-                          {githubRepos.map((repo) => (
-                            <option key={repo.id} value={repo.full_name} style={{ background: "#111" }}>
-                              {repo.full_name} {repo.private ? "(Private)" : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Branch Selection Dropdown */}
-                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Branch</label>
-                        <select
-                          value={selectedBranch}
-                          onChange={(e) => setSelectedBranch(e.target.value)}
-                          disabled={!selectedRepoFullName || branchesLoading}
-                          style={{
-                            width: "100%",
-                            padding: "10px 12px",
-                            borderRadius: "8px",
-                            border: "1px solid var(--border)",
-                            backgroundColor: "rgba(255,255,255,0.05)",
-                            color: "var(--primary-text)",
-                            fontSize: "14px",
-                            outline: "none",
-                            cursor: !selectedRepoFullName || branchesLoading ? "not-allowed" : "pointer"
-                          }}
-                        >
-                          {!selectedRepoFullName ? (
-                            <option value="" style={{ background: "#111" }}>Sila pilih repositori terlebih dahulu ▼</option>
-                          ) : branchesLoading ? (
-                            <option value="" style={{ background: "#111" }}>Memuatkan branch...</option>
-                          ) : branches.length > 0 ? (
-                            branches.map((b) => (
-                              <option key={b.name} value={b.name} style={{ background: "#111" }}>
-                                🌿 {b.name}
-                              </option>
-                            ))
-                          ) : (
-                            <option value={selectedBranch || "main"} style={{ background: "#111" }}>
-                              🌿 {selectedBranch || "main"}
-                            </option>
-                          )}
-                        </select>
-                      </div>
-
-                      {/* Action Button */}
-                      {selectedRepoFullName && (
-                        <button
-                          className="github-connect-btn"
-                          onClick={handleSetCurrentWorkspace}
-                          disabled={!selectedRepoFullName || !selectedBranch || branchesLoading}
-                          style={{ marginTop: "4px" }}
-                        >
-                          Set as Current Workspace
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
 
               <div className="flat-card">
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
