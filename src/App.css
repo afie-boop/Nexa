@@ -665,20 +665,24 @@ body {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 32px 16px;
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
   gap: 24px;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .conversation-inner {
-  max-width: 800px;
+  max-width: 1000px;
   width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* User Message Minimal Stylings */
@@ -686,6 +690,8 @@ body {
   display: flex;
   justify-content: flex-end;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .user-message-content {
@@ -694,6 +700,7 @@ body {
   border-radius: 0;
   padding: 0;
   padding-left: 24px;
+  width: fit-content;
   max-width: 85%;
   font-size: 15px;
   line-height: 1.5;
@@ -701,6 +708,7 @@ body {
   word-break: break-word;
   overflow-wrap: break-word;
   text-align: right;
+  box-sizing: border-box;
 }
 
 /* AI Answer - Transparent response block without background, border, or shadow */
@@ -716,7 +724,8 @@ body {
   box-shadow: none;
   transition: border-color 120ms ease;
   max-width: 100%;
-  overflow-x: hidden;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* Process Tracker Styles */
@@ -782,7 +791,20 @@ body {
   color: var(--primary-text);
   overflow-wrap: break-word;
   word-break: break-word;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ai-card-body table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0;
+  box-sizing: border-box;
 }
 
 .ai-card-body p {
@@ -1131,7 +1153,10 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   transition: background-color 120ms ease, border-color 120ms ease;
 }
 
@@ -1149,6 +1174,8 @@ body {
   font-family: inherit;
   font-weight: 500;
   text-transform: lowercase;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .code-block-header .code-lang {
@@ -1186,6 +1213,10 @@ body {
 .code-block-body {
   overflow-x: auto;
   background-color: transparent;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .code-block-body code {
@@ -1216,7 +1247,7 @@ body {
 }
 
 .composer-workspace {
-  max-width: 800px;
+  max-width: 1000px;
   margin: 0 auto;
   background-color: var(--surface);
   border: 1px solid var(--border);
@@ -1226,6 +1257,8 @@ body {
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .composer-input-row {
@@ -1405,12 +1438,14 @@ body {
 }
 
 .sub-panel-inner {
-  max-width: 800px;
+  max-width: 1000px;
   width: 100%;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .panel-title {
