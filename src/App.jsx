@@ -954,16 +954,15 @@ function App() {
             {/* 5. Composer Workspace (Sticky Bottom) */}
             <div className="composer-sticky-container">
               <div className="composer-workspace">
-                <textarea
-                  className="composer-textarea"
-                  value={msg}
-                  onChange={(e) => setMsg(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
-                  disabled={load}
-                />
-
-                <div className="composer-bottom-row">
+                <div className="composer-input-row">
+                  <textarea
+                    className="composer-textarea"
+                    value={msg}
+                    onChange={(e) => setMsg(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
+                    disabled={load}
+                  />
                   <button
                     className="send-btn-round"
                     onClick={() => send()}
