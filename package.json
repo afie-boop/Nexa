@@ -5,6 +5,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "prestart": "npm run build",
     "start": "node backend/server.js"
   },
   "dependencies": {

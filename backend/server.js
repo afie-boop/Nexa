@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
+const { execSync } = require("child_process");
 
 const HERMES_SERVICE_URL = process.env.HERMES_SERVICE_URL || "http://127.0.0.1:8000";
 
@@ -28,6 +29,20 @@ app.use(express.json());
 app.use(cookieParser());
 
 const distPath = path.join(__dirname, "..", "dist");
+
+// Ensure frontend dist bundle exists, auto-build if missing
+if (!fs.existsSync(distPath) || !fs.existsSync(path.join(distPath, "index.html"))) {
+  console.log("[Nexa Boot] Dist directory or index.html missing. Building frontend bundle...");
+  try {
+    execSync("npx vite build", {
+      cwd: path.join(__dirname, ".."),
+      stdio: "inherit"
+    });
+  } catch (buildErr) {
+    console.error("[Nexa Boot] Failed to build frontend dist bundle:", buildErr.message);
+  }
+}
+
 app.use(express.static(distPath));
 
 app.post("/api/feedback", handlePostFeedback);
