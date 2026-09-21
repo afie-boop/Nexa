@@ -1232,10 +1232,10 @@ function App() {
                       outline: "none"
                     }}
                   >
-                    {reposLoading && <option value="">Loading repositories...</option>}
-                    {!reposLoading && repos.length === 0 && <option value="">No repositories available</option>}
+                    {reposLoading && <option value="" style={{ backgroundColor: "#161B22", color: "#F0F6FC" }}>Loading repositories...</option>}
+                    {!reposLoading && repos.length === 0 && <option value="" style={{ backgroundColor: "#161B22", color: "#F0F6FC" }}>No repositories available</option>}
                     {repos.map(r => (
-                      <option key={r.id || r.full_name} value={r.full_name}>
+                      <option key={r.id || r.full_name} value={r.full_name} style={{ backgroundColor: "#161B22", color: "#F0F6FC" }}>
                         {r.full_name} {r.private ? "(Private)" : "(Public)"}
                       </option>
                     ))}
@@ -1262,10 +1262,10 @@ function App() {
                       outline: "none"
                     }}
                   >
-                    {branchesLoading && <option value="">Loading branches...</option>}
-                    {!branchesLoading && branches.length === 0 && <option value="">No branches available</option>}
+                    {branchesLoading && <option value="" style={{ backgroundColor: "#161B22", color: "#F0F6FC" }}>Loading branches...</option>}
+                    {!branchesLoading && branches.length === 0 && <option value="" style={{ backgroundColor: "#161B22", color: "#F0F6FC" }}>No branches available</option>}
                     {branches.map(b => (
-                      <option key={b.name} value={b.name}>
+                      <option key={b.name} value={b.name} style={{ backgroundColor: "#161B22", color: "#F0F6FC" }}>
                         {b.name}
                       </option>
                     ))}
