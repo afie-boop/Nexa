@@ -1,27 +1,29 @@
-const askGroq = require("./groq");
+const askOpenRouter = require("./openrouter");
 
 async function classifyTask(question, history = []) {
-  const recentContext = history
-    .slice(-4)
-    .map((h) => `${h.role}: ${h.content}`)
-    .join("\n");
+  const prompt = `
+Tentukan kategori mesej pengguna.
 
-  const prompt = `Klasifikasikan mesej TERKINI ni ke SATU kategori sahaja: code atau general.
+Balas SATU perkataan sahaja:
+- code
+- general
 
-code = soalan pasal programming, code, debug, error, function, script, syntax — ATAU sambungan/susulan dari perbualan tentang code (contoh: "selain itu?", "ada lagi?", "macam mana pulak" selepas topik sebelum ni pasal code).
-general = semua yang lain (sembang biasa, nasihat, pengetahuan umum, sejarah, konsep) yang TIDAK berkaitan code.
-
-${recentContext ? `Konteks perbualan sebelum ni:\n${recentContext}\n` : ""}
-Mesej TERKINI (klasifikasikan ni): ${question}
-
-Jawab dengan SATU perkataan sahaja: code atau general.`;
+Mesej pengguna:
+${question}
+`;
 
   try {
-    const result = await askGroq(prompt, { model: "openai/gpt-oss-20b" });
-    const clean = result.trim().toLowerCase();
-    if (clean.includes("code")) return "code";
-    return "general";
-  } catch (e) {
+    const result = await askOpenRouter(prompt, {
+      model: "openai/gpt-oss-20b:free",
+      system: "Balas hanya 'code' atau 'general'. Jangan beri penjelasan."
+    });
+
+    const task = result.trim().toLowerCase();
+
+    return task === "code" ? "code" : "general";
+
+  } catch (err) {
+    console.error("[Router]", err);
     return "general";
   }
 }
