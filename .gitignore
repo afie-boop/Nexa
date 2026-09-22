@@ -2,3 +2,6 @@ backend/.env
 .env
 node_modules
 dist
+backend/feedback/data/*.json
+__pycache__/
+*.pyc
