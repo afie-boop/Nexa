@@ -12,6 +12,7 @@ const {
   findNotesByTag
 } = require('./properties');
 const { buildGraph } = require('./graph');
+const { searchNotes } = require('./search');
 
 // Brain module main entry point
 class Brain {
@@ -64,6 +65,11 @@ class Brain {
   // Graph Builder
   buildGraph() {
     return buildGraph(this.vaultDir);
+  }
+
+  // Full-Text Search
+  searchNotes(query) {
+    return searchNotes(this.vaultDir, query);
   }
 }
 
