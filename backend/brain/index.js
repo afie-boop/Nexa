@@ -11,6 +11,7 @@ const {
   getNoteTags,
   findNotesByTag
 } = require('./properties');
+const { buildGraph } = require('./graph');
 
 module.exports = {
   Brain,
@@ -21,5 +22,6 @@ module.exports = {
   parseFrontmatter,
   parseInlineTags,
   getNoteTags,
-  findNotesByTag
+  findNotesByTag,
+  buildGraph
 };

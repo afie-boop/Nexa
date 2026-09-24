@@ -11,6 +11,7 @@ const {
   getNoteTags,
   findNotesByTag
 } = require('./properties');
+const { buildGraph } = require('./graph');
 
 // Brain module main entry point
 class Brain {
@@ -58,6 +59,11 @@ class Brain {
 
   findNotesByTag(targetTag) {
     return findNotesByTag(this.vaultDir, targetTag);
+  }
+
+  // Graph Builder
+  buildGraph() {
+    return buildGraph(this.vaultDir);
   }
 }
 
