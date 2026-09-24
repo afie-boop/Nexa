@@ -1,5 +1,15 @@
 const Brain = require('./brain');
+const {
+  parseWikiLinks,
+  getOutgoingLinks,
+  resolveNotePath,
+  getBacklinks
+} = require('./wikilinks');
 
 module.exports = {
-  Brain
+  Brain,
+  parseWikiLinks,
+  getOutgoingLinks,
+  resolveNotePath,
+  getBacklinks
 };
