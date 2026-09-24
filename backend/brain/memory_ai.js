@@ -33,10 +33,12 @@ function getFolderForType(type) {
 }
 
 /**
- * Extracts structured memories using LLM extractor with strict validation and anti-hallucination checks.
+ * Provider-agnostic AI Memory Extraction Adapter.
+ * Responsible ONLY for building extraction instructions, invoking the injected `llmExtractor`,
+ * validating structured memory schemas, applying confidence thresholding, and enforcing anti-hallucination source verification.
  *
  * @param {string|Array|object} input Input text or conversation
- * @param {object} [options] Options: llmExtractor, confidenceThreshold
+ * @param {object} options Options containing injected `llmExtractor` and `confidenceThreshold`
  * @returns {Promise<{ memories: Array<object> }>}
  */
 async function extractMemoryWithAI(input, options = {}) {
@@ -60,62 +62,10 @@ async function extractMemoryWithAI(input, options = {}) {
     return { memories: [] };
   }
 
-  // Check if LLM Extractor provided or fallback to OpenRouter / OpenAI if env configured
-  let llmExtractor = options.llmExtractor;
-
-  if (!llmExtractor && (process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY)) {
-    llmExtractor = async (promptText) => {
-      const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
-      const endpoint = process.env.OPENROUTER_API_KEY
-        ? 'https://openrouter.ai/api/v1/chat/completions'
-        : 'https://api.openai.com/v1/chat/completions';
-      const model = process.env.MEMORY_LLM_MODEL || 'openai/gpt-4o-mini';
-
-      const systemPrompt = `You are an AI Memory Extraction System. Extract long-term facts, preferences, goals, projects, instructions, relationships, and knowledge from the conversation.
-Return ONLY a JSON object with this exact format:
-{
-  "memories": [
-    {
-      "content": "...",
-      "type": "fact|preference|goal|project|instruction|relationship|knowledge",
-      "category": "user|project|knowledge|memory",
-      "importance": 0.0-1.0,
-      "confidence": 0.0-1.0,
-      "tags": ["tag1"],
-      "source": "exact phrase from input text supporting this memory"
-    }
-  ]
-}
-Do NOT infer unstated facts. Source MUST be an exact string present in input text.`;
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: promptText }
-          ],
-          response_format: { type: 'json_object' }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`LLM Extractor HTTP Error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content;
-      return JSON.parse(content);
-    };
-  }
+  const llmExtractor = options.llmExtractor;
 
   if (!llmExtractor || typeof llmExtractor !== 'function') {
-    throw new Error('LLM Extractor Error: No llmExtractor provided or API keys configured.');
+    throw new Error('LLM extractor is not configured');
   }
 
   const rawOutput = await llmExtractor(cleanInput, options);
