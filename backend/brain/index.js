@@ -27,6 +27,12 @@ const {
   updateMemory
 } = require('./memory');
 const { extractMemoryWithAI } = require('./memory_ai');
+const {
+  sanitizeScopeId,
+  normalizeScope,
+  getScopeDirectory,
+  isNoteInScope
+} = require('./memory_scope');
 
 module.exports = {
   Brain,
@@ -49,5 +55,9 @@ module.exports = {
   extractMemoryWithAI,
   findExistingMemory,
   saveMemory,
-  updateMemory
+  updateMemory,
+  sanitizeScopeId,
+  normalizeScope,
+  getScopeDirectory,
+  isNoteInScope
 };

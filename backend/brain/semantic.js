@@ -2,14 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { parseFrontmatter, getNoteTags } = require('./properties');
+const { isNoteInScope } = require('./memory_scope');
 
-/**
- * Calculates cosine similarity between two vectors.
- *
- * @param {number[]} vecA
- * @param {number[]} vecB
- * @returns {number}
- */
 function cosineSimilarity(vecA, vecB) {
   if (!vecA || !vecB || vecA.length === 0 || vecA.length !== vecB.length) {
     return 0;
@@ -32,28 +26,15 @@ function cosineSimilarity(vecA, vecB) {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-/**
- * Computes MD5 hash of string content.
- */
 function hashContent(content) {
   return crypto.createHash('md5').update(content || '').digest('hex');
 }
 
-/**
- * Creates an embedding for a text using configured provider or custom embedder.
- * Default provider checks environment variables: OPENAI_API_KEY, GEMINI_API_KEY, OPENROUTER_API_KEY.
- * Fallback / mock support provided when custom embedder passed in options for testing.
- *
- * @param {string} text
- * @param {object} [options]
- * @returns {Promise<number[]>}
- */
 async function createEmbedding(text, options = {}) {
   if (!text || typeof text !== 'string') {
     return [];
   }
 
-  // Allow custom embedder override (useful for testing & offline mode)
   if (typeof options.customEmbedder === 'function') {
     return await options.customEmbedder(text);
   }
@@ -63,7 +44,6 @@ async function createEmbedding(text, options = {}) {
     throw new Error('Embedding Provider Error: No API key configured. Set OPENAI_API_KEY or OPENROUTER_API_KEY or GEMINI_API_KEY.');
   }
 
-  // Basic fetch call if API key provided (OpenAI embeddings endpoint standard)
   const endpoint = process.env.EMBEDDING_API_URL || 'https://api.openai.com/v1/embeddings';
   const model = process.env.EMBEDDING_MODEL || 'text-embedding-3-small';
 
@@ -92,13 +72,6 @@ async function createEmbedding(text, options = {}) {
   throw new Error('Embedding API Error: Invalid response format received from provider.');
 }
 
-/**
- * Creates embeddings for multiple texts in batch.
- *
- * @param {string[]} texts
- * @param {object} [options]
- * @returns {Promise<number[][]>}
- */
 async function createEmbeddings(texts, options = {}) {
   if (!Array.isArray(texts)) {
     return [];
@@ -112,9 +85,6 @@ async function createEmbeddings(texts, options = {}) {
   return embeddings;
 }
 
-/**
- * Loads vector index from vault/.index/vector_index.json cleanly.
- */
 function loadIndex(indexDir) {
   const indexFilePath = path.join(indexDir, 'vector_index.json');
   if (!fs.existsSync(indexFilePath)) {
@@ -126,15 +96,11 @@ function loadIndex(indexDir) {
     const data = JSON.parse(raw);
     return typeof data === 'object' && data !== null ? data : {};
   } catch (err) {
-    // Corrupted index handling
     console.warn('Vector Index Error: Corrupted index file detected. Re-initializing index.');
     return {};
   }
 }
 
-/**
- * Saves vector index to vault/.index/vector_index.json safely.
- */
 function saveIndex(indexDir, indexData) {
   if (!fs.existsSync(indexDir)) {
     fs.mkdirSync(indexDir, { recursive: true });
@@ -144,10 +110,6 @@ function saveIndex(indexDir, indexData) {
   fs.writeFileSync(indexFilePath, JSON.stringify(indexData, null, 2), 'utf-8');
 }
 
-/**
- * Synchronizes vector index with current files in vault.
- * Handles additions, updates (via hash comparison), and deletions.
- */
 async function syncIndex(vaultDir, options = {}) {
   const absoluteVault = path.resolve(vaultDir);
   const indexDir = path.join(absoluteVault, '.index');
@@ -158,11 +120,9 @@ async function syncIndex(vaultDir, options = {}) {
   const existingPathsSet = new Set();
   let updatedCount = 0;
 
-  // 1. Process existing files (add / update)
   for (const filePath of currentFiles) {
     const relativePath = path.relative(absoluteVault, filePath).replace(/\\/g, '/');
 
-    // Skip indexing files inside .index directory
     if (relativePath.startsWith('.index/')) {
       continue;
     }
@@ -178,12 +138,11 @@ async function syncIndex(vaultDir, options = {}) {
 
       const existingEntry = currentIndex[relativePath];
 
-      // Check if unchanged
       if (existingEntry && existingEntry.contentHash === contentHash && Array.isArray(existingEntry.embedding) && existingEntry.embedding.length > 0) {
+        existingEntry.frontmatter = frontmatter;
         continue;
       }
 
-      // Generate embedding for new/modified content
       const textToEmbed = `${name}\n${tags.join(' ')}\n${body}`.trim();
       const embedding = await createEmbedding(textToEmbed, options);
 
@@ -193,17 +152,16 @@ async function syncIndex(vaultDir, options = {}) {
         tags,
         contentHash,
         embedding,
+        frontmatter,
         updatedAt: new Date().toISOString()
       };
 
       updatedCount++;
     } catch (err) {
-      // If embedding fails (e.g. no API key configured), rethrow error cleanly
       throw err;
     }
   }
 
-  // 2. Remove deleted files from index
   for (const indexedPath of Object.keys(currentIndex)) {
     if (!existingPathsSet.has(indexedPath)) {
       delete currentIndex[indexedPath];
@@ -219,12 +177,7 @@ async function syncIndex(vaultDir, options = {}) {
 }
 
 /**
- * Performs semantic / vector search over vault notes.
- *
- * @param {string} vaultDir Path to vault
- * @param {string} query Search query string
- * @param {object} [options] Options: topK, threshold, customEmbedder
- * @returns {Promise<Array<{ path: string, name: string, score: number, snippet: string, matchedMetadata: object }>>}
+ * Performs semantic search with scope filtering.
  */
 async function semanticSearch(vaultDir, query, options = {}) {
   if (!vaultDir || !query || typeof query !== 'string') {
@@ -243,8 +196,8 @@ async function semanticSearch(vaultDir, query, options = {}) {
 
   const topK = typeof options.topK === 'number' && options.topK > 0 ? options.topK : 5;
   const threshold = typeof options.threshold === 'number' ? options.threshold : 0.0;
+  const filterScope = options.scope !== undefined ? options.scope : null;
 
-  // 1. Sync & get current index
   const index = await syncIndex(absoluteVault, options);
   const entries = Object.values(index);
 
@@ -252,7 +205,6 @@ async function semanticSearch(vaultDir, query, options = {}) {
     return [];
   }
 
-  // 2. Embed search query
   const queryEmbedding = await createEmbedding(cleanQuery, options);
   if (!queryEmbedding || queryEmbedding.length === 0) {
     return [];
@@ -260,15 +212,19 @@ async function semanticSearch(vaultDir, query, options = {}) {
 
   const results = [];
 
-  // 3. Compute cosine similarity against indexed notes
   for (const entry of entries) {
     if (!entry.embedding || !Array.isArray(entry.embedding)) {
       continue;
     }
 
+    // Scope Isolation Check
+    const noteFrontmatter = entry.frontmatter || {};
+    if (!isNoteInScope(noteFrontmatter, filterScope)) {
+      continue;
+    }
+
     const similarity = cosineSimilarity(queryEmbedding, entry.embedding);
     if (similarity >= threshold) {
-      // Read snippet from file
       let snippet = '';
       try {
         const fullPath = path.join(absoluteVault, entry.path);
@@ -289,20 +245,17 @@ async function semanticSearch(vaultDir, query, options = {}) {
         snippet,
         matchedMetadata: {
           tags: entry.tags || [],
+          frontmatter: noteFrontmatter,
           updatedAt: entry.updatedAt
         }
       });
     }
   }
 
-  // 4. Sort descending by score and slice topK
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, topK);
 }
 
-/**
- * Recursively scans directory for markdown files with path traversal security check.
- */
 function getAllMdFiles(dir, absoluteVault) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
@@ -311,7 +264,6 @@ function getAllMdFiles(dir, absoluteVault) {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
 
-    // Path traversal check
     if (!fullPath.startsWith(absoluteVault + path.sep) && fullPath !== absoluteVault) {
       continue;
     }

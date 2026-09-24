@@ -1,15 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 const { parseFrontmatter, getNoteTags } = require('./properties');
+const { isNoteInScope } = require('./memory_scope');
 
 /**
  * Searches markdown notes in vault directory with relevance scoring and snippet generation.
+ * Supports scope filtering.
  *
  * @param {string} vaultDir Path to vault root directory
- * @param {string} query Search query string (can contain multiple terms)
+ * @param {string} query Search query string
+ * @param {object} [options] Options including `scope` filter
  * @returns {Array<{ name: string, path: string, score: number, matchedFields: string[], snippet: string }>}
  */
-function searchNotes(vaultDir, query) {
+function searchNotes(vaultDir, query, options = {}) {
   if (!vaultDir || !query || typeof query !== 'string') {
     return [];
   }
@@ -24,11 +27,12 @@ function searchNotes(vaultDir, query) {
     return [];
   }
 
-  // Split query into terms, filtering out empty strings
   const terms = cleanQuery.split(/\s+/).filter(Boolean);
   if (terms.length === 0) {
     return [];
   }
+
+  const filterScope = options.scope !== undefined ? options.scope : null;
 
   const mdFiles = getAllMdFiles(absoluteVault, absoluteVault);
   const resultsMap = new Map();
@@ -38,8 +42,13 @@ function searchNotes(vaultDir, query) {
       const relativePath = path.relative(absoluteVault, filePath).replace(/\\/g, '/');
       const content = fs.readFileSync(filePath, 'utf-8');
       const { frontmatter, body } = parseFrontmatter(content);
-      const tags = getNoteTags(content);
 
+      // Scope Isolation Check
+      if (!isNoteInScope(frontmatter, filterScope)) {
+        continue;
+      }
+
+      const tags = getNoteTags(content);
       const fileNameWithoutExt = path.basename(filePath, '.md');
       const title = frontmatter.title ? String(frontmatter.title) : fileNameWithoutExt;
 
@@ -49,34 +58,25 @@ function searchNotes(vaultDir, query) {
       let firstMatchTerm = '';
 
       for (const term of terms) {
-        let termMatched = false;
-
-        // 1. Title match (Weight: 10 per match)
         if (title.toLowerCase().includes(term)) {
           score += 10;
           matchedFieldsSet.add('title');
-          termMatched = true;
         }
 
-        // 2. Tag match (Weight: 8 per match)
         const tagMatches = tags.filter(t => t.toLowerCase().includes(term));
         if (tagMatches.length > 0) {
           score += 8 * tagMatches.length;
           matchedFieldsSet.add('tags');
-          termMatched = true;
         }
 
-        // 3. Path match (Weight: 5 per match)
         if (relativePath.toLowerCase().includes(term)) {
           score += 5;
           matchedFieldsSet.add('path');
-          termMatched = true;
         }
 
-        // 4. Properties/Frontmatter match (Weight: 4 per match)
         let propertyMatched = false;
         for (const [key, val] of Object.entries(frontmatter)) {
-          if (key === 'title' || key === 'tags') continue; // Handled separately
+          if (key === 'title' || key === 'tags' || key.startsWith('scope') || key.endsWith('Id')) continue;
           const strVal = String(val).toLowerCase();
           if (strVal.includes(term)) {
             score += 4;
@@ -85,18 +85,14 @@ function searchNotes(vaultDir, query) {
         }
         if (propertyMatched) {
           matchedFieldsSet.add('properties');
-          termMatched = true;
         }
 
-        // 5. Body/Content match (Weight: 2 per match)
         const lowerBody = body.toLowerCase();
         const bodyMatchesCount = countOccurrences(lowerBody, term);
         if (bodyMatchesCount > 0) {
           score += 2 * bodyMatchesCount;
           matchedFieldsSet.add('content');
-          termMatched = true;
 
-          // Track first match position in body for snippet generation
           if (firstMatchIndex === -1) {
             firstMatchIndex = lowerBody.indexOf(term);
             firstMatchTerm = term;
@@ -104,7 +100,6 @@ function searchNotes(vaultDir, query) {
         }
       }
 
-      // If at least one term matched, record the result
       if (score > 0) {
         const snippet = generateSnippet(body, firstMatchIndex, firstMatchTerm);
         resultsMap.set(relativePath, {
@@ -120,16 +115,12 @@ function searchNotes(vaultDir, query) {
     }
   }
 
-  // Convert map to array and sort descending by score
   const results = Array.from(resultsMap.values());
   results.sort((a, b) => b.score - a.score);
 
   return results;
 }
 
-/**
- * Counts occurrences of subStr in str (case-insensitive search).
- */
 function countOccurrences(str, subStr) {
   if (!str || !subStr) return 0;
   let count = 0;
@@ -141,16 +132,12 @@ function countOccurrences(str, subStr) {
   return count;
 }
 
-/**
- * Generates short content snippet around match position.
- */
 function generateSnippet(body, matchIndex, matchTerm) {
   if (!body || typeof body !== 'string') {
     return '';
   }
 
   if (matchIndex === -1) {
-    // Return first 80 characters of body if no body match position
     const cleanBody = body.replace(/\s+/g, ' ').trim();
     return cleanBody.length > 80 ? cleanBody.substring(0, 80) + '...' : cleanBody;
   }
@@ -170,9 +157,6 @@ function generateSnippet(body, matchIndex, matchTerm) {
   return snippet;
 }
 
-/**
- * Recursively scans directory for markdown files with path traversal security check.
- */
 function getAllMdFiles(dir, absoluteVault) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
@@ -181,7 +165,6 @@ function getAllMdFiles(dir, absoluteVault) {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
 
-    // Path traversal check
     if (!fullPath.startsWith(absoluteVault + path.sep) && fullPath !== absoluteVault) {
       continue;
     }

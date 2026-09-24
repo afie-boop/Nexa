@@ -5,14 +5,15 @@ const { semanticSearch } = require('./semantic');
 const { parseWikiLinks, getBacklinks, resolveNotePath } = require('./wikilinks');
 const { parseFrontmatter, getNoteTags } = require('./properties');
 const { buildGraph } = require('./graph');
+const { isNoteInScope } = require('./memory_scope');
 
 /**
- * Retrieves RAG context by combining hybrid search (Full-text + Semantic)
- * and expanding graph, wikilink, and backlink relationships.
+ * Retrieves RAG context with hybrid search (Full-text + Semantic) and graph relationships,
+ * strictly filtered by scope isolation boundaries.
  *
  * @param {string} vaultDir
  * @param {string} query
- * @param {object} [options]
+ * @param {object} [options] Options including `scope` filter
  * @returns {Promise<{ query: string, results: Array<object>, context: string, sources: Array<object> }>}
  */
 async function retrieveContext(vaultDir, query, options = {}) {
@@ -43,17 +44,16 @@ async function retrieveContext(vaultDir, query, options = {}) {
   const maxContextChars = typeof options.maxContextChars === 'number' && options.maxContextChars > 0 ? options.maxContextChars : 4000;
   const semanticThreshold = typeof options.semanticThreshold === 'number' ? options.semanticThreshold : 0.0;
   const graphLimit = typeof options.graphLimit === 'number' && options.graphLimit >= 0 ? options.graphLimit : 5;
+  const filterScope = options.scope;
 
-  const sourcesMap = new Map(); // key: relativePath, value: source item
+  const sourcesMap = new Map();
 
-  // Helper to add or update source in map
   const addSource = (item) => {
     const key = item.path;
     if (!sourcesMap.has(key)) {
       sourcesMap.set(key, item);
     } else {
       const existing = sourcesMap.get(key);
-      // Boost score if discovered through multiple channels
       existing.score = Math.max(existing.score, item.score) + 0.1;
       if (!existing.sourceTypes.includes(item.primarySourceType)) {
         existing.sourceTypes.push(item.primarySourceType);
@@ -61,10 +61,10 @@ async function retrieveContext(vaultDir, query, options = {}) {
     }
   };
 
-  // 1. Full-Text Search
+  // 1. Full-Text Search (Scope filtered)
   let fulltextResults = [];
   try {
-    fulltextResults = searchNotes(absoluteVault, cleanQuery);
+    fulltextResults = searchNotes(absoluteVault, cleanQuery, { scope: filterScope });
   } catch (err) {
     console.warn('Full-text Search Retrieval Warning:', err.message);
   }
@@ -81,13 +81,14 @@ async function retrieveContext(vaultDir, query, options = {}) {
     });
   }
 
-  // 2. Semantic Search (with graceful fallback if API key missing or error)
+  // 2. Semantic Search (Scope filtered)
   let semanticResults = [];
   try {
     semanticResults = await semanticSearch(absoluteVault, cleanQuery, {
       topK,
       threshold: semanticThreshold,
-      customEmbedder: options.customEmbedder
+      customEmbedder: options.customEmbedder,
+      scope: filterScope
     });
   } catch (err) {
     console.warn('Semantic Search Retrieval Fallback (proceeding without vector results):', err.message);
@@ -97,7 +98,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
     addSource({
       name: sem.name,
       path: sem.path,
-      score: sem.score * 10, // Normalizing score range relative to full-text
+      score: sem.score * 10,
       snippet: sem.snippet,
       tags: sem.matchedMetadata?.tags || [],
       primarySourceType: 'semantic',
@@ -105,24 +106,20 @@ async function retrieveContext(vaultDir, query, options = {}) {
     });
   }
 
-  // If no primary search results found, return empty response
   if (sourcesMap.size === 0) {
     return emptyResponse;
   }
 
-  // Rank hybrid results
   let sortedPrimary = Array.from(sourcesMap.values()).sort((a, b) => b.score - a.score);
   const primaryTopK = sortedPrimary.slice(0, topK);
 
-  // 3. Graph Relationships Expansion (buildGraph)
+  // 3. Graph Relationships Expansion (with Scope Isolation)
   if (graphLimit > 0) {
     try {
       const vaultGraph = buildGraph(absoluteVault);
       let graphAddedCount = 0;
 
-      // Index edges for outgoing (source -> target) and incoming (target -> source)
-      const graphAdjacency = new Map(); // nodeId -> Set of connected nodeIds
-
+      const graphAdjacency = new Map();
       for (const edge of vaultGraph.edges) {
         if (!graphAdjacency.has(edge.source)) {
           graphAdjacency.set(edge.source, new Set());
@@ -135,7 +132,6 @@ async function retrieveContext(vaultDir, query, options = {}) {
         graphAdjacency.get(edge.target).add(edge.source);
       }
 
-      // Map graph node IDs to graph nodes
       const graphNodesMap = new Map();
       for (const node of vaultGraph.nodes) {
         graphNodesMap.set(node.id, node);
@@ -157,13 +153,20 @@ async function retrieveContext(vaultDir, query, options = {}) {
             const fullPath = path.join(absoluteVault, neighborNode.path);
             if (!fs.existsSync(fullPath)) continue;
 
+            let frontmatter = {};
             let snippet = '';
             try {
               const raw = fs.readFileSync(fullPath, 'utf-8');
-              const { body } = parseFrontmatter(raw);
-              snippet = body.substring(0, 150).replace(/\r?\n|\r/g, ' ').trim();
+              const parsed = parseFrontmatter(raw);
+              frontmatter = parsed.frontmatter;
+              snippet = parsed.body.substring(0, 150).replace(/\r?\n|\r/g, ' ').trim();
             } catch (e) {
               // Snippet fallback
+            }
+
+            // Enforce Scope Isolation for Graph neighbors
+            if (filterScope !== undefined && !isNoteInScope(frontmatter, filterScope)) {
+              continue; // Exclude out-of-scope graph node
             }
 
             const graphScore = primaryItem.score * 0.25;
@@ -187,7 +190,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
     }
   }
 
-  // 4. Related Notes Expansion (WikiLinks, Backlinks)
+  // 4. Related Notes Expansion (WikiLinks, Backlinks with Scope Isolation)
   for (const primaryItem of primaryTopK) {
     const fullPath = path.join(absoluteVault, primaryItem.path);
     if (!fs.existsSync(fullPath)) continue;
@@ -205,6 +208,12 @@ async function retrieveContext(vaultDir, query, options = {}) {
           if (fs.existsSync(resolvedPath)) {
             const relContent = fs.readFileSync(resolvedPath, 'utf-8');
             const { frontmatter, body } = parseFrontmatter(relContent);
+
+            // Scope Isolation Check
+            if (filterScope !== undefined && !isNoteInScope(frontmatter, filterScope)) {
+              continue;
+            }
+
             const tags = getNoteTags(relContent);
             const name = frontmatter.title || path.basename(resolvedPath, '.md');
 
@@ -230,6 +239,12 @@ async function retrieveContext(vaultDir, query, options = {}) {
         if (fs.existsSync(bl.sourcePath)) {
           const blContent = fs.readFileSync(bl.sourcePath, 'utf-8');
           const { frontmatter, body } = parseFrontmatter(blContent);
+
+          // Scope Isolation Check
+          if (filterScope !== undefined && !isNoteInScope(frontmatter, filterScope)) {
+            continue;
+          }
+
           const tags = getNoteTags(blContent);
           const name = frontmatter.title || path.basename(bl.sourcePath, '.md');
 
@@ -249,12 +264,10 @@ async function retrieveContext(vaultDir, query, options = {}) {
     }
   }
 
-  // 5. Final Sources Selection (Limited to maxSources)
   const finalSources = Array.from(sourcesMap.values())
     .sort((a, b) => b.score - a.score)
     .slice(0, maxSources);
 
-  // Read full or snippet content for sources & Build Context
   const context = buildContextText(cleanQuery, finalSources, absoluteVault, maxContextChars);
 
   return {
@@ -276,9 +289,6 @@ async function retrieveContext(vaultDir, query, options = {}) {
   };
 }
 
-/**
- * Builds clean, structured context text for LLMs.
- */
 function buildContextText(query, sources, absoluteVault, maxContextChars) {
   let header = `=== USER QUERY ===\n${query}\n\n=== RETRIEVED CONTEXT ===\n`;
   let footer = `\n=== SOURCES ===\n`;
@@ -299,7 +309,7 @@ function buildContextText(query, sources, absoluteVault, maxContextChars) {
         const { body } = parseFrontmatter(raw);
         noteContent = body || src.snippet;
       } catch (e) {
-        // Fallback to snippet
+        // Fallback
       }
     }
 
@@ -307,7 +317,6 @@ function buildContextText(query, sources, absoluteVault, maxContextChars) {
     const blockText = `${blockHeader}${noteContent.trim()}\n`;
 
     if (currentLength + blockText.length > maxContextChars) {
-      // Truncate cleanly if maxContextChars exceeded
       const allowedChars = maxContextChars - currentLength - blockHeader.length - 20;
       if (allowedChars > 50) {
         const truncatedBlock = `${blockHeader}${noteContent.substring(0, allowedChars).trim()}...\n`;

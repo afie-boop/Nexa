@@ -27,6 +27,12 @@ const {
   updateMemory
 } = require('./memory');
 const { extractMemoryWithAI } = require('./memory_ai');
+const {
+  sanitizeScopeId,
+  normalizeScope,
+  getScopeDirectory,
+  isNoteInScope
+} = require('./memory_scope');
 
 // Brain module main entry point
 class Brain {
@@ -82,8 +88,8 @@ class Brain {
   }
 
   // Full-Text Search
-  searchNotes(query) {
-    return searchNotes(this.vaultDir, query);
+  searchNotes(query, options) {
+    return searchNotes(this.vaultDir, query, options);
   }
 
   // Semantic / Vector Search
@@ -115,6 +121,19 @@ class Brain {
 
   async updateMemory(notePath, updates, options) {
     return await updateMemory(this.vaultDir, notePath, updates, options);
+  }
+
+  // Memory Scope Helpers
+  normalizeScope(scopeInput) {
+    return normalizeScope(scopeInput);
+  }
+
+  getScopeDirectory(normScope) {
+    return getScopeDirectory(normScope);
+  }
+
+  isNoteInScope(noteMetadata, filterScope) {
+    return isNoteInScope(noteMetadata, filterScope);
   }
 }
 

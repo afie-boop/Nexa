@@ -5,10 +5,8 @@ const { parseFrontmatter, getNoteTags } = require('./properties');
 const { searchNotes } = require('./search');
 const { semanticSearch } = require('./semantic');
 const { extractMemoryWithAI } = require('./memory_ai');
+const { normalizeScope, getScopeDirectory, isNoteInScope } = require('./memory_scope');
 
-/**
- * Generates a stable deterministic memory ID from content string or random fallback.
- */
 function generateMemoryId(content) {
   if (content && typeof content === 'string') {
     const hash = crypto.createHash('sha256').update(content.trim().toLowerCase()).digest('hex').substring(0, 12);
@@ -17,17 +15,11 @@ function generateMemoryId(content) {
   return `mem_${crypto.randomBytes(6).toString('hex')}`;
 }
 
-/**
- * Normalizes content text for strict comparisons.
- */
 function normalizeContent(text) {
   if (!text || typeof text !== 'string') return '';
   return text.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
-/**
- * Deterministic Rule-Based Memory Extractor (Original).
- */
 function extractMemoryRules(input, options = {}) {
   const confidenceThreshold = typeof options.confidenceThreshold === 'number' ? options.confidenceThreshold : 0.6;
 
@@ -54,14 +46,13 @@ function extractMemoryRules(input, options = {}) {
   for (const line of lines) {
     const lower = line.toLowerCase();
 
-    // Ignore temporary chat chatter & greetings
     if (/^(hi|hello|hey|siapa|apa khabar|ok|thanks|terima kasih|bye|good morning|good night)\b/i.test(lower)) {
       continue;
     }
 
-    // Rule 1: User Preferences
     if (/(saya|i)\s+(suka|gemar|prefer|pilih|favorite|tidak suka|benci)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
+      const memId = generateMemoryId(content);
       rawMemories.push({
         content,
         type: 'preference',
@@ -69,14 +60,14 @@ function extractMemoryRules(input, options = {}) {
         importance: 0.8,
         confidence: 0.9,
         tags: ['preference', 'user'],
-        suggestedPath: `Users/pref_${generateMemoryId(content)}.md`
+        suggestedPath: `Users/pref_${memId}.md`
       });
       continue;
     }
 
-    // Rule 2: User Facts
     if (/(nama saya|saya seorang|i am a|my name is|saya bekerja|umur saya)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
+      const memId = generateMemoryId(content);
       rawMemories.push({
         content,
         type: 'fact',
@@ -84,14 +75,14 @@ function extractMemoryRules(input, options = {}) {
         importance: 0.85,
         confidence: 0.95,
         tags: ['fact', 'user'],
-        suggestedPath: `Users/fact_${generateMemoryId(content)}.md`
+        suggestedPath: `Users/fact_${memId}.md`
       });
       continue;
     }
 
-    // Rule 3: Goals
     if (/(matlamat|goal|target|saya mahu|i want to|impian)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
+      const memId = generateMemoryId(content);
       rawMemories.push({
         content,
         type: 'goal',
@@ -99,14 +90,14 @@ function extractMemoryRules(input, options = {}) {
         importance: 0.8,
         confidence: 0.85,
         tags: ['goal', 'project'],
-        suggestedPath: `Projects/goal_${generateMemoryId(content)}.md`
+        suggestedPath: `Projects/goal_${memId}.md`
       });
       continue;
     }
 
-    // Rule 4: Project Info
     if (/(projek|project|sistem|aplikasi|sumber)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
+      const memId = generateMemoryId(content);
       rawMemories.push({
         content,
         type: 'project',
@@ -114,14 +105,14 @@ function extractMemoryRules(input, options = {}) {
         importance: 0.75,
         confidence: 0.8,
         tags: ['project'],
-        suggestedPath: `Projects/proj_${generateMemoryId(content)}.md`
+        suggestedPath: `Projects/proj_${memId}.md`
       });
       continue;
     }
 
-    // Rule 5: Knowledge Facts
     if (/(definisi|fakta|konsep|teori|maksud)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
+      const memId = generateMemoryId(content);
       rawMemories.push({
         content,
         type: 'knowledge',
@@ -129,7 +120,7 @@ function extractMemoryRules(input, options = {}) {
         importance: 0.7,
         confidence: 0.8,
         tags: ['knowledge'],
-        suggestedPath: `Knowledge/know_${generateMemoryId(content)}.md`
+        suggestedPath: `Knowledge/know_${memId}.md`
       });
       continue;
     }
@@ -141,16 +132,11 @@ function extractMemoryRules(input, options = {}) {
 }
 
 /**
- * Unified Memory Extractor supporting mode: "rules", "llm", or "auto" (with deterministic fallback).
- *
- * @param {string|Array|object} input Conversation or text input
- * @param {object} [options] Options: mode ("rules"|"llm"|"auto"), llmExtractor, customExtractor, confidenceThreshold
- * @returns {Promise<{ memories: Array<object> }>}
+ * Unified Memory Extractor supporting mode: "rules", "llm", or "auto" with scope awareness.
  */
 async function extractMemory(input, options = {}) {
   const mode = options.mode || 'rules';
 
-  // Support legacy customExtractor testing option
   if (typeof options.customExtractor === 'function') {
     const confidenceThreshold = typeof options.confidenceThreshold === 'number' ? options.confidenceThreshold : 0.6;
     const customResult = await options.customExtractor(input, options);
@@ -158,32 +144,41 @@ async function extractMemory(input, options = {}) {
     return { memories: filtered };
   }
 
+  let extracted;
   if (mode === 'rules') {
-    return extractMemoryRules(input, options);
-  }
-
-  if (mode === 'llm') {
-    return await extractMemoryWithAI(input, options);
-  }
-
-  if (mode === 'auto') {
+    extracted = extractMemoryRules(input, options);
+  } else if (mode === 'llm') {
+    extracted = await extractMemoryWithAI(input, options);
+  } else if (mode === 'auto') {
     try {
       const aiResult = await extractMemoryWithAI(input, options);
       if (aiResult && Array.isArray(aiResult.memories) && aiResult.memories.length > 0) {
-        return aiResult;
+        extracted = aiResult;
       }
     } catch (err) {
       console.warn('Memory Auto Extractor Warning (falling back to rules):', err.message);
     }
-    // Fallback to rules if LLM fails, times out, or returns 0 memories
-    return extractMemoryRules(input, options);
+    if (!extracted) {
+      extracted = extractMemoryRules(input, options);
+    }
+  } else {
+    extracted = extractMemoryRules(input, options);
   }
 
-  return extractMemoryRules(input, options);
+  // Attach scope metadata if provided in options
+  if (options.scope && extracted && Array.isArray(extracted.memories)) {
+    const normScope = normalizeScope(options.scope);
+    extracted.memories = extracted.memories.map(m => ({
+      ...m,
+      scope: normScope
+    }));
+  }
+
+  return extracted;
 }
 
 /**
- * Finds if an existing memory already exists in vault to prevent duplicates.
+ * Finds if an existing memory already exists within vault/scope to prevent duplicates.
  */
 async function findExistingMemory(vaultDir, memory, options = {}) {
   if (!vaultDir || !memory || (!memory.content && !memory.id)) {
@@ -196,14 +191,19 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
   }
 
   const normTarget = normalizeContent(memory.content);
+  const scopeFilter = options.scope !== undefined ? options.scope : memory.scope;
 
-  // 1. Scan vault files for matching ID or exact content
   const mdFiles = getAllMdFiles(absoluteVault, absoluteVault);
   for (const filePath of mdFiles) {
     try {
       const relativePath = path.relative(absoluteVault, filePath).replace(/\\/g, '/');
       const raw = fs.readFileSync(filePath, 'utf-8');
       const { frontmatter, body } = parseFrontmatter(raw);
+
+      // Scope Check
+      if (scopeFilter !== undefined && !isNoteInScope(frontmatter, scopeFilter)) {
+        continue;
+      }
 
       if (memory.id && frontmatter.id === memory.id) {
         return {
@@ -227,9 +227,8 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
     }
   }
 
-  // 2. Full-Text Search check for high relevance
   if (memory.content) {
-    const ftResults = searchNotes(absoluteVault, memory.content);
+    const ftResults = searchNotes(absoluteVault, memory.content, { scope: scopeFilter });
     if (ftResults.length > 0 && ftResults[0].score >= 8) {
       const topMatch = ftResults[0];
       const fullPath = path.join(absoluteVault, topMatch.path);
@@ -248,13 +247,13 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
     }
   }
 
-  // 3. Semantic Search check
   if (memory.content) {
     try {
       const semResults = await semanticSearch(absoluteVault, memory.content, {
         topK: 1,
         threshold: 0.95,
-        customEmbedder: options.customEmbedder
+        customEmbedder: options.customEmbedder,
+        scope: scopeFilter
       });
       if (semResults.length > 0) {
         const topSem = semResults[0];
@@ -279,7 +278,7 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
 }
 
 /**
- * Saves a new structured memory into vault as a Markdown note with frontmatter.
+ * Saves a new structured memory into vault as a Markdown note with scope metadata.
  */
 async function saveMemory(vaultDir, memory, options = {}) {
   if (!vaultDir || !memory || !memory.content || typeof memory.content !== 'string' || !memory.content.trim()) {
@@ -291,8 +290,11 @@ async function saveMemory(vaultDir, memory, options = {}) {
     fs.mkdirSync(absoluteVault, { recursive: true });
   }
 
-  // 1. Duplicate check
-  const dupCheck = await findExistingMemory(absoluteVault, memory, options);
+  const scopeInput = options.scope !== undefined ? options.scope : memory.scope;
+  const normScope = normalizeScope(scopeInput);
+
+  // 1. Duplicate check within scope
+  const dupCheck = await findExistingMemory(absoluteVault, memory, { ...options, scope: normScope });
   if (dupCheck.found) {
     return {
       created: false,
@@ -301,18 +303,22 @@ async function saveMemory(vaultDir, memory, options = {}) {
       memory: {
         ...memory,
         id: dupCheck.existingFrontmatter?.id || memory.id,
-        path: dupCheck.path
+        path: dupCheck.path,
+        scope: normScope
       }
     };
   }
 
-  // 2. Determine target path & path traversal security check
+  // 2. Determine target path using scope directory
   const memId = memory.id || generateMemoryId(memory.content);
   let targetRelPath = memory.suggestedPath || memory.path;
 
   if (!targetRelPath) {
-    const folder = getFolderForType(memory.type || memory.category);
-    targetRelPath = `${folder}/mem_${memId}.md`;
+    const scopeDir = getScopeDirectory(normScope);
+    targetRelPath = `${scopeDir}/mem_${memId}.md`;
+  } else if (normScope.type !== 'knowledge' && !targetRelPath.includes('/')) {
+    const scopeDir = getScopeDirectory(normScope);
+    targetRelPath = `${scopeDir}/${targetRelPath}`;
   }
 
   if (!targetRelPath.endsWith('.md')) {
@@ -331,7 +337,7 @@ async function saveMemory(vaultDir, memory, options = {}) {
     fs.mkdirSync(parentDir, { recursive: true });
   }
 
-  // 3. Format Markdown content with YAML frontmatter
+  // 3. Format Markdown content with YAML frontmatter + scope metadata
   const now = new Date().toISOString();
   const title = memory.title || (memory.content.length > 40 ? memory.content.substring(0, 40) + '...' : memory.content);
   const tags = Array.isArray(memory.tags) ? Array.from(new Set(memory.tags)) : [memory.type || 'memory'];
@@ -345,7 +351,12 @@ async function saveMemory(vaultDir, memory, options = {}) {
     created: now,
     updated: now,
     importance: memory.importance ?? 0.7,
-    confidence: memory.confidence ?? 0.9
+    confidence: memory.confidence ?? 0.9,
+    // Scope metadata
+    scopeType: normScope.type,
+    userId: normScope.userId,
+    projectId: normScope.projectId,
+    sessionId: normScope.sessionId
   };
 
   const yamlBlock = buildYamlFrontmatter(frontmatterObj);
@@ -364,7 +375,8 @@ async function saveMemory(vaultDir, memory, options = {}) {
       title,
       path: relResultPath,
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
+      scope: normScope
     }
   };
 }
@@ -385,7 +397,6 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
 
   const targetFullPath = path.resolve(absoluteVault, cleanRelPath);
 
-  // Security Check: Path Traversal Protection
   if (!targetFullPath.startsWith(absoluteVault + path.sep) && targetFullPath !== absoluteVault) {
     throw new Error(`Security Violation: Path traversal detected for "${notePath}"`);
   }
@@ -408,7 +419,11 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
     importance: updates.importance ?? frontmatter.importance,
     confidence: updates.confidence ?? frontmatter.confidence,
     created: frontmatter.created || now,
-    updated: now
+    updated: now,
+    scopeType: frontmatter.scopeType || 'knowledge',
+    userId: frontmatter.userId || null,
+    projectId: frontmatter.projectId || null,
+    sessionId: frontmatter.sessionId || null
   };
 
   const updatedBody = updates.content !== undefined ? updates.content.trim() : body.trim();
@@ -429,14 +444,14 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
 function buildYamlFrontmatter(obj) {
   let lines = ['---'];
   for (const [key, val] of Object.entries(obj)) {
-    if (val === undefined || val === null) continue;
+    if (val === undefined) continue;
 
     if (Array.isArray(val)) {
       lines.push(`${key}:`);
       for (const item of val) {
         lines.push(`  - ${item}`);
       }
-    } else if (typeof val === 'object') {
+    } else if (typeof val === 'object' && val !== null) {
       lines.push(`${key}: ${JSON.stringify(val)}`);
     } else {
       lines.push(`${key}: ${val}`);
@@ -444,20 +459,6 @@ function buildYamlFrontmatter(obj) {
   }
   lines.push('---');
   return lines.join('\n');
-}
-
-function getFolderForType(type) {
-  const t = String(type || '').toLowerCase();
-  if (t === 'user' || t === 'preference' || t === 'fact' || t === 'relationship') {
-    return 'Users';
-  }
-  if (t === 'project' || t === 'goal') {
-    return 'Projects';
-  }
-  if (t === 'knowledge' || t === 'instruction') {
-    return 'Knowledge';
-  }
-  return 'Memory';
 }
 
 function getAllMdFiles(dir, absoluteVault) {
