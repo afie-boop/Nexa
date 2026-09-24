@@ -1,5 +1,1 @@
-const Brain = require('./brain');
-
-module.exports = {
-  Brain
-};
+module.exports = require("./brain");
