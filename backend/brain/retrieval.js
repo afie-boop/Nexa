@@ -4,10 +4,11 @@ const { searchNotes } = require('./search');
 const { semanticSearch } = require('./semantic');
 const { parseWikiLinks, getBacklinks, resolveNotePath } = require('./wikilinks');
 const { parseFrontmatter, getNoteTags } = require('./properties');
+const { buildGraph } = require('./graph');
 
 /**
  * Retrieves RAG context by combining hybrid search (Full-text + Semantic)
- * and expanding graph/wikilink/backlink relationships.
+ * and expanding graph, wikilink, and backlink relationships.
  *
  * @param {string} vaultDir
  * @param {string} query
@@ -41,6 +42,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
   const maxSources = typeof options.maxSources === 'number' && options.maxSources > 0 ? options.maxSources : 10;
   const maxContextChars = typeof options.maxContextChars === 'number' && options.maxContextChars > 0 ? options.maxContextChars : 4000;
   const semanticThreshold = typeof options.semanticThreshold === 'number' ? options.semanticThreshold : 0.0;
+  const graphLimit = typeof options.graphLimit === 'number' && options.graphLimit >= 0 ? options.graphLimit : 5;
 
   const sourcesMap = new Map(); // key: relativePath, value: source item
 
@@ -112,7 +114,80 @@ async function retrieveContext(vaultDir, query, options = {}) {
   let sortedPrimary = Array.from(sourcesMap.values()).sort((a, b) => b.score - a.score);
   const primaryTopK = sortedPrimary.slice(0, topK);
 
-  // 3. Related Notes Expansion (WikiLinks, Backlinks)
+  // 3. Graph Relationships Expansion (buildGraph)
+  if (graphLimit > 0) {
+    try {
+      const vaultGraph = buildGraph(absoluteVault);
+      let graphAddedCount = 0;
+
+      // Index edges for outgoing (source -> target) and incoming (target -> source)
+      const graphAdjacency = new Map(); // nodeId -> Set of connected nodeIds
+
+      for (const edge of vaultGraph.edges) {
+        if (!graphAdjacency.has(edge.source)) {
+          graphAdjacency.set(edge.source, new Set());
+        }
+        graphAdjacency.get(edge.source).add(edge.target);
+
+        if (!graphAdjacency.has(edge.target)) {
+          graphAdjacency.set(edge.target, new Set());
+        }
+        graphAdjacency.get(edge.target).add(edge.source);
+      }
+
+      // Map graph node IDs to graph nodes
+      const graphNodesMap = new Map();
+      for (const node of vaultGraph.nodes) {
+        graphNodesMap.set(node.id, node);
+      }
+
+      for (const primaryItem of primaryTopK) {
+        if (graphAddedCount >= graphLimit || sourcesMap.size >= maxSources) break;
+
+        const primaryNodeId = primaryItem.path;
+        const connectedNodes = graphAdjacency.get(primaryNodeId);
+
+        if (connectedNodes) {
+          for (const neighborId of connectedNodes) {
+            if (graphAddedCount >= graphLimit || sourcesMap.size >= maxSources) break;
+
+            const neighborNode = graphNodesMap.get(neighborId);
+            if (!neighborNode) continue;
+
+            const fullPath = path.join(absoluteVault, neighborNode.path);
+            if (!fs.existsSync(fullPath)) continue;
+
+            let snippet = '';
+            try {
+              const raw = fs.readFileSync(fullPath, 'utf-8');
+              const { body } = parseFrontmatter(raw);
+              snippet = body.substring(0, 150).replace(/\r?\n|\r/g, ' ').trim();
+            } catch (e) {
+              // Snippet fallback
+            }
+
+            const graphScore = primaryItem.score * 0.25;
+
+            addSource({
+              name: neighborNode.name,
+              path: neighborNode.path,
+              score: graphScore,
+              snippet,
+              tags: neighborNode.tags || [],
+              primarySourceType: 'graph',
+              sourceTypes: ['graph']
+            });
+
+            graphAddedCount++;
+          }
+        }
+      }
+    } catch (graphErr) {
+      console.warn('Graph Retrieval Warning:', graphErr.message);
+    }
+  }
+
+  // 4. Related Notes Expansion (WikiLinks, Backlinks)
   for (const primaryItem of primaryTopK) {
     const fullPath = path.join(absoluteVault, primaryItem.path);
     if (!fs.existsSync(fullPath)) continue;
@@ -174,7 +249,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
     }
   }
 
-  // 4. Final Sources Selection (Limited to maxSources)
+  // 5. Final Sources Selection (Limited to maxSources)
   const finalSources = Array.from(sourcesMap.values())
     .sort((a, b) => b.score - a.score)
     .slice(0, maxSources);
