@@ -26,6 +26,7 @@ const {
   saveMemory,
   updateMemory
 } = require('./memory');
+const { extractMemoryWithAI } = require('./memory_ai');
 
 module.exports = {
   Brain,
@@ -45,6 +46,7 @@ module.exports = {
   semanticSearch,
   retrieveContext,
   extractMemory,
+  extractMemoryWithAI,
   findExistingMemory,
   saveMemory,
   updateMemory

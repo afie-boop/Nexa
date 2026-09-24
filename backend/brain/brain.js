@@ -26,6 +26,7 @@ const {
   saveMemory,
   updateMemory
 } = require('./memory');
+const { extractMemoryWithAI } = require('./memory_ai');
 
 // Brain module main entry point
 class Brain {
@@ -95,9 +96,13 @@ class Brain {
     return await retrieveContext(this.vaultDir, query, options);
   }
 
-  // Memory Engine
+  // Memory Engine & Intelligence Layer
   async extractMemory(input, options) {
     return await extractMemory(input, options);
+  }
+
+  async extractMemoryWithAI(input, options) {
+    return await extractMemoryWithAI(input, options);
   }
 
   async findExistingMemory(memory, options) {

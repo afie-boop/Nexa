@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { parseFrontmatter, getNoteTags } = require('./properties');
 const { searchNotes } = require('./search');
 const { semanticSearch } = require('./semantic');
+const { extractMemoryWithAI } = require('./memory_ai');
 
 /**
  * Generates a stable deterministic memory ID from content string or random fallback.
@@ -25,25 +26,13 @@ function normalizeContent(text) {
 }
 
 /**
- * Extracts structured memories from conversation input string or array.
- * Uses rule-based heuristics by default, or customExtractor if provided.
- *
- * @param {string|Array} input Conversation input text or message objects
- * @param {object} [options] Options: customExtractor, confidenceThreshold
- * @returns {Promise<{ memories: Array<object> }>}
+ * Deterministic Rule-Based Memory Extractor (Original).
  */
-async function extractMemory(input, options = {}) {
+function extractMemoryRules(input, options = {}) {
   const confidenceThreshold = typeof options.confidenceThreshold === 'number' ? options.confidenceThreshold : 0.6;
 
   if (!input) {
     return { memories: [] };
-  }
-
-  // Allow custom extractor override (useful for testing & offline mode without external LLM)
-  if (typeof options.customExtractor === 'function') {
-    const customResult = await options.customExtractor(input, options);
-    const filtered = (customResult?.memories || []).filter(m => (m.confidence ?? 1.0) >= confidenceThreshold);
-    return { memories: filtered };
   }
 
   let textInput = '';
@@ -70,7 +59,7 @@ async function extractMemory(input, options = {}) {
       continue;
     }
 
-    // Rule 1: User Preferences ("saya suka", "i prefer", "my favorite", "saya tidak suka")
+    // Rule 1: User Preferences
     if (/(saya|i)\s+(suka|gemar|prefer|pilih|favorite|tidak suka|benci)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
       rawMemories.push({
@@ -85,7 +74,7 @@ async function extractMemory(input, options = {}) {
       continue;
     }
 
-    // Rule 2: User Facts ("nama saya", "saya bekerja", "i am a", "my name is")
+    // Rule 2: User Facts
     if (/(nama saya|saya seorang|i am a|my name is|saya bekerja|umur saya)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
       rawMemories.push({
@@ -100,7 +89,7 @@ async function extractMemory(input, options = {}) {
       continue;
     }
 
-    // Rule 3: Goals ("matlamat", "goal", "saya mahu", "i want to achieve")
+    // Rule 3: Goals
     if (/(matlamat|goal|target|saya mahu|i want to|impian)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
       rawMemories.push({
@@ -115,7 +104,7 @@ async function extractMemory(input, options = {}) {
       continue;
     }
 
-    // Rule 4: Project Info ("projek", "project", "aplikasi", "sistem")
+    // Rule 4: Project Info
     if (/(projek|project|sistem|aplikasi|sumber)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
       rawMemories.push({
@@ -130,7 +119,7 @@ async function extractMemory(input, options = {}) {
       continue;
     }
 
-    // Rule 5: Knowledge Facts ("definisi", "fakta", "pengetahuan", "is a")
+    // Rule 5: Knowledge Facts
     if (/(definisi|fakta|konsep|teori|maksud)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
       rawMemories.push({
@@ -146,21 +135,55 @@ async function extractMemory(input, options = {}) {
     }
   }
 
-  // Filter memories by confidence threshold
   const validMemories = rawMemories.filter(m => m.confidence >= confidenceThreshold);
 
-  return {
-    memories: validMemories
-  };
+  return { memories: validMemories };
+}
+
+/**
+ * Unified Memory Extractor supporting mode: "rules", "llm", or "auto" (with deterministic fallback).
+ *
+ * @param {string|Array|object} input Conversation or text input
+ * @param {object} [options] Options: mode ("rules"|"llm"|"auto"), llmExtractor, customExtractor, confidenceThreshold
+ * @returns {Promise<{ memories: Array<object> }>}
+ */
+async function extractMemory(input, options = {}) {
+  const mode = options.mode || 'rules';
+
+  // Support legacy customExtractor testing option
+  if (typeof options.customExtractor === 'function') {
+    const confidenceThreshold = typeof options.confidenceThreshold === 'number' ? options.confidenceThreshold : 0.6;
+    const customResult = await options.customExtractor(input, options);
+    const filtered = (customResult?.memories || []).filter(m => (m.confidence ?? 1.0) >= confidenceThreshold);
+    return { memories: filtered };
+  }
+
+  if (mode === 'rules') {
+    return extractMemoryRules(input, options);
+  }
+
+  if (mode === 'llm') {
+    return await extractMemoryWithAI(input, options);
+  }
+
+  if (mode === 'auto') {
+    try {
+      const aiResult = await extractMemoryWithAI(input, options);
+      if (aiResult && Array.isArray(aiResult.memories) && aiResult.memories.length > 0) {
+        return aiResult;
+      }
+    } catch (err) {
+      console.warn('Memory Auto Extractor Warning (falling back to rules):', err.message);
+    }
+    // Fallback to rules if LLM fails, times out, or returns 0 memories
+    return extractMemoryRules(input, options);
+  }
+
+  return extractMemoryRules(input, options);
 }
 
 /**
  * Finds if an existing memory already exists in vault to prevent duplicates.
- *
- * @param {string} vaultDir
- * @param {object} memory
- * @param {object} [options]
- * @returns {Promise<{ found: boolean, path?: string, existingFrontmatter?: object, existingContent?: string }>}
  */
 async function findExistingMemory(vaultDir, memory, options = {}) {
   if (!vaultDir || !memory || (!memory.content && !memory.id)) {
@@ -182,7 +205,6 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
       const raw = fs.readFileSync(filePath, 'utf-8');
       const { frontmatter, body } = parseFrontmatter(raw);
 
-      // Check ID match
       if (memory.id && frontmatter.id === memory.id) {
         return {
           found: true,
@@ -192,7 +214,6 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
         };
       }
 
-      // Check Content match
       if (normTarget && normalizeContent(body) === normTarget) {
         return {
           found: true,
@@ -227,7 +248,7 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
     }
   }
 
-  // 3. Semantic Search check if customEmbedder or API key available
+  // 3. Semantic Search check
   if (memory.content) {
     try {
       const semResults = await semanticSearch(absoluteVault, memory.content, {
@@ -250,7 +271,7 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
         }
       }
     } catch (e) {
-      // Fallback if semantic fails
+      // Fallback
     }
   }
 
@@ -259,12 +280,6 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
 
 /**
  * Saves a new structured memory into vault as a Markdown note with frontmatter.
- * Rejects duplicates and enforces path traversal security.
- *
- * @param {string} vaultDir
- * @param {object} memory Memory object: { content, type, category, importance, confidence, tags, suggestedPath }
- * @param {object} [options]
- * @returns {Promise<{ created: boolean, duplicate?: boolean, path: string, memory: object }>}
  */
 async function saveMemory(vaultDir, memory, options = {}) {
   if (!vaultDir || !memory || !memory.content || typeof memory.content !== 'string' || !memory.content.trim()) {
@@ -311,7 +326,6 @@ async function saveMemory(vaultDir, memory, options = {}) {
     throw new Error(`Security Violation: Path traversal detected for "${targetRelPath}"`);
   }
 
-  // Ensure parent directory exists
   const parentDir = path.dirname(targetFullPath);
   if (!fs.existsSync(parentDir)) {
     fs.mkdirSync(parentDir, { recursive: true });
@@ -357,13 +371,6 @@ async function saveMemory(vaultDir, memory, options = {}) {
 
 /**
  * Updates an existing memory note in vault safely.
- * Preserves existing frontmatter fields and update timestamps.
- *
- * @param {string} vaultDir
- * @param {string} notePath Relative path to note inside vault
- * @param {object} updates Updates object: { content, title, tags, importance, confidence }
- * @param {object} [options]
- * @returns {Promise<{ updated: boolean, path: string, frontmatter: object }>}
  */
 async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
   if (!vaultDir || !notePath) {
@@ -392,7 +399,6 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
 
   const now = new Date().toISOString();
 
-  // Merge frontmatter preserving existing id & created timestamp
   const updatedFrontmatter = {
     ...frontmatter,
     id: frontmatter.id || generateMemoryId(body),
@@ -420,9 +426,6 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
   };
 }
 
-/**
- * Builds YAML frontmatter string from object.
- */
 function buildYamlFrontmatter(obj) {
   let lines = ['---'];
   for (const [key, val] of Object.entries(obj)) {
@@ -443,9 +446,6 @@ function buildYamlFrontmatter(obj) {
   return lines.join('\n');
 }
 
-/**
- * Determines default folder for memory category/type.
- */
 function getFolderForType(type) {
   const t = String(type || '').toLowerCase();
   if (t === 'user' || t === 'preference' || t === 'fact' || t === 'relationship') {
@@ -460,9 +460,6 @@ function getFolderForType(type) {
   return 'Memory';
 }
 
-/**
- * Recursively scans directory for markdown files with path traversal security check.
- */
 function getAllMdFiles(dir, absoluteVault) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
