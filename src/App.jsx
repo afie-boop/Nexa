@@ -100,7 +100,7 @@ function App() {
   });
 
   const [load, setLoad] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState("Nexa sedang berfikir...");
+  const [loadingStatus, setLoadingStatus] = useState("AXMchat sedang berfikir...");
   const [error, setError] = useState(null);
   const [copiedIdx, setCopiedIdx] = useState(null);
   const chatEndRef = useRef(null);
@@ -356,7 +356,7 @@ function App() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Nexa AI Response",
+          title: "AXMchat AI Response",
           text: content,
         });
       } catch (err) {
@@ -371,11 +371,11 @@ function App() {
 
   const handleShareChat = async () => {
     if (chat.length === 0) return;
-    const conversationText = chat.map(m => `${m.type === "user" ? "User" : "Nexa AI"}: ${m.text}`).join("\n\n");
+    const conversationText = chat.map(m => `${m.type === "user" ? "User" : "AXMchat AI"}: ${m.text}`).join("\n\n");
     if (navigator.share) {
       try {
         await navigator.share({
-          title: activeConversation.title || "Nexa AI Chat",
+          title: activeConversation.title || "AXMchat AI Chat",
           text: conversationText,
         });
       } catch (err) {
@@ -427,7 +427,7 @@ function App() {
     }
 
     setLoad(true);
-    setLoadingStatus("Nexa sedang berfikir...");
+    setLoadingStatus("AXMchat sedang berfikir...");
     setError(null);
 
     try {
@@ -647,8 +647,8 @@ function App() {
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <div className="logo-container">
-            <div className="logo-icon">N</div>
-            <div className="logo-text">NEXA</div>
+            <div className="logo-icon">A</div>
+            <div className="logo-text">AXMchat</div>
           </div>
           <button className="new-chat-btn" onClick={handleNewChat}>
             <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
@@ -819,9 +819,9 @@ function App() {
 
         {/* User Profile Info */}
         <div className="sidebar-profile">
-          <div className="profile-avatar">NX</div>
+          <div className="profile-avatar">AX</div>
           <div className="profile-info">
-            <span className="profile-name">Nexa Developer</span>
+            <span className="profile-name">AXMchat Developer</span>
             <span className="profile-plan">Pro Evolution Plan</span>
           </div>
         </div>
@@ -851,7 +851,7 @@ function App() {
             </button>
 
             <div className="ai-status-container">
-              <span className="ai-name">Nexa AI</span>
+              <span className="ai-name">AXMchat AI</span>
               <div className="status-indicator">
                 <span className={`status-dot ${currentStatus === "Thinking" ? "thinking" : ""}`} />
                 <span>{currentStatus}</span>
@@ -886,8 +886,8 @@ function App() {
             {/* 2. Hero Section (when empty) */}
             {chat.length === 0 && !load ? (
               <div className="hero-section animate-fade">
-                <div className="hero-logo">N</div>
-                <h2 className="hero-title">Hello, I'm Nexa.</h2>
+                <div className="hero-logo">A</div>
+                <h2 className="hero-title">Hello, I'm AXMchat.</h2>
                 <p className="hero-tagline">Build. Think. Create.</p>
 
                 <div className="suggestion-prompts-container">
@@ -1057,7 +1057,7 @@ function App() {
                     value={msg}
                     onChange={(e) => setMsg(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
+                    placeholder="Tanya AXMchat apa sahaja... (Shift+Enter untuk baris baru)"
                     disabled={load}
                   />
                   <button
@@ -1081,7 +1081,7 @@ function App() {
         {activeNav === "models" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <h2 className="panel-title">Nexa AI Models</h2>
+              <h2 className="panel-title">AXMchat AI Models</h2>
               <p className="panel-subtitle">Tetapkan Model ID tersuai untuk General AI, Coding AI, dan Fallback AI.</p>
 
               <div className="grid-container">
@@ -1199,7 +1199,7 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">Settings</h2>
-              <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran Nexa AI.</p>
+              <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran AXMchat AI.</p>
 
               <div className="flat-card">
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
@@ -1234,12 +1234,12 @@ function App() {
         {activeNav === "about" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <h2 className="panel-title">About NEXA AI</h2>
-              <p className="panel-subtitle">Nexa is a minimalist, clean, and highly productive workspace designed from the ground up for developer efficiency.</p>
+              <h2 className="panel-title">About AXMchat AI</h2>
+              <p className="panel-subtitle">AXMchat is a minimalist, clean, and highly productive workspace designed from the ground up for developer efficiency.</p>
 
               <div className="flat-card">
                 <p style={{ lineHeight: "1.6", color: "var(--primary-text)" }}>
-                  Nexa is built upon a dual-column flat structural philosophy: an organized sidebar navigation for immediate interaction and a broad central workspace providing a clean layout with zero visual clutter.
+                  AXMchat is built upon a dual-column flat structural philosophy: an organized sidebar navigation for immediate interaction and a broad central workspace providing a clean layout with zero visual clutter.
                 </p>
                 <p style={{ marginTop: "16px", fontWeight: "500", color: "var(--secondary-text)" }}>
                   Made with focus, clarity, and precision for professional builders.
