@@ -20,6 +20,12 @@ const {
   semanticSearch
 } = require('./semantic');
 const { retrieveContext } = require('./retrieval');
+const {
+  extractMemory,
+  findExistingMemory,
+  saveMemory,
+  updateMemory
+} = require('./memory');
 
 module.exports = {
   Brain,
@@ -37,5 +43,9 @@ module.exports = {
   createEmbedding,
   createEmbeddings,
   semanticSearch,
-  retrieveContext
+  retrieveContext,
+  extractMemory,
+  findExistingMemory,
+  saveMemory,
+  updateMemory
 };

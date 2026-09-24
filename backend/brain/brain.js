@@ -20,6 +20,12 @@ const {
   semanticSearch
 } = require('./semantic');
 const { retrieveContext } = require('./retrieval');
+const {
+  extractMemory,
+  findExistingMemory,
+  saveMemory,
+  updateMemory
+} = require('./memory');
 
 // Brain module main entry point
 class Brain {
@@ -87,6 +93,23 @@ class Brain {
   // RAG Context Retrieval
   async retrieveContext(query, options) {
     return await retrieveContext(this.vaultDir, query, options);
+  }
+
+  // Memory Engine
+  async extractMemory(input, options) {
+    return await extractMemory(input, options);
+  }
+
+  async findExistingMemory(memory, options) {
+    return await findExistingMemory(this.vaultDir, memory, options);
+  }
+
+  async saveMemory(memory, options) {
+    return await saveMemory(this.vaultDir, memory, options);
+  }
+
+  async updateMemory(notePath, updates, options) {
+    return await updateMemory(this.vaultDir, notePath, updates, options);
   }
 }
 
