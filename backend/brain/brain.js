@@ -19,6 +19,7 @@ const {
   createEmbeddings,
   semanticSearch
 } = require('./semantic');
+const { retrieveContext } = require('./retrieval');
 
 // Brain module main entry point
 class Brain {
@@ -81,6 +82,11 @@ class Brain {
   // Semantic / Vector Search
   async semanticSearch(query, options) {
     return await semanticSearch(this.vaultDir, query, options);
+  }
+
+  // RAG Context Retrieval
+  async retrieveContext(query, options) {
+    return await retrieveContext(this.vaultDir, query, options);
   }
 }
 

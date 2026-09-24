@@ -19,6 +19,7 @@ const {
   createEmbeddings,
   semanticSearch
 } = require('./semantic');
+const { retrieveContext } = require('./retrieval');
 
 module.exports = {
   Brain,
@@ -35,5 +36,6 @@ module.exports = {
   cosineSimilarity,
   createEmbedding,
   createEmbeddings,
-  semanticSearch
+  semanticSearch,
+  retrieveContext
 };
