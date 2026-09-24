@@ -5,6 +5,12 @@ const {
   resolveNotePath,
   getBacklinks
 } = require('./wikilinks');
+const {
+  parseFrontmatter,
+  parseInlineTags,
+  getNoteTags,
+  findNotesByTag
+} = require('./properties');
 
 // Brain module main entry point
 class Brain {
@@ -20,6 +26,7 @@ class Brain {
     console.log('Brain initialized successfully with vault at:', this.vaultDir);
   }
 
+  // WikiLinks & Backlinks
   parseWikiLinks(content) {
     return parseWikiLinks(content);
   }
@@ -34,6 +41,23 @@ class Brain {
 
   getBacklinks(targetNote) {
     return getBacklinks(this.vaultDir, targetNote);
+  }
+
+  // Tags & Properties / YAML Frontmatter
+  parseFrontmatter(content) {
+    return parseFrontmatter(content);
+  }
+
+  parseInlineTags(text) {
+    return parseInlineTags(text);
+  }
+
+  getNoteTags(content) {
+    return getNoteTags(content);
+  }
+
+  findNotesByTag(targetTag) {
+    return findNotesByTag(this.vaultDir, targetTag);
   }
 }
 

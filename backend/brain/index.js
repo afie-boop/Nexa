@@ -5,11 +5,21 @@ const {
   resolveNotePath,
   getBacklinks
 } = require('./wikilinks');
+const {
+  parseFrontmatter,
+  parseInlineTags,
+  getNoteTags,
+  findNotesByTag
+} = require('./properties');
 
 module.exports = {
   Brain,
   parseWikiLinks,
   getOutgoingLinks,
   resolveNotePath,
-  getBacklinks
+  getBacklinks,
+  parseFrontmatter,
+  parseInlineTags,
+  getNoteTags,
+  findNotesByTag
 };
