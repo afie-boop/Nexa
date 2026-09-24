@@ -13,6 +13,12 @@ const {
 } = require('./properties');
 const { buildGraph } = require('./graph');
 const { searchNotes } = require('./search');
+const {
+  cosineSimilarity,
+  createEmbedding,
+  createEmbeddings,
+  semanticSearch
+} = require('./semantic');
 
 // Brain module main entry point
 class Brain {
@@ -70,6 +76,11 @@ class Brain {
   // Full-Text Search
   searchNotes(query) {
     return searchNotes(this.vaultDir, query);
+  }
+
+  // Semantic / Vector Search
+  async semanticSearch(query, options) {
+    return await semanticSearch(this.vaultDir, query, options);
   }
 }
 

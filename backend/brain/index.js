@@ -13,6 +13,12 @@ const {
 } = require('./properties');
 const { buildGraph } = require('./graph');
 const { searchNotes } = require('./search');
+const {
+  cosineSimilarity,
+  createEmbedding,
+  createEmbeddings,
+  semanticSearch
+} = require('./semantic');
 
 module.exports = {
   Brain,
@@ -25,5 +31,9 @@ module.exports = {
   getNoteTags,
   findNotesByTag,
   buildGraph,
-  searchNotes
+  searchNotes,
+  cosineSimilarity,
+  createEmbedding,
+  createEmbeddings,
+  semanticSearch
 };
