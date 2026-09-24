@@ -851,7 +851,7 @@ function App() {
             </button>
 
             <div className="ai-status-container">
-              <span className="ai-name">AXMchat AI</span>
+              <span className="ai-name">AXMchat</span>
               <div className="status-indicator">
                 <span className={`status-dot ${currentStatus === "Thinking" ? "thinking" : ""}`} />
                 <span>{currentStatus}</span>
