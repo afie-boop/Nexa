@@ -123,7 +123,8 @@ async function syncIndex(vaultDir, options = {}) {
   for (const filePath of currentFiles) {
     const relativePath = path.relative(absoluteVault, filePath).replace(/\\/g, '/');
 
-    if (relativePath.startsWith('.index/')) {
+    // Skip indexing Memory/History and .index
+    if (relativePath.startsWith('.index/') || relativePath.startsWith('Memory/History/')) {
       continue;
     }
 
@@ -177,7 +178,7 @@ async function syncIndex(vaultDir, options = {}) {
 }
 
 /**
- * Performs semantic search with scope filtering.
+ * Performs semantic search with scope filtering. Excludes Memory/History snapshots.
  */
 async function semanticSearch(vaultDir, query, options = {}) {
   if (!vaultDir || !query || typeof query !== 'string') {
@@ -214,6 +215,11 @@ async function semanticSearch(vaultDir, query, options = {}) {
 
   for (const entry of entries) {
     if (!entry.embedding || !Array.isArray(entry.embedding)) {
+      continue;
+    }
+
+    // Exclude Memory/History snapshots
+    if (entry.path.startsWith('Memory/History/')) {
       continue;
     }
 
@@ -265,6 +271,11 @@ function getAllMdFiles(dir, absoluteVault) {
     const fullPath = path.join(dir, entry.name);
 
     if (!fullPath.startsWith(absoluteVault + path.sep) && fullPath !== absoluteVault) {
+      continue;
+    }
+
+    const relPath = path.relative(absoluteVault, fullPath).replace(/\\/g, '/');
+    if (relPath.startsWith('Memory/History') || relPath.startsWith('.index')) {
       continue;
     }
 

@@ -5,7 +5,7 @@ const { isNoteInScope } = require('./memory_scope');
 
 /**
  * Searches markdown notes in vault directory with relevance scoring and snippet generation.
- * Supports scope filtering.
+ * Excludes Memory/History directory.
  *
  * @param {string} vaultDir Path to vault root directory
  * @param {string} query Search query string
@@ -40,6 +40,12 @@ function searchNotes(vaultDir, query, options = {}) {
   for (const filePath of mdFiles) {
     try {
       const relativePath = path.relative(absoluteVault, filePath).replace(/\\/g, '/');
+
+      // Exclude historical snapshots from ordinary search
+      if (relativePath.startsWith('Memory/History/')) {
+        continue;
+      }
+
       const content = fs.readFileSync(filePath, 'utf-8');
       const { frontmatter, body } = parseFrontmatter(content);
 
@@ -166,6 +172,11 @@ function getAllMdFiles(dir, absoluteVault) {
     const fullPath = path.join(dir, entry.name);
 
     if (!fullPath.startsWith(absoluteVault + path.sep) && fullPath !== absoluteVault) {
+      continue;
+    }
+
+    const relPath = path.relative(absoluteVault, fullPath).replace(/\\/g, '/');
+    if (relPath.startsWith('Memory/History') || relPath.startsWith('.index')) {
       continue;
     }
 

@@ -5,6 +5,7 @@ const { parseFrontmatter, getNoteTags } = require('./properties');
 
 /**
  * Builds a network graph of nodes and edges from all markdown files in the vault.
+ * Excludes Memory/History snapshots.
  *
  * @param {string} vaultDir Path to the vault root directory
  * @returns {{ nodes: Array<{ id: string, path: string, name: string, tags: string[], frontmatter: Record<string, any> }>, edges: Array<{ source: string, target: string }> }}
@@ -26,13 +27,18 @@ function buildGraph(vaultDir) {
   // Step 1: Generate Nodes
   for (const filePath of mdFiles) {
     try {
-      const relativePath = path.relative(absoluteVault, filePath);
-      const nodeId = relativePath.replace(/\\/g, '/'); // Normalize path for ID
+      const relativePath = path.relative(absoluteVault, filePath).replace(/\\/g, '/');
+
+      // Exclude Memory/History
+      if (relativePath.startsWith('Memory/History/')) {
+        continue;
+      }
+
+      const nodeId = relativePath;
       const content = fs.readFileSync(filePath, 'utf-8');
       const { frontmatter } = parseFrontmatter(content);
       const tags = getNoteTags(content);
 
-      // Name: Title from frontmatter or filename without extension
       const fileNameWithoutExt = path.basename(filePath, '.md');
       const name = frontmatter.title || fileNameWithoutExt;
 
@@ -70,12 +76,10 @@ function buildGraph(vaultDir) {
           const targetId = filePathToIdMap.get(resolvedPath);
 
           if (targetId) {
-            // Rule: No self-links
             if (sourceId === targetId) {
               continue;
             }
 
-            // Rule: Avoid duplicate edges
             const edgeKey = `${sourceId}->${targetId}`;
             if (!edgesSet.has(edgeKey)) {
               edgesSet.add(edgeKey);
@@ -86,7 +90,7 @@ function buildGraph(vaultDir) {
             }
           }
         } catch (e) {
-          // Link target doesn't exist or security violation, skip edge
+          // Skip invalid links
         }
       }
     } catch (readErr) {
@@ -100,9 +104,6 @@ function buildGraph(vaultDir) {
   };
 }
 
-/**
- * Safely collects all markdown files inside vault with path traversal protection.
- */
 function getAllMdFiles(dir, absoluteVault) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
@@ -111,8 +112,12 @@ function getAllMdFiles(dir, absoluteVault) {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
 
-    // Path traversal check
     if (!fullPath.startsWith(absoluteVault + path.sep) && fullPath !== absoluteVault) {
+      continue;
+    }
+
+    const relPath = path.relative(absoluteVault, fullPath).replace(/\\/g, '/');
+    if (relPath.startsWith('Memory/History') || relPath.startsWith('.index')) {
       continue;
     }
 

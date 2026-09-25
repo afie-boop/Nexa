@@ -33,6 +33,10 @@ const {
   getScopeDirectory,
   isNoteInScope
 } = require('./memory_scope');
+const {
+  getMemoryHistory,
+  restoreMemory
+} = require('./memory_history');
 
 // Brain module main entry point
 class Brain {
@@ -134,6 +138,15 @@ class Brain {
 
   isNoteInScope(noteMetadata, filterScope) {
     return isNoteInScope(noteMetadata, filterScope);
+  }
+
+  // Memory History & Versioning
+  getMemoryHistory(memoryId, options) {
+    return getMemoryHistory(this.vaultDir, memoryId, options);
+  }
+
+  async restoreMemory(memoryId, targetVersion, options) {
+    return await restoreMemory(this.vaultDir, memoryId, targetVersion, options);
   }
 }
 

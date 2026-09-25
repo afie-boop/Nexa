@@ -33,6 +33,10 @@ const {
   getScopeDirectory,
   isNoteInScope
 } = require('./memory_scope');
+const {
+  getMemoryHistory,
+  restoreMemory
+} = require('./memory_history');
 
 module.exports = {
   Brain,
@@ -59,5 +63,7 @@ module.exports = {
   sanitizeScopeId,
   normalizeScope,
   getScopeDirectory,
-  isNoteInScope
+  isNoteInScope,
+  getMemoryHistory,
+  restoreMemory
 };

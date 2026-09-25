@@ -6,6 +6,7 @@ const { searchNotes } = require('./search');
 const { semanticSearch } = require('./semantic');
 const { extractMemoryWithAI } = require('./memory_ai');
 const { normalizeScope, getScopeDirectory, isNoteInScope } = require('./memory_scope');
+const { saveHistorySnapshot } = require('./memory_history');
 
 function generateMemoryId(content) {
   if (content && typeof content === 'string') {
@@ -290,7 +291,7 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
 }
 
 /**
- * Saves a new structured memory into vault as a Markdown note with scope metadata.
+ * Saves a new structured memory into vault as a Markdown note with scope & version metadata.
  * Enforces authoritative scope directory confinement when private scope is provided.
  */
 async function saveMemory(vaultDir, memory, options = {}) {
@@ -327,14 +328,12 @@ async function saveMemory(vaultDir, memory, options = {}) {
   const memId = memory.id || generateMemoryId(memory.content);
   const rawInputPath = memory.suggestedPath || memory.path || `mem_${memId}.md`;
 
-  // Security Check: Reject explicit absolute paths or traversal indicators in raw input path
   if (path.isAbsolute(rawInputPath) || rawInputPath.includes('..') || rawInputPath.includes('\\')) {
     throw new Error(`Security Violation: Path traversal detected in memory path "${rawInputPath}".`);
   }
 
   let targetRelPath;
   if (hasExplicitScope) {
-    // For EVERY explicit scope (user, project, session, knowledge), the scope directory is authoritative.
     const scopeDir = getScopeDirectory(normScope);
     let rawFileName = path.basename(rawInputPath);
     if (!rawFileName || rawFileName === '.' || rawFileName === '.md') {
@@ -345,7 +344,6 @@ async function saveMemory(vaultDir, memory, options = {}) {
     }
     targetRelPath = `${scopeDir}/${rawFileName}`;
   } else {
-    // Unscoped legacy fallback
     targetRelPath = rawInputPath;
     if (!targetRelPath.endsWith('.md')) {
       targetRelPath += '.md';
@@ -354,12 +352,10 @@ async function saveMemory(vaultDir, memory, options = {}) {
 
   const targetFullPath = path.resolve(absoluteVault, targetRelPath);
 
-  // Security Check: Vault Path Traversal Protection
   if (!targetFullPath.startsWith(absoluteVault + path.sep) && targetFullPath !== absoluteVault) {
     throw new Error(`Security Violation: Path traversal escape detected for "${targetRelPath}".`);
   }
 
-  // If explicit scope is provided, verify target file stays strictly inside authoritative scope directory
   if (hasExplicitScope) {
     const scopeDir = getScopeDirectory(normScope);
     const absoluteScopeDir = path.resolve(absoluteVault, scopeDir);
@@ -373,10 +369,11 @@ async function saveMemory(vaultDir, memory, options = {}) {
     fs.mkdirSync(parentDir, { recursive: true });
   }
 
-  // 3. Format Markdown content with YAML frontmatter + scope metadata
+  // 3. Format Markdown content with YAML frontmatter + scope & version metadata
   const now = new Date().toISOString();
   const title = memory.title || (memory.content.length > 40 ? memory.content.substring(0, 40) + '...' : memory.content);
   const tags = Array.isArray(memory.tags) ? Array.from(new Set(memory.tags)) : [memory.type || 'memory'];
+  const version = 1;
 
   const frontmatterObj = {
     id: memId,
@@ -384,6 +381,7 @@ async function saveMemory(vaultDir, memory, options = {}) {
     type: memory.type || 'fact',
     category: memory.category || 'memory',
     tags,
+    version,
     created: now,
     updated: now,
     importance: memory.importance ?? 0.7,
@@ -400,6 +398,16 @@ async function saveMemory(vaultDir, memory, options = {}) {
 
   fs.writeFileSync(targetFullPath, markdownText, 'utf-8');
 
+  // Save history snapshot v1
+  saveHistorySnapshot(absoluteVault, {
+    memoryId: memId,
+    version: 1,
+    operation: 'create',
+    previousVersion: null,
+    content: memory.content.trim(),
+    frontmatter: frontmatterObj
+  });
+
   const relResultPath = path.relative(absoluteVault, targetFullPath).replace(/\\/g, '/');
 
   return {
@@ -409,6 +417,7 @@ async function saveMemory(vaultDir, memory, options = {}) {
       ...memory,
       id: memId,
       title,
+      version: 1,
       path: relResultPath,
       createdAt: now,
       updatedAt: now,
@@ -418,7 +427,7 @@ async function saveMemory(vaultDir, memory, options = {}) {
 }
 
 /**
- * Updates an existing memory note in vault safely.
+ * Updates an existing memory note in vault safely and creates new version history snapshot.
  */
 async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
   if (!vaultDir || !notePath) {
@@ -444,7 +453,14 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
   const raw = fs.readFileSync(targetFullPath, 'utf-8');
   const { frontmatter, body } = parseFrontmatter(raw);
 
+  const filterScope = options.scope !== undefined ? options.scope : null;
+  if (!isNoteInScope(frontmatter, filterScope)) {
+    throw new Error(`Security Violation: Unauthorized scope update attempt on note "${notePath}".`);
+  }
+
   const now = new Date().toISOString();
+  const currentVersion = Number(frontmatter.version) || 1;
+  const newVersion = currentVersion + 1;
 
   const updatedFrontmatter = {
     ...frontmatter,
@@ -454,6 +470,7 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
     tags: updates.tags ? Array.from(new Set(updates.tags)) : frontmatter.tags,
     importance: updates.importance ?? frontmatter.importance,
     confidence: updates.confidence ?? frontmatter.confidence,
+    version: newVersion,
     created: frontmatter.created || now,
     updated: now,
     scopeType: frontmatter.scopeType || 'knowledge',
@@ -468,11 +485,22 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
 
   fs.writeFileSync(targetFullPath, markdownText, 'utf-8');
 
+  // Save history snapshot v[newVersion]
+  saveHistorySnapshot(absoluteVault, {
+    memoryId: updatedFrontmatter.id,
+    version: newVersion,
+    operation: 'update',
+    previousVersion: currentVersion,
+    content: updatedBody,
+    frontmatter: updatedFrontmatter
+  });
+
   const relResultPath = path.relative(absoluteVault, targetFullPath).replace(/\\/g, '/');
 
   return {
     updated: true,
     path: relResultPath,
+    version: newVersion,
     frontmatter: updatedFrontmatter
   };
 }
@@ -506,6 +534,11 @@ function getAllMdFiles(dir, absoluteVault) {
     const fullPath = path.join(dir, entry.name);
 
     if (!fullPath.startsWith(absoluteVault + path.sep) && fullPath !== absoluteVault) {
+      continue;
+    }
+
+    const relPath = path.relative(absoluteVault, fullPath).replace(/\\/g, '/');
+    if (relPath.startsWith('Memory/History') || relPath.startsWith('.index')) {
       continue;
     }
 
