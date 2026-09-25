@@ -266,8 +266,9 @@ async function restoreMemory(vaultDir, memoryId, targetVersion, options = {}) {
       const { frontmatter } = parseFrontmatter(raw);
 
       if (frontmatter.id === memId) {
+        // A same-ID note in another scope must not block an authorized match.
         if (!isNoteInScope(frontmatter, filterScope)) {
-          throw new Error(`Security Violation: Unauthorized scope access to memory history for memoryId "${memId}".`);
+          continue;
         }
         activeMemoryFilePath = filePath;
         activeFrontmatter = frontmatter;
