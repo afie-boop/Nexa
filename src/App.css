@@ -1182,3 +1182,18 @@ body {
     font-size: 11px;
   }
 }
+
+/* Brain Memory History UI */
+.brain-history-search-card { gap: 10px; }
+.brain-history-input-row { display: flex; gap: 10px; align-items: center; }
+.brain-history-input-row input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg); color: var(--primary-text); outline: none; font: inherit; font-size: 13px; }
+.brain-history-input-row input:focus { border-color: var(--accent); }
+.brain-primary-btn { color: var(--primary-text); border-color: var(--accent); background: var(--accent-light); }
+.brain-history-list { display: flex; flex-direction: column; gap: 12px; }
+.brain-history-item { gap: 8px; }
+.brain-history-item-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.brain-operation { display: inline-flex; margin-left: 6px; padding: 3px 7px; border-radius: 999px; background: var(--accent-light); color: var(--accent); font-size: 10px; text-transform: uppercase; letter-spacing: .5px; }
+.brain-history-meta { color: var(--muted-text); font-size: 11px; line-height: 1.5; word-break: break-word; }
+.brain-empty-state { color: var(--secondary-text); text-align: center; }
+.brain-history-error { margin: 0; }
+@media (max-width: 600px) { .brain-history-input-row { flex-direction: column; align-items: stretch; } .brain-history-input-row .card-action-btn { justify-content: center; } .brain-history-item-top { align-items: flex-start; flex-direction: column; } }
