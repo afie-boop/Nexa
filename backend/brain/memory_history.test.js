@@ -112,6 +112,35 @@ async function runTests() {
   const historyInBacklinks = backlinks.find(b => b.relativePath.startsWith('Memory/History'));
   assert.strictEqual(historyInBacklinks, undefined, 'History snapshot must NOT appear in Backlinks');
 
+  // Semantic/vector search scope isolation + history exclusion
+  console.log('4b. Testing Semantic/Vector Search Scope Isolation...');
+  const semanticA = await brain.saveMemory({ content: 'Unique semantic isolation term for User A' }, scopeUserA);
+  const semanticB = await brain.saveMemory({ content: 'Unique semantic isolation term for User B' }, scopeUserB);
+
+  const semanticResults = await brain.semanticSearch('Unique semantic isolation query', {
+    scope: scopeUserA.scope,
+    customEmbedder: async () => [1, 0],
+    topK: 50,
+    threshold: -1
+  });
+
+  assert.ok(
+    semanticResults.every(r => !r.path.startsWith('Memory/History')),
+    'History snapshots must NOT appear in semantic/vector search'
+  );
+  assert.ok(
+    semanticResults.every(r => !r.path.includes('/Users/userB/')),
+    'Semantic/vector search must respect user scope isolation'
+  );
+  assert.ok(
+    semanticResults.some(r => r.path === semanticA.path),
+    'Authorized user memory should remain searchable'
+  );
+  assert.ok(
+    semanticB.path.includes('/Users/userB/'),
+    'Cross-scope control memory must be stored in User B scope'
+  );
+
   // 5. Versioning Operations (Create -> v1, Update -> v2, Update -> v3, Restore v1 -> v4)
   console.log('5. Testing Full Versioning Sequence (v1 -> v2 -> v3 -> restore v1 -> v4)...');
   const v1Memory = await brain.saveMemory({ content: 'Version 1 base content' }, scopeProjA);
