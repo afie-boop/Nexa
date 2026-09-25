@@ -1,32 +1,35 @@
 const path = require('path');
 
 const VALID_SCOPE_TYPES = new Set(['user', 'project', 'knowledge', 'session']);
+const SAFE_ID_REGEX = /^[a-zA-Z0-9_-]+$/;
 
 /**
- * Sanitizes an ID to prevent path traversal and filesystem issues.
- * Only allows alphanumeric, hyphen, and underscore.
+ * Validates and sanitizes a scope ID strictly.
+ * Rejects traversal characters, slashes, backslashes, colons, spaces, and empty IDs.
  *
  * @param {string} id
- * @returns {string} Safe ID
- * @throws {Error} If ID contains path traversal or invalid characters
+ * @returns {string} Clean validated ID
+ * @throws {Error} If ID is invalid or contains traversal characters
  */
 function sanitizeScopeId(id) {
-  if (!id || typeof id !== 'string') {
-    throw new Error('Scope Error: ID must be a non-empty string.');
+  if (id === undefined || id === null || typeof id !== 'string') {
+    throw new Error('Scope Error: Scope ID must be a non-empty string.');
   }
 
   const clean = id.trim();
+  if (!clean) {
+    throw new Error('Scope Error: Scope ID cannot be empty or whitespace-only.');
+  }
+
   if (clean.includes('..') || clean.includes('/') || clean.includes('\\') || clean.includes(':')) {
     throw new Error(`Security Violation: Unsafe scope ID detected "${id}".`);
   }
 
-  // Allow alphanumeric, hyphen, underscore
-  const sanitized = clean.replace(/[^a-zA-Z0-9_-]/g, '_');
-  if (!sanitized) {
-    throw new Error(`Scope Error: ID "${id}" contains no valid characters.`);
+  if (!SAFE_ID_REGEX.test(clean)) {
+    throw new Error(`Scope Error: ID "${id}" contains invalid characters. Only alphanumeric, hyphen, and underscore are allowed.`);
   }
 
-  return sanitized;
+  return clean;
 }
 
 /**
@@ -111,7 +114,7 @@ function getScopeDirectory(normScope) {
  *
  * Filtering Rules:
  * - Unscoped / Legacy notes or scopeType "knowledge" -> Globally accessible.
- * - If filter scope is NOT provided (null/undefined/knowledge) -> Only globally accessible (unscoped/knowledge) notes are returned.
+ * - If filter scope is NOT provided (null/undefined) -> ONLY globally accessible (unscoped/knowledge) notes are returned. Private notes are NEVER returned.
  * - Private User memory (scopeType: "user") -> Accessible ONLY if filter scope type === "user" and userId matches.
  * - Private Project memory (scopeType: "project") -> Accessible ONLY if filter scope type === "project" and projectId matches.
  * - Private Session memory (scopeType: "session") -> Accessible ONLY if filter scope type === "session" and sessionId matches.
@@ -126,12 +129,12 @@ function isNoteInScope(noteMetadata = {}, filterScope = null) {
   const isGlobalNote = normNoteScopeType === 'knowledge' ||
     (!noteMetadata.scopeType && !noteMetadata.userId && !noteMetadata.projectId && !noteMetadata.sessionId);
 
-  // If note is global / knowledge / legacy unscoped, it is always accessible
+  // Unscoped / global knowledge notes are always accessible
   if (isGlobalNote) {
     return true;
   }
 
-  // If filter scope is not provided or is global 'knowledge', private notes are NEVER exposed
+  // Private note check: If filterScope is missing or null, private notes are NEVER accessible
   if (!filterScope) {
     return false;
   }
@@ -147,17 +150,17 @@ function isNoteInScope(noteMetadata = {}, filterScope = null) {
     return isGlobalNote;
   }
 
-  // Scoped note checks:
+  // Scoped private note checks
   if (normNoteScopeType === 'user') {
-    return noteMetadata.userId === normFilter.userId;
+    return normFilter.type === 'user' && noteMetadata.userId === normFilter.userId;
   }
 
   if (normNoteScopeType === 'project') {
-    return noteMetadata.projectId === normFilter.projectId;
+    return normFilter.type === 'project' && noteMetadata.projectId === normFilter.projectId;
   }
 
   if (normNoteScopeType === 'session') {
-    return noteMetadata.sessionId === normFilter.sessionId;
+    return normFilter.type === 'session' && noteMetadata.sessionId === normFilter.sessionId;
   }
 
   return false;

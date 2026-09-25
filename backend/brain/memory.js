@@ -20,6 +20,20 @@ function normalizeContent(text) {
   return text.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+function getFolderForType(type) {
+  const t = String(type || '').toLowerCase();
+  if (t === 'user' || t === 'preference' || t === 'fact' || t === 'relationship') {
+    return 'Users';
+  }
+  if (t === 'project' || t === 'goal') {
+    return 'Projects';
+  }
+  if (t === 'knowledge' || t === 'instruction') {
+    return 'Knowledge';
+  }
+  return 'Memory';
+}
+
 function extractMemoryRules(input, options = {}) {
   const confidenceThreshold = typeof options.confidenceThreshold === 'number' ? options.confidenceThreshold : 0.6;
 
@@ -165,7 +179,6 @@ async function extractMemory(input, options = {}) {
     extracted = extractMemoryRules(input, options);
   }
 
-  // Attach scope metadata if provided in options
   if (options.scope && extracted && Array.isArray(extracted.memories)) {
     const normScope = normalizeScope(options.scope);
     extracted.memories = extracted.memories.map(m => ({
@@ -200,7 +213,6 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
       const raw = fs.readFileSync(filePath, 'utf-8');
       const { frontmatter, body } = parseFrontmatter(raw);
 
-      // Scope Check
       if (scopeFilter !== undefined && !isNoteInScope(frontmatter, scopeFilter)) {
         continue;
       }
@@ -279,6 +291,7 @@ async function findExistingMemory(vaultDir, memory, options = {}) {
 
 /**
  * Saves a new structured memory into vault as a Markdown note with scope metadata.
+ * Enforces authoritative scope directory confinement when private scope is provided.
  */
 async function saveMemory(vaultDir, memory, options = {}) {
   if (!vaultDir || !memory || !memory.content || typeof memory.content !== 'string' || !memory.content.trim()) {
@@ -290,6 +303,7 @@ async function saveMemory(vaultDir, memory, options = {}) {
     fs.mkdirSync(absoluteVault, { recursive: true });
   }
 
+  const hasExplicitScope = options.scope !== undefined || memory.scope !== undefined;
   const scopeInput = options.scope !== undefined ? options.scope : memory.scope;
   const normScope = normalizeScope(scopeInput);
 
@@ -309,16 +323,23 @@ async function saveMemory(vaultDir, memory, options = {}) {
     };
   }
 
-  // 2. Determine target path using scope directory
+  // 2. Authoritative Scope Directory Determination
   const memId = memory.id || generateMemoryId(memory.content);
-  let targetRelPath = memory.suggestedPath || memory.path;
+  let targetRelPath;
 
-  if (!targetRelPath) {
+  if (hasExplicitScope && normScope.type !== 'knowledge') {
     const scopeDir = getScopeDirectory(normScope);
-    targetRelPath = `${scopeDir}/mem_${memId}.md`;
-  } else if (normScope.type !== 'knowledge' && !targetRelPath.includes('/')) {
-    const scopeDir = getScopeDirectory(normScope);
-    targetRelPath = `${scopeDir}/${targetRelPath}`;
+    let rawFileName = path.basename(memory.suggestedPath || memory.path || `mem_${memId}.md`);
+    if (!rawFileName.endsWith('.md')) {
+      rawFileName += '.md';
+    }
+    targetRelPath = `${scopeDir}/${rawFileName}`;
+  } else {
+    targetRelPath = memory.suggestedPath || memory.path;
+    if (!targetRelPath) {
+      const scopeDir = getScopeDirectory(normScope);
+      targetRelPath = `${scopeDir}/mem_${memId}.md`;
+    }
   }
 
   if (!targetRelPath.endsWith('.md')) {
@@ -329,7 +350,16 @@ async function saveMemory(vaultDir, memory, options = {}) {
 
   // Security Check: Path Traversal Protection
   if (!targetFullPath.startsWith(absoluteVault + path.sep) && targetFullPath !== absoluteVault) {
-    throw new Error(`Security Violation: Path traversal detected for "${targetRelPath}"`);
+    throw new Error(`Security Violation: Path traversal escape detected for "${targetRelPath}".`);
+  }
+
+  // If explicit private scope set, verify target file stays strictly inside scope directory
+  if (hasExplicitScope && normScope.type !== 'knowledge') {
+    const scopeDir = getScopeDirectory(normScope);
+    const absoluteScopeDir = path.resolve(absoluteVault, scopeDir);
+    if (!targetFullPath.startsWith(absoluteScopeDir + path.sep) && targetFullPath !== absoluteScopeDir) {
+      throw new Error(`Security Violation: Target path "${targetRelPath}" escapes scope directory "${scopeDir}".`);
+    }
   }
 
   const parentDir = path.dirname(targetFullPath);

@@ -38,13 +38,12 @@ async function retrieveContext(vaultDir, query, options = {}) {
     return emptyResponse;
   }
 
-  // Options configuration
   const topK = typeof options.topK === 'number' && options.topK > 0 ? options.topK : 5;
   const maxSources = typeof options.maxSources === 'number' && options.maxSources > 0 ? options.maxSources : 10;
   const maxContextChars = typeof options.maxContextChars === 'number' && options.maxContextChars > 0 ? options.maxContextChars : 4000;
   const semanticThreshold = typeof options.semanticThreshold === 'number' ? options.semanticThreshold : 0.0;
   const graphLimit = typeof options.graphLimit === 'number' && options.graphLimit >= 0 ? options.graphLimit : 5;
-  const filterScope = options.scope;
+  const filterScope = options.scope !== undefined ? options.scope : null;
 
   const sourcesMap = new Map();
 
@@ -113,7 +112,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
   let sortedPrimary = Array.from(sourcesMap.values()).sort((a, b) => b.score - a.score);
   const primaryTopK = sortedPrimary.slice(0, topK);
 
-  // 3. Graph Relationships Expansion (with Scope Isolation)
+  // 3. Graph Relationships Expansion (Scope filtered)
   if (graphLimit > 0) {
     try {
       const vaultGraph = buildGraph(absoluteVault);
@@ -165,7 +164,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
             }
 
             // Enforce Scope Isolation for Graph neighbors
-            if (filterScope !== undefined && !isNoteInScope(frontmatter, filterScope)) {
+            if (!isNoteInScope(frontmatter, filterScope)) {
               continue; // Exclude out-of-scope graph node
             }
 
@@ -210,7 +209,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
             const { frontmatter, body } = parseFrontmatter(relContent);
 
             // Scope Isolation Check
-            if (filterScope !== undefined && !isNoteInScope(frontmatter, filterScope)) {
+            if (!isNoteInScope(frontmatter, filterScope)) {
               continue;
             }
 
@@ -241,7 +240,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
           const { frontmatter, body } = parseFrontmatter(blContent);
 
           // Scope Isolation Check
-          if (filterScope !== undefined && !isNoteInScope(frontmatter, filterScope)) {
+          if (!isNoteInScope(frontmatter, filterScope)) {
             continue;
           }
 

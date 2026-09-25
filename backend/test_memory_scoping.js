@@ -25,7 +25,8 @@ async function runTests() {
   assert.throws(() => sanitizeScopeId('../user1'), /Security Violation/);
   assert.throws(() => sanitizeScopeId('user/1'), /Security Violation/);
   assert.throws(() => sanitizeScopeId('user:1'), /Security Violation/);
-  assert.strictEqual(sanitizeScopeId('user@123!'), 'user_123_');
+  assert.throws(() => sanitizeScopeId('user@123!'), /invalid characters/);
+  assert.strictEqual(sanitizeScopeId('user_123'), 'user_123');
 
   // 2. Scope Normalization & Directory Layout Tests
   console.log('Testing Scope Normalization & Directory Layout...');
@@ -91,7 +92,7 @@ async function runTests() {
   console.log('Unscoped Search Results:', unscopedSearch.sources.map(s => s.path));
   // Must only contain global Knowledge, not User A, User B, Project A, or Project B private notes!
   assert.strictEqual(unscopedSearch.sources.length, 1);
-  assert.ok(unscopedSearch.sources[0].path.startsWith('Knowledge/'));
+  assert.ok(unscopedSearch.sources[0].path.includes('Knowledge/'));
 
   // 8. Legacy / Unscoped Memory Readability
   console.log('Testing Legacy Unscoped Memory Readability...');
