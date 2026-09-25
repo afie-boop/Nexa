@@ -20,6 +20,8 @@ console.log("=================================");
 const classifyTask = require("./router");
 const { runPipeline } = require("./pipeline/pipeline");
 const { handlePostFeedback } = require("./feedback/feedbackController");
+const Brain = require("./brain/brain");
+const brain = new Brain(path.join(__dirname, "brain", "vault"));
 
 const app = express();
 
@@ -516,6 +518,33 @@ app.post("/api/agent/task/:task_id/approval", async (req, res) => {
       message: "Hermes agent service is currently unreachable.",
       details: error.message
     });
+  }
+});
+
+// Brain Memory History API (knowledge scope only until authenticated user scopes are wired)
+app.get("/api/brain/history", async (req, res) => {
+  const memoryId = typeof req.query.memory_id === "string" ? req.query.memory_id.trim() : "";
+  if (!memoryId) return res.status(400).json({ status: "error", message: "memory_id diperlukan." });
+  try {
+    const history = brain.getMemoryHistory(memoryId, { scope: { type: "knowledge" } });
+    return res.status(200).json({ status: "ok", memoryId, history });
+  } catch (error) {
+    console.error("[Brain History Error]:", error.message);
+    return res.status(400).json({ status: "error", message: error.message });
+  }
+});
+
+app.post("/api/brain/history/restore", async (req, res) => {
+  const { memory_id, version } = req.body || {};
+  if (typeof memory_id !== "string" || !memory_id.trim() || !Number.isInteger(Number(version))) {
+    return res.status(400).json({ status: "error", message: "memory_id dan version yang sah diperlukan." });
+  }
+  try {
+    const result = await brain.restoreMemory(memory_id.trim(), Number(version), { scope: { type: "knowledge" } });
+    return res.status(200).json({ status: "ok", result });
+  } catch (error) {
+    console.error("[Brain Restore Error]:", error.message);
+    return res.status(400).json({ status: "error", message: error.message });
   }
 });
 
