@@ -102,6 +102,11 @@ function App() {
   const [load, setLoad] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("AXMchat sedang berfikir...");
   const [error, setError] = useState(null);
+  const [brainMemoryId, setBrainMemoryId] = useState("");
+  const [brainHistory, setBrainHistory] = useState([]);
+  const [brainHistoryLoading, setBrainHistoryLoading] = useState(false);
+  const [brainHistoryError, setBrainHistoryError] = useState("");
+  const [brainRestoringVersion, setBrainRestoringVersion] = useState(null);
   const [copiedIdx, setCopiedIdx] = useState(null);
   const chatEndRef = useRef(null);
 
@@ -611,6 +616,48 @@ function App() {
     },
   };
 
+  async function loadBrainHistory() {
+    const memoryId = brainMemoryId.trim();
+    if (!memoryId) {
+      setBrainHistoryError("Masukkan Memory ID terlebih dahulu.");
+      return;
+    }
+    setBrainHistoryLoading(true);
+    setBrainHistoryError("");
+    try {
+      const res = await fetch(`/api/brain/history?memory_id=${encodeURIComponent(memoryId)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Gagal mendapatkan memory history.");
+      setBrainHistory(data.history || []);
+    } catch (err) {
+      setBrainHistory([]);
+      setBrainHistoryError(err.message || "Gagal mendapatkan memory history.");
+    } finally {
+      setBrainHistoryLoading(false);
+    }
+  }
+
+  async function restoreBrainVersion(version) {
+    if (!brainMemoryId.trim()) return;
+    if (!window.confirm(`Restore memory ke versi v${version}?`)) return;
+    setBrainRestoringVersion(version);
+    setBrainHistoryError("");
+    try {
+      const res = await fetch("/api/brain/history/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memory_id: brainMemoryId.trim(), version })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Restore gagal.");
+      await loadBrainHistory();
+    } catch (err) {
+      setBrainHistoryError(err.message || "Restore gagal.");
+    } finally {
+      setBrainRestoringVersion(null);
+    }
+  }
+
   function clearChat() {
     if (window.confirm("Adakah anda pasti mahu memadamkan semua sejarah chat?")) {
       updateActiveMessages([]);
@@ -684,6 +731,17 @@ function App() {
               </svg>
             </span>
             <span>Models</span>
+          </button>
+          <button
+            className={`nav-item ${activeNav === "brain" ? "active" : ""}`}
+            onClick={() => { setActiveNav("brain"); setSidebarOpen(false); }}
+          >
+            <span className="nav-icon">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9.5 2a3.5 3.5 0 0 0-3.4 4.35A3.5 3.5 0 0 0 4 12a3.5 3.5 0 0 0 2.1 5.65A3.5 3.5 0 0 0 9.5 22c1.1 0 2-.4 2.5-1.1.5.7 1.4 1.1 2.5 1.1a3.5 3.5 0 0 0 3.4-4.35A3.5 3.5 0 0 0 20 12a3.5 3.5 0 0 0-2.1-5.65A3.5 3.5 0 0 0 14.5 2c-1.1 0-2 .4-2.5 1.1C11.5 2.4 10.6 2 9.5 2z"></path>
+              </svg>
+            </span>
+            <span>Brain</span>
           </button>
           <button
             className={`nav-item ${activeNav === "history" ? "active" : ""}`}
@@ -1149,6 +1207,53 @@ function App() {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeNav === "brain" && (
+          <div className="sub-panel-container animate-fade">
+            <div className="sub-panel-inner">
+              <h2 className="panel-title">AXMchat Brain</h2>
+              <p className="panel-subtitle">Memory History & Versioning — lihat perubahan memory dan restore versi lama.</p>
+
+              <div className="flat-card brain-history-search-card">
+                <label className="flat-card-title" htmlFor="brain-memory-id">Memory ID</label>
+                <div className="brain-history-input-row">
+                  <input id="brain-memory-id" value={brainMemoryId} onChange={(e) => setBrainMemoryId(e.target.value)} placeholder="Contoh: mem_a1b2c3d4e5f6" />
+                  <button className="card-action-btn brain-primary-btn" onClick={loadBrainHistory} disabled={brainHistoryLoading}>
+                    {brainHistoryLoading ? "Memuat..." : "Lihat History"}
+                  </button>
+                </div>
+                <span className="flat-card-desc">Buat masa ini UI menggunakan knowledge scope. User/project/session scope akan disambungkan selepas layer permissions siap.</span>
+              </div>
+
+              {brainHistoryError && <div className="error-banner brain-history-error">{brainHistoryError}</div>}
+
+              {brainHistory.length > 0 ? (
+                <div className="brain-history-list">
+                  {[...brainHistory].reverse().map((item) => (
+                    <div className="flat-card brain-history-item" key={item.version}>
+                      <div className="brain-history-item-top">
+                        <div>
+                          <div className="flat-card-title">v{item.version} <span className="brain-operation">{item.operation}</span></div>
+                          <div className="flat-card-desc">{item.snapshotCreatedAt ? new Date(item.snapshotCreatedAt).toLocaleString() : "Tarikh tidak tersedia"}</div>
+                        </div>
+                        <button className="card-action-btn" onClick={() => restoreBrainVersion(item.version)} disabled={brainRestoringVersion !== null}>
+                          {brainRestoringVersion === item.version ? "Restoring..." : "Restore"}
+                        </button>
+                      </div>
+                      <div className="brain-history-meta">
+                        {item.previousVersion ? `Previous: v${item.previousVersion}` : "Initial snapshot"}
+                        {item.restoredFromVersion ? ` · Restored from: v${item.restoredFromVersion}` : ""}
+                        {item.contentHash ? ` · Hash: ${item.contentHash.slice(0, 10)}…` : ""}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                !brainHistoryLoading && <div className="flat-card brain-empty-state">Tiada history ditemui untuk Memory ID ini.</div>
+              )}
             </div>
           </div>
         )}
