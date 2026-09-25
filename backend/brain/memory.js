@@ -325,40 +325,46 @@ async function saveMemory(vaultDir, memory, options = {}) {
 
   // 2. Authoritative Scope Directory Determination
   const memId = memory.id || generateMemoryId(memory.content);
-  let targetRelPath;
+  const rawInputPath = memory.suggestedPath || memory.path || `mem_${memId}.md`;
 
-  if (hasExplicitScope && normScope.type !== 'knowledge') {
+  // Security Check: Reject explicit absolute paths or traversal indicators in raw input path
+  if (path.isAbsolute(rawInputPath) || rawInputPath.includes('..') || rawInputPath.includes('\\')) {
+    throw new Error(`Security Violation: Path traversal detected in memory path "${rawInputPath}".`);
+  }
+
+  let targetRelPath;
+  if (hasExplicitScope) {
+    // For EVERY explicit scope (user, project, session, knowledge), the scope directory is authoritative.
     const scopeDir = getScopeDirectory(normScope);
-    let rawFileName = path.basename(memory.suggestedPath || memory.path || `mem_${memId}.md`);
+    let rawFileName = path.basename(rawInputPath);
+    if (!rawFileName || rawFileName === '.' || rawFileName === '.md') {
+      rawFileName = `mem_${memId}.md`;
+    }
     if (!rawFileName.endsWith('.md')) {
       rawFileName += '.md';
     }
     targetRelPath = `${scopeDir}/${rawFileName}`;
   } else {
-    targetRelPath = memory.suggestedPath || memory.path;
-    if (!targetRelPath) {
-      const scopeDir = getScopeDirectory(normScope);
-      targetRelPath = `${scopeDir}/mem_${memId}.md`;
+    // Unscoped legacy fallback
+    targetRelPath = rawInputPath;
+    if (!targetRelPath.endsWith('.md')) {
+      targetRelPath += '.md';
     }
-  }
-
-  if (!targetRelPath.endsWith('.md')) {
-    targetRelPath += '.md';
   }
 
   const targetFullPath = path.resolve(absoluteVault, targetRelPath);
 
-  // Security Check: Path Traversal Protection
+  // Security Check: Vault Path Traversal Protection
   if (!targetFullPath.startsWith(absoluteVault + path.sep) && targetFullPath !== absoluteVault) {
     throw new Error(`Security Violation: Path traversal escape detected for "${targetRelPath}".`);
   }
 
-  // If explicit private scope set, verify target file stays strictly inside scope directory
-  if (hasExplicitScope && normScope.type !== 'knowledge') {
+  // If explicit scope is provided, verify target file stays strictly inside authoritative scope directory
+  if (hasExplicitScope) {
     const scopeDir = getScopeDirectory(normScope);
     const absoluteScopeDir = path.resolve(absoluteVault, scopeDir);
     if (!targetFullPath.startsWith(absoluteScopeDir + path.sep) && targetFullPath !== absoluteScopeDir) {
-      throw new Error(`Security Violation: Target path "${targetRelPath}" escapes scope directory "${scopeDir}".`);
+      throw new Error(`Security Violation: Target path "${targetRelPath}" escapes authoritative scope directory "${scopeDir}".`);
     }
   }
 

@@ -66,13 +66,16 @@ async function runTests() {
   assert.strictEqual(searchSess101.sources.length, 1);
   assert.ok(searchSess101.sources[0].path.startsWith('Memory/Sessions/sess_101/'));
 
-  // 5. Global Knowledge Access
-  console.log('5. Testing Global Knowledge Access...');
+  // 5. User Scope can retrieve Global Knowledge & Knowledge scope ONLY retrieves global/knowledge notes
+  console.log('5. Testing Global Knowledge Access & Knowledge Scope Isolation...');
   await brain.saveMemory({ content: 'Global shared knowledge overview' }, { scope: { type: 'knowledge' } });
 
   const userAWithKnowledge = await brain.retrieveContext('overview', { scope: { type: 'user', userId: 'user_A' } });
   assert.strictEqual(userAWithKnowledge.sources.length, 1);
   assert.ok(userAWithKnowledge.sources[0].path.startsWith('Knowledge/'));
+
+  const knowledgeOnlySearch = await brain.retrieveContext('secret', { scope: { type: 'knowledge' } });
+  assert.strictEqual(knowledgeOnlySearch.sources.length, 0, 'Knowledge scope must ONLY retrieve global/knowledge notes, never private user notes');
 
   // 6. Retrieval without scope does NOT expose private scoped memories
   console.log('6. Testing Unscoped Retrieval Protection...');
@@ -112,7 +115,7 @@ Legacy unscoped fact note.`
   assert.strictEqual(legacyRes.sources[0].path, 'Knowledge/LegacyFact.md');
 
   // 9. Full-Text, Semantic, WikiLink, Backlink, and Graph Expansion Scope Isolation
-  console.log('9. Testing Graph, WikiLink, and Backlink Expansion Scope Isolation...');
+  console.log('9. Testing Full-Text, Semantic, Graph, WikiLink, and Backlink Scope Isolation...');
   const userANote = path.join(tempVaultDir, 'Users', 'user_A', 'NoteA.md');
   const userBTarget = path.join(tempVaultDir, 'Users', 'user_B', 'NoteB.md');
 
@@ -141,17 +144,29 @@ User B secret target note.`
   const userBFound = graphIsolationRes.sources.find(s => s.path.includes('user_B'));
   assert.strictEqual(userBFound, undefined, 'Graph / WikiLink expansion must NOT leak User B notes into User A context');
 
-  // 10. Path Traversal Attempt Rejection in saveMemory
-  console.log('10. Testing Path Traversal Attempt Rejection in saveMemory...');
-  try {
+  // Full-text search isolation
+  const ftResUserA = brain.searchNotes('secret', { scope: { type: 'user', userId: 'user_A' } });
+  assert.strictEqual(ftResUserA.length, 1);
+  assert.ok(ftResUserA[0].path.startsWith('Users/user_A/'));
+
+  // 10. Path Traversal Attempt Rejection in saveMemory for ALL scopes including Knowledge
+  console.log('10. Testing Path Traversal Attempt Rejection for ALL scopes...');
+  assert.rejects(async () => {
     await brain.saveMemory(
       { content: 'Hacked path content', suggestedPath: '../../Knowledge/hacked.md' },
       { scope: { type: 'user', userId: 'user_A' } }
     );
-  } catch (err) {
-    // Expected behavior
-  }
+  }, /Security Violation/);
+
+  assert.rejects(async () => {
+    await brain.saveMemory(
+      { content: 'Hacked knowledge content', suggestedPath: '../../Users/user_A/hacked_knowledge.md' },
+      { scope: { type: 'knowledge' } }
+    );
+  }, /Security Violation/);
+
   assert.strictEqual(fs.existsSync(path.join(tempVaultDir, 'Knowledge', 'hacked.md')), false, 'File must not be created outside user scope dir');
+  assert.strictEqual(fs.existsSync(path.join(tempVaultDir, 'Users', 'user_A', 'hacked_knowledge.md')), false, 'Knowledge scope file must not escape Knowledge dir');
 
   // Cleanup
   fs.rmSync(tempVaultDir, { recursive: true, force: true });
