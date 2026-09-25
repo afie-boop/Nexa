@@ -2,7 +2,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { parseFrontmatter } = require('./properties');
-const { isNoteInScope, sanitizeScopeId } = require('./memory_scope');
+const { isNoteInScope, normalizeScope, getScopeDirectory } = require('./memory_scope');
+const { isExcludedVaultPath } = require('./vault_utils');
 
 function hashContent(content) {
   return crypto.createHash('md5').update(content || '').digest('hex');
@@ -54,18 +55,50 @@ function buildYamlFrontmatter(obj) {
   return lines.join('\n');
 }
 
+/**
+ * Returns physical scoped directory path for history snapshots.
+ *
+ * Example:
+ * Memory/History/Users/<userId>/<memId>/
+ * Memory/History/Projects/<projectId>/<memId>/
+ * Memory/History/Sessions/<sessionId>/<memId>/
+ * Memory/History/Knowledge/<memId>/
+ */
+function getHistoryScopeDirectory(vaultDir, normScope, memId) {
+  const absoluteVault = path.resolve(vaultDir);
+  const baseHistoryDir = path.resolve(absoluteVault, 'Memory', 'History');
+
+  let scopeSubDir;
+  if (normScope.type === 'session') {
+    scopeSubDir = `Sessions/${normScope.sessionId}`;
+  } else {
+    scopeSubDir = getScopeDirectory(normScope);
+  }
+
+  const historyScopeDir = path.resolve(baseHistoryDir, scopeSubDir, memId);
+
+  // Security Check: Enforce history path remains inside vault's Memory/History directory
+  if (!historyScopeDir.startsWith(baseHistoryDir + path.sep) && historyScopeDir !== baseHistoryDir) {
+    throw new Error(`Security Violation: History path escape detected for memoryId "${memId}".`);
+  }
+
+  return historyScopeDir;
+}
+
 function saveHistorySnapshot(vaultDir, snapshotData) {
   const absoluteVault = path.resolve(vaultDir);
   const memId = sanitizeMemoryId(snapshotData.memoryId);
   const version = sanitizeVersion(snapshotData.version);
 
-  const historyDirRel = path.join('Memory', 'History', memId);
-  const absoluteHistoryDir = path.resolve(absoluteVault, historyDirRel);
+  const frontmatter = snapshotData.frontmatter || {};
+  const normScope = normalizeScope(frontmatter.scopeType ? {
+    type: frontmatter.scopeType,
+    userId: frontmatter.userId,
+    projectId: frontmatter.projectId,
+    sessionId: frontmatter.sessionId
+  } : snapshotData.scope);
 
-  const baseHistoryDir = path.resolve(absoluteVault, 'Memory', 'History');
-  if (!absoluteHistoryDir.startsWith(baseHistoryDir + path.sep) && absoluteHistoryDir !== baseHistoryDir) {
-    throw new Error(`Security Violation: History path escape detected for memoryId "${memId}".`);
-  }
+  const absoluteHistoryDir = getHistoryScopeDirectory(absoluteVault, normScope, memId);
 
   if (!fs.existsSync(absoluteHistoryDir)) {
     fs.mkdirSync(absoluteHistoryDir, { recursive: true });
@@ -79,7 +112,6 @@ function saveHistorySnapshot(vaultDir, snapshotData) {
   }
 
   const now = new Date().toISOString();
-  const frontmatter = snapshotData.frontmatter || {};
   const content = snapshotData.content || '';
 
   const prevVer = snapshotData.previousVersion !== undefined && snapshotData.previousVersion !== null && !isNaN(Number(snapshotData.previousVersion))
@@ -98,10 +130,10 @@ function saveHistorySnapshot(vaultDir, snapshotData) {
     restoredFromVersion: restVer,
     contentHash: hashContent(content),
     snapshotCreatedAt: now,
-    scopeType: frontmatter.scopeType || 'knowledge',
-    userId: frontmatter.userId || null,
-    projectId: frontmatter.projectId || null,
-    sessionId: frontmatter.sessionId || null
+    scopeType: normScope.type,
+    userId: normScope.userId,
+    projectId: normScope.projectId,
+    sessionId: normScope.sessionId
   };
 
   const yamlText = buildYamlFrontmatter(historyFrontmatter);
@@ -121,53 +153,92 @@ function getMemoryHistory(vaultDir, memoryId, options = {}) {
   const memId = sanitizeMemoryId(memoryId);
   const filterScope = options.scope !== undefined ? options.scope : null;
 
-  const historyDirRel = path.join('Memory', 'History', memId);
-  const absoluteHistoryDir = path.resolve(absoluteVault, historyDirRel);
-
-  if (!fs.existsSync(absoluteHistoryDir)) {
+  const baseHistoryDir = path.resolve(absoluteVault, 'Memory', 'History');
+  if (!fs.existsSync(baseHistoryDir)) {
     return [];
   }
 
-  const files = fs.readdirSync(absoluteHistoryDir);
   const historyList = [];
 
-  for (const file of files) {
-    if (!file.endsWith('.md') || !file.startsWith('v')) continue;
-
-    const fullFilePath = path.join(absoluteHistoryDir, file);
-    try {
-      const raw = fs.readFileSync(fullFilePath, 'utf-8');
-      const { frontmatter } = parseFrontmatter(raw);
-
-      if (!isNoteInScope(frontmatter, filterScope)) {
-        continue;
+  // If filterScope provided, check specific scoped history directory first
+  let targetDirs = [];
+  if (filterScope) {
+    const normScope = normalizeScope(filterScope);
+    if (normScope.type !== 'knowledge') {
+      const scopedHistoryDir = getHistoryScopeDirectory(absoluteVault, normScope, memId);
+      if (fs.existsSync(scopedHistoryDir)) {
+        targetDirs.push(scopedHistoryDir);
       }
+    } else {
+      // Global knowledge search can scan Knowledge subfolder as well as legacy unscoped history folder
+      const scopedHistoryDir = getHistoryScopeDirectory(absoluteVault, normScope, memId);
+      if (fs.existsSync(scopedHistoryDir)) {
+        targetDirs.push(scopedHistoryDir);
+      }
+      const legacyHistoryDir = path.resolve(baseHistoryDir, memId);
+      if (fs.existsSync(legacyHistoryDir)) {
+        targetDirs.push(legacyHistoryDir);
+      }
+    }
+  } else {
+    // Unscoped search - check legacy history folder or find all history dirs
+    const legacyHistoryDir = path.resolve(baseHistoryDir, memId);
+    if (fs.existsSync(legacyHistoryDir)) {
+      targetDirs.push(legacyHistoryDir);
+    }
+    if (targetDirs.length === 0) {
+      targetDirs = findHistoryDirsForMemoryId(baseHistoryDir, memId);
+    }
+  }
 
-      const relPath = path.relative(absoluteVault, fullFilePath).replace(/\\/g, '/');
-      const parsedVer = Number(frontmatter.version) || parseInt(file.replace(/^v|\.md$/g, ''), 10);
+  const processedPaths = new Set();
 
-      const prevVer = frontmatter.previousVersion !== undefined && frontmatter.previousVersion !== null && !isNaN(Number(frontmatter.previousVersion))
-        ? Number(frontmatter.previousVersion)
-        : null;
-      const restVer = frontmatter.restoredFromVersion !== undefined && frontmatter.restoredFromVersion !== null && !isNaN(Number(frontmatter.restoredFromVersion))
-        ? Number(frontmatter.restoredFromVersion)
-        : null;
+  for (const absoluteHistoryDir of targetDirs) {
+    if (!fs.existsSync(absoluteHistoryDir)) continue;
 
-      historyList.push({
-        version: parsedVer,
-        operation: frontmatter.operation || 'update',
-        previousVersion: prevVer,
-        restoredFromVersion: restVer,
-        contentHash: frontmatter.contentHash || '',
-        snapshotCreatedAt: frontmatter.snapshotCreatedAt || frontmatter.created || '',
-        scopeType: frontmatter.scopeType || 'knowledge',
-        userId: frontmatter.userId || null,
-        projectId: frontmatter.projectId || null,
-        sessionId: frontmatter.sessionId || null,
-        path: relPath
-      });
-    } catch (e) {
-      // Ignore unreadable history snapshots
+    const files = fs.readdirSync(absoluteHistoryDir);
+
+    for (const file of files) {
+      if (!file.endsWith('.md') || !file.startsWith('v')) continue;
+
+      const fullFilePath = path.join(absoluteHistoryDir, file);
+      if (processedPaths.has(fullFilePath)) continue;
+      processedPaths.add(fullFilePath);
+
+      try {
+        const raw = fs.readFileSync(fullFilePath, 'utf-8');
+        const { frontmatter } = parseFrontmatter(raw);
+
+        if (!isNoteInScope(frontmatter, filterScope)) {
+          continue;
+        }
+
+        const relPath = path.relative(absoluteVault, fullFilePath).replace(/\\/g, '/');
+        const parsedVer = Number(frontmatter.version) || parseInt(file.replace(/^v|\.md$/g, ''), 10);
+
+        const prevVer = frontmatter.previousVersion !== undefined && frontmatter.previousVersion !== null && !isNaN(Number(frontmatter.previousVersion))
+          ? Number(frontmatter.previousVersion)
+          : null;
+        const restVer = frontmatter.restoredFromVersion !== undefined && frontmatter.restoredFromVersion !== null && !isNaN(Number(frontmatter.restoredFromVersion))
+          ? Number(frontmatter.restoredFromVersion)
+          : null;
+
+        historyList.push({
+          version: parsedVer,
+          operation: frontmatter.operation || 'update',
+          previousVersion: prevVer,
+          restoredFromVersion: restVer,
+          contentHash: frontmatter.contentHash || '',
+          snapshotCreatedAt: frontmatter.snapshotCreatedAt || frontmatter.created || '',
+          scopeType: frontmatter.scopeType || 'knowledge',
+          userId: frontmatter.userId || null,
+          projectId: frontmatter.projectId || null,
+          sessionId: frontmatter.sessionId || null,
+          path: relPath
+        });
+      } catch (e) {
+        // Ignore unreadable history snapshots
+      }
     }
   }
 
@@ -211,13 +282,17 @@ async function restoreMemory(vaultDir, memoryId, targetVersion, options = {}) {
     throw new Error(`Restore Error: Active memory note with ID "${memId}" not found or unauthorized in requested scope.`);
   }
 
-  const historyDirRel = path.join('Memory', 'History', memId);
-  const absoluteHistoryDir = path.resolve(absoluteVault, historyDirRel);
-  const snapshotFileName = `v${versionToRestore}.md`;
-  const absoluteSnapshotPath = path.resolve(absoluteHistoryDir, snapshotFileName);
+  const existingHistory = getMemoryHistory(absoluteVault, memId, { scope: filterScope });
+  const snapshotMeta = existingHistory.find(h => h.version === versionToRestore);
+
+  if (!snapshotMeta) {
+    throw new Error(`Restore Error: Snapshot version v${versionToRestore} does not exist or unauthorized for memoryId "${memId}".`);
+  }
+
+  const absoluteSnapshotPath = path.resolve(absoluteVault, snapshotMeta.path);
 
   if (!fs.existsSync(absoluteSnapshotPath)) {
-    throw new Error(`Restore Error: Snapshot version v${versionToRestore} does not exist for memoryId "${memId}".`);
+    throw new Error(`Restore Error: Snapshot file v${versionToRestore} missing at "${snapshotMeta.path}".`);
   }
 
   const snapshotRaw = fs.readFileSync(absoluteSnapshotPath, 'utf-8');
@@ -227,7 +302,6 @@ async function restoreMemory(vaultDir, memoryId, targetVersion, options = {}) {
     throw new Error(`Security Violation: Unauthorized scope access to snapshot v${versionToRestore}.`);
   }
 
-  const existingHistory = getMemoryHistory(absoluteVault, memId, { scope: filterScope });
   const latestVersion = existingHistory.length > 0 ? Math.max(...existingHistory.map(h => h.version)) : (Number(activeFrontmatter.version) || 1);
   const newVersion = latestVersion + 1;
   const now = new Date().toISOString();
@@ -286,6 +360,26 @@ async function restoreMemory(vaultDir, memoryId, targetVersion, options = {}) {
   };
 }
 
+function findHistoryDirsForMemoryId(baseHistoryDir, memId) {
+  const dirs = [];
+  function scan(dir) {
+    if (!fs.existsSync(dir)) return;
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === memId) {
+          dirs.push(full);
+        } else {
+          scan(full);
+        }
+      }
+    }
+  }
+  scan(baseHistoryDir);
+  return dirs;
+}
+
 function getAllMdFiles(dir, absoluteVault) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
@@ -299,7 +393,7 @@ function getAllMdFiles(dir, absoluteVault) {
     }
 
     const relPath = path.relative(absoluteVault, fullPath).replace(/\\/g, '/');
-    if (relPath.startsWith('Memory/History') || relPath.startsWith('.index')) {
+    if (isExcludedVaultPath(relPath)) {
       continue;
     }
 

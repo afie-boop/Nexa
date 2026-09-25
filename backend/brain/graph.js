@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { parseWikiLinks, resolveNotePath } = require('./wikilinks');
 const { parseFrontmatter, getNoteTags } = require('./properties');
+const { isExcludedVaultPath } = require('./vault_utils');
 
 /**
  * Builds a network graph of nodes and edges from all markdown files in the vault.
@@ -29,8 +30,7 @@ function buildGraph(vaultDir) {
     try {
       const relativePath = path.relative(absoluteVault, filePath).replace(/\\/g, '/');
 
-      // Exclude Memory/History
-      if (relativePath.startsWith('Memory/History/')) {
+      if (isExcludedVaultPath(relativePath)) {
         continue;
       }
 
@@ -117,7 +117,7 @@ function getAllMdFiles(dir, absoluteVault) {
     }
 
     const relPath = path.relative(absoluteVault, fullPath).replace(/\\/g, '/');
-    if (relPath.startsWith('Memory/History') || relPath.startsWith('.index')) {
+    if (isExcludedVaultPath(relPath)) {
       continue;
     }
 

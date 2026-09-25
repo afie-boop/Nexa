@@ -8,9 +8,10 @@ const { extractMemoryWithAI } = require('./memory_ai');
 const { normalizeScope, getScopeDirectory, isNoteInScope } = require('./memory_scope');
 const { saveHistorySnapshot } = require('./memory_history');
 
-function generateMemoryId(content) {
+function generateMemoryId(content, scope) {
   if (content && typeof content === 'string') {
-    const hash = crypto.createHash('sha256').update(content.trim().toLowerCase()).digest('hex').substring(0, 12);
+    const scopeKey = scope ? `${scope.type || 'knowledge'}_${scope.userId || scope.projectId || scope.sessionId || ''}` : '';
+    const hash = crypto.createHash('sha256').update((scopeKey + content).trim().toLowerCase()).digest('hex').substring(0, 12);
     return `mem_${hash}`;
   }
   return `mem_${crypto.randomBytes(6).toString('hex')}`;
@@ -325,7 +326,7 @@ async function saveMemory(vaultDir, memory, options = {}) {
   }
 
   // 2. Authoritative Scope Directory Determination
-  const memId = memory.id || generateMemoryId(memory.content);
+  const memId = memory.id || generateMemoryId(memory.content, normScope);
   const rawInputPath = memory.suggestedPath || memory.path || `mem_${memId}.md`;
 
   if (path.isAbsolute(rawInputPath) || rawInputPath.includes('..') || rawInputPath.includes('\\')) {

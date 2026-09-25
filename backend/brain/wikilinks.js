@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { isExcludedVaultPath } = require('./vault_utils');
 
 /**
  * Parses all WikiLinks from text content.
@@ -66,20 +67,16 @@ function resolveNotePath(vaultDir, targetNote) {
     cleanTarget += '.md';
   }
 
-  // Calculate candidate path
   const candidatePath = path.resolve(absoluteVault, cleanTarget);
 
-  // Security Check: Path Traversal Prevention
   if (!candidatePath.startsWith(absoluteVault + path.sep) && candidatePath !== absoluteVault) {
     throw new Error(`Security Violation: Path traversal detected for "${targetNote}"`);
   }
 
-  // If candidate file exists, return it
   if (fs.existsSync(candidatePath)) {
     return candidatePath;
   }
 
-  // Fallback: search for note by filename inside vault if folder path not exact
   const targetFileName = path.basename(cleanTarget).toLowerCase();
   const found = findFileByBasename(absoluteVault, targetFileName, absoluteVault);
   if (found) {
@@ -91,6 +88,7 @@ function resolveNotePath(vaultDir, targetNote) {
 
 /**
  * Helper to recursively search for a file by basename within vault boundaries.
+ * Excludes Memory/History snapshots.
  */
 function findFileByBasename(dir, targetBasename, absoluteVault) {
   if (!fs.existsSync(dir)) return null;
@@ -99,8 +97,12 @@ function findFileByBasename(dir, targetBasename, absoluteVault) {
   for (const entry of entries) {
     const fullPath = path.join(dir, entry.name);
 
-    // Ensure stay inside vault
     if (!fullPath.startsWith(absoluteVault + path.sep) && fullPath !== absoluteVault) {
+      continue;
+    }
+
+    const relPath = path.relative(absoluteVault, fullPath).replace(/\\/g, '/');
+    if (isExcludedVaultPath(relPath)) {
       continue;
     }
 
@@ -116,6 +118,7 @@ function findFileByBasename(dir, targetBasename, absoluteVault) {
 
 /**
  * Recursively scans all .md files in vault and retrieves backlinks for a target note.
+ * Excludes Memory/History snapshots.
  *
  * @param {string} vaultDir Root path of the vault
  * @param {string} targetNote Target note path or name to find backlinks for
@@ -135,7 +138,6 @@ function getBacklinks(vaultDir, targetNote) {
   try {
     resolvedTarget = resolveNotePath(absoluteVault, targetNote);
   } catch (err) {
-    // If security error or invalid target, return empty
     return [];
   }
 
@@ -144,7 +146,6 @@ function getBacklinks(vaultDir, targetNote) {
   const backlinksMap = new Map();
 
   for (const filePath of allMdFiles) {
-    // Don't count self-referential backlinks as incoming backlinks if same file
     if (filePath === resolvedTarget) {
       continue;
     }
@@ -165,15 +166,13 @@ function getBacklinks(vaultDir, targetNote) {
           // Ignore invalid link paths
         }
 
-        // Also check direct target name match
         const linkTargetBasename = path.basename(link.target, '.md').toLowerCase();
         if (linkTargetBasename === targetBasename) {
           isMatch = true;
         }
 
         if (isMatch) {
-          const relativePath = path.relative(absoluteVault, filePath);
-          // Key by source relative path to prevent duplicate source entries if multiple links exist in same file
+          const relativePath = path.relative(absoluteVault, filePath).replace(/\\/g, '/');
           if (!backlinksMap.has(relativePath)) {
             backlinksMap.set(relativePath, {
               sourcePath: filePath,
@@ -192,7 +191,7 @@ function getBacklinks(vaultDir, targetNote) {
 }
 
 /**
- * Helper to get all .md files in directory recursively.
+ * Helper to get all .md files in directory recursively. Excludes Memory/History.
  */
 function getAllMdFiles(dir, absoluteVault) {
   let results = [];
@@ -203,6 +202,11 @@ function getAllMdFiles(dir, absoluteVault) {
     const fullPath = path.join(dir, entry.name);
 
     if (!fullPath.startsWith(absoluteVault + path.sep) && fullPath !== absoluteVault) {
+      continue;
+    }
+
+    const relPath = path.relative(absoluteVault, fullPath).replace(/\\/g, '/');
+    if (isExcludedVaultPath(relPath)) {
       continue;
     }
 
