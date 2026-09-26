@@ -493,12 +493,12 @@ app.post("/api/agent/task/:task_id/approval", async (req, res) => {
   }
 });
 
-// Brain Memory History API (knowledge scope only until authenticated user scopes are wired)
+// Brain Memory History API (authenticated user scope)
 app.get("/api/brain/history", brainNoStore, rateLimitBrain("read"), requireBrainAuth(getGitHubSession), async (req, res) => {
   const memoryId = typeof req.query.memory_id === "string" ? req.query.memory_id.trim() : "";
   if (!validateMemoryIdInput(memoryId)) return res.status(400).json({ status: "error", message: "memory_id tidak sah." });
   try {
-    const history = brain.getMemoryHistory(memoryId, { scope: { type: "knowledge" } });
+    const history = brain.getMemoryHistory(memoryId, { scope: req.brainUser });
     return res.status(200).json({ status: "ok", memoryId, history });
   } catch (error) {
     console.error("[Brain History Error]:", error.message);
