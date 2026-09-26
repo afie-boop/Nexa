@@ -6,6 +6,7 @@ const { parseWikiLinks, getBacklinks, resolveNotePath } = require('./wikilinks')
 const { parseFrontmatter, getNoteTags } = require('./properties');
 const { buildGraph } = require('./graph');
 const { isNoteInScope } = require('./memory_scope');
+const { fuseMemories, buildFusedContext } = require('./memory_fusion');
 
 /**
  * Retrieves RAG context with hybrid search (Full-text + Semantic) and graph relationships,
@@ -267,7 +268,19 @@ async function retrieveContext(vaultDir, query, options = {}) {
     .sort((a, b) => b.score - a.score)
     .slice(0, maxSources);
 
-  const context = buildContextText(cleanQuery, finalSources, absoluteVault, maxContextChars);
+  const fusedGroups = fuseMemories(
+    absoluteVault,
+    cleanQuery,
+    finalSources,
+    {
+      scope: filterScope,
+      limit: typeof options.fusionLimit === 'number' ? options.fusionLimit : Math.min(5, maxSources)
+    }
+  );
+  const fusedContext = fusedGroups.length
+    ? buildFusedContext(cleanQuery, fusedGroups, Math.min(maxContextChars, options.fusionMaxChars || 2500))
+    : '';
+  const context = fusedContext || buildContextText(cleanQuery, finalSources, absoluteVault, maxContextChars);
 
   return {
     query: cleanQuery,
