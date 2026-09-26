@@ -24,6 +24,7 @@ const Brain = require("./brain/brain");
 const brain = new Brain(path.join(__dirname, "brain", "vault"));
 const { rateLimitBrain, brainNoStore, validateMemoryIdInput, validateVersionInput } = require("./brain/brain_security");
 const { requireBrainAuth } = require("./brain/brain_auth");
+const { saveGitHubSession, getGitHubSession, clearGitHubSession } = require("./github_session");
 
 const app = express();
 
@@ -50,37 +51,6 @@ if (!fs.existsSync(distPath) || !fs.existsSync(path.join(distPath, "index.html")
 app.use(express.static(distPath));
 
 app.post("/api/feedback", handlePostFeedback);
-
-// Helper to save GitHub session securely on server
-function saveGitHubSession(sessionData) {
-  try {
-    const dataDir = path.join(__dirname, "feedback", "data");
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    const sessionPath = path.join(dataDir, "github_session.json");
-    fs.writeFileSync(sessionPath, JSON.stringify(sessionData, null, 2), "utf8");
-  } catch (err) {
-    console.error("[GitHub Session Write Error]:", err.message);
-  }
-}
-
-// Read GitHub Session (Strictly rejects mock_token)
-function getGitHubSession() {
-  try {
-    const sessionPath = path.join(__dirname, "feedback", "data", "github_session.json");
-    if (fs.existsSync(sessionPath)) {
-      const data = fs.readFileSync(sessionPath, "utf8");
-      const parsed = JSON.parse(data);
-      if (parsed.connected && parsed.accessToken && parsed.accessToken !== "mock_token") {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.error("[GitHub Session Read Error]:", err.message);
-  }
-  return { connected: false, username: null, accessToken: null };
-}
 
 // GET /api/auth/github - Start OAuth flow
 app.get("/api/auth/github", (req, res) => {
@@ -145,7 +115,7 @@ app.get("/api/auth/github/callback", async (req, res) => {
       user: { login: userRes.data.login, name: userRes.data.name }
     };
 
-    saveGitHubSession(sessionData);
+    saveGitHubSession(req, sessionData);
 
     // Redirect to frontend root
     return res.redirect("/");
@@ -159,7 +129,7 @@ app.get("/api/auth/github/callback", async (req, res) => {
 app.get("/api/auth/github/status", (req, res) => {
   res.setHeader("Content-Type", "application/json");
   try {
-    const session = getGitHubSession();
+    const session = getGitHubSession(req);
     return res.status(200).json({
       connected: !!(session && session.connected && session.accessToken && session.accessToken !== "mock_token"),
       username: session ? session.username || null : null
@@ -174,13 +144,13 @@ app.get("/api/auth/github/status", (req, res) => {
 
 // POST /api/auth/github/disconnect - Clear GitHub session
 app.post("/api/auth/github/disconnect", (req, res) => {
-  saveGitHubSession({ connected: false, username: null, accessToken: null });
+  clearGitHubSession(req);
   return res.status(200).json({ connected: false, message: "Akaun GitHub berjaya dilog keluar." });
 });
 
 // GET /api/github/repos - Authenticated read-only repository list
 app.get("/api/github/repos", async (req, res) => {
-  const session = getGitHubSession();
+  const session = getGitHubSession(req);
 
   if (!session.connected || !session.accessToken || session.accessToken === "mock_token") {
     return res.status(401).json({
@@ -253,7 +223,7 @@ app.post("/api/agent/task/:task_id/push", async (req, res) => {
     });
   }
 
-  const session = getGitHubSession();
+  const session = getGitHubSession(req);
   const token = session.accessToken;
 
   try {
@@ -283,7 +253,7 @@ app.post("/api/agent/task/:task_id/push", async (req, res) => {
 
 // GET /api/github/repos/:owner/:repo/branches - Read-only branch list
 app.get("/api/github/repos/:owner/:repo/branches", async (req, res) => {
-  const session = getGitHubSession();
+  const session = getGitHubSession(req);
   const { owner, repo } = req.params;
 
   const validNameRegex = /^[a-zA-Z0-9_.-]+$/;
