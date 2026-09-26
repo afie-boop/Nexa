@@ -3,6 +3,7 @@ const path = require('path');
 const { parseWikiLinks, resolveNotePath } = require('./wikilinks');
 const { parseFrontmatter, getNoteTags } = require('./properties');
 const { isExcludedVaultPath } = require('./vault_utils');
+const { isNoteInScope } = require('./memory_scope');
 
 /**
  * Builds a network graph of nodes and edges from all markdown files in the vault.
@@ -11,7 +12,7 @@ const { isExcludedVaultPath } = require('./vault_utils');
  * @param {string} vaultDir Path to the vault root directory
  * @returns {{ nodes: Array<{ id: string, path: string, name: string, tags: string[], frontmatter: Record<string, any> }>, edges: Array<{ source: string, target: string }> }}
  */
-function buildGraph(vaultDir) {
+function buildGraph(vaultDir, options = {}) {
   if (!vaultDir) {
     return { nodes: [], edges: [] };
   }
@@ -21,7 +22,7 @@ function buildGraph(vaultDir) {
     return { nodes: [], edges: [] };
   }
 
-  const mdFiles = getAllMdFiles(absoluteVault, absoluteVault);
+  const mdFiles = getAllMdFiles(absoluteVault, absoluteVault, options.scope);
   const nodesMap = new Map();
   const filePathToIdMap = new Map();
 
@@ -37,6 +38,7 @@ function buildGraph(vaultDir) {
       const nodeId = relativePath;
       const content = fs.readFileSync(filePath, 'utf-8');
       const { frontmatter } = parseFrontmatter(content);
+      if (options.scope !== undefined && !isNoteInScope(frontmatter, options.scope)) continue;
       const tags = getNoteTags(content);
 
       const fileNameWithoutExt = path.basename(filePath, '.md');
@@ -72,7 +74,7 @@ function buildGraph(vaultDir) {
 
       for (const link of wikiLinks) {
         try {
-          const resolvedPath = resolveNotePath(absoluteVault, link.target);
+          const resolvedPath = resolveNotePath(absoluteVault, link.target, { scope: options.scope });
           const targetId = filePathToIdMap.get(resolvedPath);
 
           if (targetId) {
@@ -104,7 +106,7 @@ function buildGraph(vaultDir) {
   };
 }
 
-function getAllMdFiles(dir, absoluteVault) {
+function getAllMdFiles(dir, absoluteVault, scope) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
 
@@ -122,8 +124,15 @@ function getAllMdFiles(dir, absoluteVault) {
     }
 
     if (entry.isDirectory()) {
-      results = results.concat(getAllMdFiles(fullPath, absoluteVault));
+      results = results.concat(getAllMdFiles(fullPath, absoluteVault, scope));
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      if (scope !== undefined) {
+        try {
+          const raw = fs.readFileSync(fullPath, 'utf-8');
+          const { frontmatter } = parseFrontmatter(raw);
+          if (!isNoteInScope(frontmatter, scope)) continue;
+        } catch (_) { continue; }
+      }
       results.push(fullPath);
     }
   }
