@@ -64,6 +64,7 @@ async function learnFromChat(brain, userMessage, session, options = {}) {
   const saved = [];
   let duplicates = 0;
   let updated = 0;
+  let consolidated = [];
 
   for (const rawMemory of memories.slice(0, options.maxMemories || 3)) {
     const memory = normalizeMemory(rawMemory);
@@ -132,10 +133,24 @@ async function learnFromChat(brain, userMessage, session, options = {}) {
     }
   }
 
+  if (options.consolidate !== false && saved.some(item => item.created) && typeof brain.consolidateMemories === "function") {
+    try {
+      const consolidation = await brain.consolidateMemories({
+        scope,
+        threshold: typeof options.consolidationThreshold === "number" ? options.consolidationThreshold : 0.55,
+        limit: typeof options.consolidationLimit === "number" ? options.consolidationLimit : 3
+      });
+      consolidated = consolidation.updated || [];
+    } catch (error) {
+      console.warn("[Brain Consolidation Warning]:", error.message);
+    }
+  }
+
   return {
     saved,
     duplicates,
     updated,
+    consolidated,
     classified: saved.map(item => ({
       id: item.id,
       type: item.type,
