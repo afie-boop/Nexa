@@ -20,6 +20,12 @@ console.log("=================================");
 const classifyTask = require("./router");
 const { runPipeline } = require("./pipeline/pipeline");
 const { handlePostFeedback } = require("./feedback/feedbackController");
+const Brain = require("./brain/brain");
+const brain = new Brain(path.join(__dirname, "brain", "vault"));
+const { rateLimitBrain, brainNoStore, validateMemoryIdInput, validateVersionInput } = require("./brain/brain_security");
+const { requireBrainAuth } = require("./brain/brain_auth");
+const { saveGitHubSession, getGitHubSession, clearGitHubSession } = require("./github_session");
+const { learnFromChat } = require("./brain/learning");
 
 const app = express();
 
@@ -45,50 +51,50 @@ if (!fs.existsSync(distPath) || !fs.existsSync(path.join(distPath, "index.html")
 
 app.use(express.static(distPath));
 
+// OAuth URL compatibility: normalize malformed/legacy callback paths before route matching.
+app.use((req, res, next) => {
+  let pathname = req.originalUrl.split("?")[0];
+  try {
+    pathname = decodeURIComponent(pathname);
+  } catch (_) {
+    // Keep the original path when decoding fails.
+  }
+
+  if (pathname === "/api/auth github" || pathname === "/api/auth/github/") {
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    return res.redirect(302, "/api/auth/github" + query);
+  }
+
+  if (pathname === "/auth/github/callback" || pathname === "/auth/github/callback/") {
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    return res.redirect(302, "/api/auth/github/callback" + query);
+  }
+
+  if (pathname === "/api/auth/github/callback/") {
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    return res.redirect(302, "/api/auth/github/callback" + query);
+  }
+
+  next();
+});
+
 app.post("/api/feedback", handlePostFeedback);
-
-// Helper to save GitHub session securely on server
-function saveGitHubSession(sessionData) {
-  try {
-    const dataDir = path.join(__dirname, "feedback", "data");
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
-    }
-    const sessionPath = path.join(dataDir, "github_session.json");
-    fs.writeFileSync(sessionPath, JSON.stringify(sessionData, null, 2), "utf8");
-  } catch (err) {
-    console.error("[GitHub Session Write Error]:", err.message);
-  }
-}
-
-// Read GitHub Session (Strictly rejects mock_token)
-function getGitHubSession() {
-  try {
-    const sessionPath = path.join(__dirname, "feedback", "data", "github_session.json");
-    if (fs.existsSync(sessionPath)) {
-      const data = fs.readFileSync(sessionPath, "utf8");
-      const parsed = JSON.parse(data);
-      if (parsed.connected && parsed.accessToken && parsed.accessToken !== "mock_token") {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.error("[GitHub Session Read Error]:", err.message);
-  }
-  return { connected: false, username: null, accessToken: null };
-}
 
 // GET /api/auth/github - Start OAuth flow
 app.get("/api/auth/github", (req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
+  const callbackUrl = process.env.GITHUB_CALLBACK_URL;
   if (!clientId) {
     return res.status(500).json({
       message: "GITHUB_CLIENT_ID belum dikonfigurasi dalam persekitaran server."
     });
   }
-  const protocol = req.headers["x-forwarded-proto"] || req.protocol;
-  const host = req.get("host");
-  const redirectUri = encodeURIComponent(`${protocol}://${host}/api/auth/github/callback`);
+  if (!callbackUrl) {
+    return res.status(500).json({
+      message: "GITHUB_CALLBACK_URL belum dikonfigurasi dalam persekitaran server."
+    });
+  }
+  const redirectUri = encodeURIComponent(callbackUrl);
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo,user`;
   return res.redirect(githubAuthUrl);
 });
@@ -141,7 +147,7 @@ app.get("/api/auth/github/callback", async (req, res) => {
       user: { login: userRes.data.login, name: userRes.data.name }
     };
 
-    saveGitHubSession(sessionData);
+    saveGitHubSession(req, sessionData);
 
     // Redirect to frontend root
     return res.redirect("/");
@@ -155,7 +161,7 @@ app.get("/api/auth/github/callback", async (req, res) => {
 app.get("/api/auth/github/status", (req, res) => {
   res.setHeader("Content-Type", "application/json");
   try {
-    const session = getGitHubSession();
+    const session = getGitHubSession(req);
     return res.status(200).json({
       connected: !!(session && session.connected && session.accessToken && session.accessToken !== "mock_token"),
       username: session ? session.username || null : null
@@ -170,13 +176,13 @@ app.get("/api/auth/github/status", (req, res) => {
 
 // POST /api/auth/github/disconnect - Clear GitHub session
 app.post("/api/auth/github/disconnect", (req, res) => {
-  saveGitHubSession({ connected: false, username: null, accessToken: null });
+  clearGitHubSession(req);
   return res.status(200).json({ connected: false, message: "Akaun GitHub berjaya dilog keluar." });
 });
 
 // GET /api/github/repos - Authenticated read-only repository list
 app.get("/api/github/repos", async (req, res) => {
-  const session = getGitHubSession();
+  const session = getGitHubSession(req);
 
   if (!session.connected || !session.accessToken || session.accessToken === "mock_token") {
     return res.status(401).json({
@@ -249,7 +255,7 @@ app.post("/api/agent/task/:task_id/push", async (req, res) => {
     });
   }
 
-  const session = getGitHubSession();
+  const session = getGitHubSession(req);
   const token = session.accessToken;
 
   try {
@@ -279,7 +285,7 @@ app.post("/api/agent/task/:task_id/push", async (req, res) => {
 
 // GET /api/github/repos/:owner/:repo/branches - Read-only branch list
 app.get("/api/github/repos/:owner/:repo/branches", async (req, res) => {
-  const session = getGitHubSession();
+  const session = getGitHubSession(req);
   const { owner, repo } = req.params;
 
   const validNameRegex = /^[a-zA-Z0-9_.-]+$/;
@@ -519,6 +525,44 @@ app.post("/api/agent/task/:task_id/approval", async (req, res) => {
   }
 });
 
+// Brain Memory Intelligence API (authenticated user scope)
+app.get("/api/brain/health", brainNoStore, rateLimitBrain("read"), requireBrainAuth(getGitHubSession), async (req, res) => {
+  try {
+    const health = brain.inspectMemoryHealth({ scope: req.brainUser, staleDays: 180 });
+    return res.status(200).json({ status: "ok", scope: req.brainUser, health });
+  } catch (error) {
+    console.error("[Brain Health Error]:", error.message);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+});
+
+// Brain Memory History API (authenticated user scope)
+app.get("/api/brain/history", brainNoStore, rateLimitBrain("read"), requireBrainAuth(getGitHubSession), async (req, res) => {
+  const memoryId = typeof req.query.memory_id === "string" ? req.query.memory_id.trim() : "";
+  if (!validateMemoryIdInput(memoryId)) return res.status(400).json({ status: "error", message: "memory_id tidak sah." });
+  try {
+    const history = brain.getMemoryHistory(memoryId, { scope: req.brainUser });
+    return res.status(200).json({ status: "ok", memoryId, history });
+  } catch (error) {
+    console.error("[Brain History Error]:", error.message);
+    return res.status(400).json({ status: "error", message: error.message });
+  }
+});
+
+app.post("/api/brain/history/restore", brainNoStore, rateLimitBrain("restore"), requireBrainAuth(getGitHubSession), async (req, res) => {
+  const { memory_id, version } = req.body || {};
+  if (!validateMemoryIdInput(memory_id) || !validateVersionInput(version)) {
+    return res.status(400).json({ status: "error", message: "memory_id dan version yang sah diperlukan." });
+  }
+  try {
+    const result = await brain.restoreMemory(memory_id.trim(), Number(version), { scope: req.brainUser });
+    return res.status(200).json({ status: "ok", result });
+  } catch (error) {
+    console.error("[Brain Restore Error]:", error.message);
+    return res.status(400).json({ status: "error", message: error.message });
+  }
+});
+
 app.post("/chat", async (req, res) => {
   const { question, history } = req.body;
 
@@ -575,6 +619,27 @@ app.post("/chat", async (req, res) => {
 
     const { generalModel, codingModel, fallbackModel } = req.body;
 
+    // Brain context is retrieved server-side. If GitHub is authenticated,
+    // private memories are restricted to the authenticated user's scope.
+    // Without authentication, only global knowledge notes are eligible.
+    let brainContext = null;
+    try {
+      const brainSession = getGitHubSession(req);
+      const brainScope = brainSession && brainSession.connected && brainSession.accessToken && brainSession.accessToken !== "mock_token"
+        ? { type: "user", userId: brainSession.username }
+        : null;
+
+      sendStatus("Mencari konteks Brain...");
+      brainContext = await brain.retrieveContext(question.trim(), {
+        scope: brainScope,
+        topK: 5,
+        maxSources: 8,
+        maxContextChars: 5000
+      });
+    } catch (brainError) {
+      console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
+    }
+
     sendStatus("Mengelaskan permintaan...");
 
     const task = await classifyTask(
@@ -582,9 +647,13 @@ app.post("/chat", async (req, res) => {
       history || []
     );
 
+    const brainAugmentedQuestion = brainContext && brainContext.context && brainContext.sources && brainContext.sources.length
+      ? `${question.trim()}\\n\\n[AXMCHAT BRAIN CONTEXT]\\n${brainContext.context}\\n[END AXMCHAT BRAIN CONTEXT]`
+      : question;
+
     const answer = await runPipeline({
       task,
-      question,
+      question: brainAugmentedQuestion,
       history: history || [],
       generalModel,
       codingModel,
@@ -592,6 +661,33 @@ app.post("/chat", async (req, res) => {
       sendStatus,
       sendProcessStep
     });
+
+    // Brain Learning Loop: learn only durable information from the user's
+    // own message, scoped to the authenticated GitHub user. The assistant
+    // response is never persisted as memory.
+    try {
+      const learningSession = getGitHubSession(req);
+      const learning = await learnFromChat(brain, question, learningSession, {
+        mode: process.env.BRAIN_MEMORY_MODE || "auto",
+        confidenceThreshold: 0.75,
+        maxMemories: 3
+      });
+
+      if (learning.updated) {
+        sendStatus("Brain mengemas kini " + learning.updated + " memori.");
+      }
+      if (learning.consolidated && learning.consolidated.length) {
+        sendStatus("Brain menggabungkan " + learning.consolidated.length + " memori berkaitan.");
+      } else if (learning.saved && learning.saved.some(item => item.created)) {
+        sendStatus(
+          "Brain menyimpan " +
+          learning.saved.filter(item => item.created).length +
+          " memori."
+        );
+      }
+    } catch (learningError) {
+      console.warn("[Brain Learning Loop Warning]:", learningError.message);
+    }
 
     sendAnswer(answer);
 

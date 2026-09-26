@@ -100,8 +100,17 @@ function App() {
   });
 
   const [load, setLoad] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState("Nexa sedang berfikir...");
+  const [loadingStatus, setLoadingStatus] = useState("AXMchat sedang berfikir...");
   const [error, setError] = useState(null);
+  const [brainMemoryId, setBrainMemoryId] = useState("");
+  const [brainHistory, setBrainHistory] = useState([]);
+  const [brainHistoryLoading, setBrainHistoryLoading] = useState(false);
+  const [brainHistoryError, setBrainHistoryError] = useState("");
+  const [brainRestoringVersion, setBrainRestoringVersion] = useState(null);
+  const [githubConnected, setGithubConnected] = useState(false);
+  const [githubUsername, setGithubUsername] = useState(null);
+  const [githubAuthLoading, setGithubAuthLoading] = useState(true);
+  const [githubAuthError, setGithubAuthError] = useState("");
   const [copiedIdx, setCopiedIdx] = useState(null);
   const chatEndRef = useRef(null);
 
@@ -111,6 +120,49 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "dark");
   }, []);
+  useEffect(() => {
+    let cancelled = false;
+    async function checkGitHubStatus() {
+      try {
+        const res = await fetch("/api/auth/github/status", { credentials: "same-origin" });
+        const data = await res.json();
+        if (!cancelled) {
+          setGithubConnected(!!data.connected);
+          setGithubUsername(data.username || null);
+          setGithubAuthError("");
+        }
+      } catch (err) {
+        if (!cancelled) setGithubAuthError("Gagal menyemak sambungan GitHub.");
+      } finally {
+        if (!cancelled) setGithubAuthLoading(false);
+      }
+    }
+    checkGitHubStatus();
+    return () => { cancelled = true; };
+  }, []);
+
+  function connectGitHub() {
+    window.location.assign("/api/auth/github");
+  }
+
+  async function disconnectGitHub() {
+    try {
+      setGithubAuthLoading(true);
+      const res = await fetch("/api/auth/github/disconnect", {
+        method: "POST",
+        credentials: "same-origin"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Gagal memutuskan GitHub.");
+      setGithubConnected(false);
+      setGithubUsername(null);
+      setGithubAuthError("");
+    } catch (err) {
+      setGithubAuthError(err.message || "Gagal memutuskan GitHub.");
+    } finally {
+      setGithubAuthLoading(false);
+    }
+  }
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -356,7 +408,7 @@ function App() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "Nexa AI Response",
+          title: "AXMchat AI Response",
           text: content,
         });
       } catch (err) {
@@ -371,11 +423,11 @@ function App() {
 
   const handleShareChat = async () => {
     if (chat.length === 0) return;
-    const conversationText = chat.map(m => `${m.type === "user" ? "User" : "Nexa AI"}: ${m.text}`).join("\n\n");
+    const conversationText = chat.map(m => `${m.type === "user" ? "User" : "AXMchat AI"}: ${m.text}`).join("\n\n");
     if (navigator.share) {
       try {
         await navigator.share({
-          title: activeConversation.title || "Nexa AI Chat",
+          title: activeConversation.title || "AXMchat AI Chat",
           text: conversationText,
         });
       } catch (err) {
@@ -427,7 +479,7 @@ function App() {
     }
 
     setLoad(true);
-    setLoadingStatus("Nexa sedang berfikir...");
+    setLoadingStatus("AXMchat sedang berfikir...");
     setError(null);
 
     try {
@@ -611,6 +663,48 @@ function App() {
     },
   };
 
+  async function loadBrainHistory() {
+    const memoryId = brainMemoryId.trim();
+    if (!memoryId) {
+      setBrainHistoryError("Masukkan Memory ID terlebih dahulu.");
+      return;
+    }
+    setBrainHistoryLoading(true);
+    setBrainHistoryError("");
+    try {
+      const res = await fetch(`/api/brain/history?memory_id=${encodeURIComponent(memoryId)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Gagal mendapatkan memory history.");
+      setBrainHistory(data.history || []);
+    } catch (err) {
+      setBrainHistory([]);
+      setBrainHistoryError(err.message || "Gagal mendapatkan memory history.");
+    } finally {
+      setBrainHistoryLoading(false);
+    }
+  }
+
+  async function restoreBrainVersion(version) {
+    if (!brainMemoryId.trim()) return;
+    if (!window.confirm(`Restore memory ke versi v${version}?`)) return;
+    setBrainRestoringVersion(version);
+    setBrainHistoryError("");
+    try {
+      const res = await fetch("/api/brain/history/restore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memory_id: brainMemoryId.trim(), version })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Restore gagal.");
+      await loadBrainHistory();
+    } catch (err) {
+      setBrainHistoryError(err.message || "Restore gagal.");
+    } finally {
+      setBrainRestoringVersion(null);
+    }
+  }
+
   function clearChat() {
     if (window.confirm("Adakah anda pasti mahu memadamkan semua sejarah chat?")) {
       updateActiveMessages([]);
@@ -642,16 +736,20 @@ function App() {
       )}
 
       {/* ==========================================================================
-         SIDEBAR (LEFT) - 260px Fixed Layout (NO EMOJIS)
+         SIDEBAR (LEFT) - Modern Glass Sidebar with Icons
          ========================================================================== */}
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <div className="logo-container">
-            <div className="logo-icon">N</div>
-            <div className="logo-text">NEXA</div>
+            <div className="logo-icon">A</div>
+            <div className="logo-text">AXMchat</div>
           </div>
           <button className="new-chat-btn" onClick={handleNewChat}>
-            + New Chat
+            <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>New Chat</span>
           </button>
         </div>
 
@@ -661,31 +759,73 @@ function App() {
             className={`nav-item ${activeNav === "chats" ? "active" : ""}`}
             onClick={() => { setActiveNav("chats"); setSidebarOpen(false); }}
           >
-            Chats
+            <span className="nav-icon">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </span>
+            <span>Chats</span>
           </button>
           <button
             className={`nav-item ${activeNav === "models" ? "active" : ""}`}
             onClick={() => { setActiveNav("models"); setSidebarOpen(false); }}
           >
-            Models
+            <span className="nav-icon">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                <line x1="8" y1="21" x2="16" y2="21"></line>
+                <line x1="12" y1="17" x2="12" y2="21"></line>
+              </svg>
+            </span>
+            <span>Models</span>
+          </button>
+          <button
+            className={`nav-item ${activeNav === "brain" ? "active" : ""}`}
+            onClick={() => { setActiveNav("brain"); setSidebarOpen(false); }}
+          >
+            <span className="nav-icon">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                <path d="M9.5 2a3.5 3.5 0 0 0-3.4 4.35A3.5 3.5 0 0 0 4 12a3.5 3.5 0 0 0 2.1 5.65A3.5 3.5 0 0 0 9.5 22c1.1 0 2-.4 2.5-1.1.5.7 1.4 1.1 2.5 1.1a3.5 3.5 0 0 0 3.4-4.35A3.5 3.5 0 0 0 20 12a3.5 3.5 0 0 0-2.1-5.65A3.5 3.5 0 0 0 14.5 2c-1.1 0-2 .4-2.5 1.1C11.5 2.4 10.6 2 9.5 2z"></path>
+              </svg>
+            </span>
+            <span>Brain</span>
           </button>
           <button
             className={`nav-item ${activeNav === "history" ? "active" : ""}`}
             onClick={() => { setActiveNav("history"); setSidebarOpen(false); }}
           >
-            History
+            <span className="nav-icon">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </span>
+            <span>History</span>
           </button>
           <button
             className={`nav-item ${activeNav === "settings" ? "active" : ""}`}
             onClick={() => { setActiveNav("settings"); setSidebarOpen(false); }}
           >
-            Settings
+            <span className="nav-icon">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+              </svg>
+            </span>
+            <span>Settings</span>
           </button>
           <button
             className={`nav-item ${activeNav === "about" ? "active" : ""}`}
             onClick={() => { setActiveNav("about"); setSidebarOpen(false); }}
           >
-            About
+            <span className="nav-icon">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+            </span>
+            <span>About</span>
           </button>
 
           {/* Sesi Aktif List inside Sidebar for easy access when Chats navigation is active */}
@@ -695,7 +835,7 @@ function App() {
               <div className="sidebar-search-box">
                 <input
                   type="text"
-                  placeholder="Cari..."
+                  placeholder="Cari perbualan..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -732,14 +872,21 @@ function App() {
                             onClick={(e) => handlePinConversation(c.id, e)}
                             title="Pin Sembang"
                           >
-                            {c.pinned ? "Unpin" : "Pin"}
+                            <svg stroke="currentColor" fill={c.pinned ? "currentColor" : "none"} strokeWidth="2" viewBox="0 0 24 24" height="12" width="12" xmlns="http://www.w3.org/2000/svg">
+                              <line x1="12" y1="17" x2="12" y2="22"></line>
+                              <path d="M5 17h14l-1.5-6V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v6L5 17z"></path>
+                            </svg>
                           </button>
                           <button
                             className="sidebar-action-btn"
                             onClick={(e) => handleArchiveConversation(c.id, e)}
                             title="Arkib Sembang"
                           >
-                            Arkib
+                            <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="12" width="12" xmlns="http://www.w3.org/2000/svg">
+                              <polyline points="21 8 21 21 3 21 3 8"></polyline>
+                              <rect x="1" y="3" width="22" height="5"></rect>
+                              <line x1="10" y1="12" x2="14" y2="12"></line>
+                            </svg>
                           </button>
                           <button
                             className="sidebar-action-btn"
@@ -750,14 +897,20 @@ function App() {
                             }}
                             title="Nama Semula"
                           >
-                            Edit
+                            <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="12" width="12" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
                           </button>
                           <button
                             className="sidebar-action-btn"
                             onClick={(e) => handleDeleteConversation(c.id, e)}
                             title="Padam Sembang"
                           >
-                            Padam
+                            <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="12" width="12" xmlns="http://www.w3.org/2000/svg">
+                              <polyline points="3 6 5 6 21 6"></polyline>
+                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
                           </button>
                         </div>
                       </>
@@ -771,9 +924,9 @@ function App() {
 
         {/* User Profile Info */}
         <div className="sidebar-profile">
-          <div className="profile-avatar">UX</div>
+          <div className="profile-avatar">AX</div>
           <div className="profile-info">
-            <span className="profile-name">Nexa Developer</span>
+            <span className="profile-name">AXMchat Developer</span>
             <span className="profile-plan">Pro Evolution Plan</span>
           </div>
         </div>
@@ -785,7 +938,7 @@ function App() {
       </aside>
 
       {/* ==========================================================================
-         WORKSPACE UTAMA (Spans all remaining space)
+         WORKSPACE UTAMA
          ========================================================================== */}
       <div className="workspace">
         {/* 1. Top Bar */}
@@ -795,11 +948,15 @@ function App() {
               className="mobile-toggle"
               onClick={() => setSidebarOpen(!sidebarOpen)}
             >
-              ☰
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="20" width="20" xmlns="http://www.w3.org/2000/svg">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
 
             <div className="ai-status-container">
-              <span className="ai-name">Nexa AI</span>
+              <span className="ai-name">AXMchat</span>
               <div className="status-indicator">
                 <span className={`status-dot ${currentStatus === "Thinking" ? "thinking" : ""}`} />
                 <span>{currentStatus}</span>
@@ -813,7 +970,14 @@ function App() {
               onClick={handleShareChat}
               disabled={chat.length === 0}
             >
-              {copiedIdx === "top-bar-share" ? "Disalin ✓" : "Share Chat"}
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="14" width="14" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+              <span>{copiedIdx === "top-bar-share" ? "Disalin ✓" : "Share Chat"}</span>
             </button>
           </div>
         </header>
@@ -827,8 +991,8 @@ function App() {
             {/* 2. Hero Section (when empty) */}
             {chat.length === 0 && !load ? (
               <div className="hero-section animate-fade">
-                <div className="hero-logo">N</div>
-                <h2 className="hero-title">Hello, I'm Nexa.</h2>
+                <div className="hero-logo">A</div>
+                <h2 className="hero-title">Hello, I'm AXMchat.</h2>
                 <p className="hero-tagline">Build. Think. Create.</p>
 
                 <div className="suggestion-prompts-container">
@@ -836,13 +1000,20 @@ function App() {
                     className="suggestion-btn"
                     onClick={() => handleSuggestionClick("Tulis fungsi Fibonacci dalam Python dan jelaskan prestasinya.")}
                   >
-                    Tulis Kod Fibonacci
+                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="14" width="14" xmlns="http://www.w3.org/2000/svg">
+                      <polyline points="16 18 22 12 16 6"></polyline>
+                      <polyline points="8 6 2 12 8 18"></polyline>
+                    </svg>
+                    <span>Tulis Kod Fibonacci</span>
                   </button>
                   <button
                     className="suggestion-btn"
                     onClick={() => handleSuggestionClick("Bina satu strategi pemasaran digital ringkas untuk permulaan teknologi.")}
                   >
-                    Strategi Pemasaran
+                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="14" width="14" xmlns="http://www.w3.org/2000/svg">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                    <span>Strategi Pemasaran</span>
                   </button>
                 </div>
               </div>
@@ -873,39 +1044,60 @@ function App() {
                             </ReactMarkdown>
                           </div>
 
-                          {/* Control actions for AI response: Copy, Like, Dislike, Regenerate, Share (Toolbar only when response exists) */}
+                          {/* Control actions for AI response: Copy, Like, Dislike, Regenerate, Share */}
                           <div className="ai-card-actions">
                             <button
                               className="card-action-btn"
                               onClick={() => copyCode(c.text, `ai-${messageId}`)}
                             >
-                              {copiedIdx === `ai-${messageId}` ? "Disalin" : "Salin Respon"}
+                              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                              </svg>
+                              <span>{copiedIdx === `ai-${messageId}` ? "Disalin" : "Salin Respon"}</span>
                             </button>
                             <button
                               className="card-action-btn"
                               onClick={() => handleLike(messageId)}
                               style={c.feedback === "like" ? { color: "var(--accent)", borderColor: "var(--accent)", backgroundColor: "var(--accent-light)" } : {}}
                             >
-                              Like
+                              <svg stroke="currentColor" fill={c.feedback === "like" ? "currentColor" : "none"} strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                              </svg>
+                              <span>Like</span>
                             </button>
                             <button
                               className="card-action-btn"
                               onClick={() => handleDislike(messageId)}
                               style={c.feedback === "dislike" ? { color: "#EF4444", borderColor: "#EF4444", backgroundColor: "rgba(239, 68, 68, 0.08)" } : {}}
                             >
-                              Dislike
+                              <svg stroke="currentColor" fill={c.feedback === "dislike" ? "currentColor" : "none"} strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
+                              </svg>
+                              <span>Dislike</span>
                             </button>
                             <button
                               className="card-action-btn"
                               onClick={() => handleRegenerate(messageId)}
                             >
-                              Regenerate
+                              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
+                                <polyline points="1 4 1 10 7 10"></polyline>
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                              </svg>
+                              <span>Regenerate</span>
                             </button>
                             <button
                               className="card-action-btn"
                               onClick={() => handleShare(c.text, `share-${messageId}`)}
                             >
-                              {copiedIdx === `share-${messageId}` ? "Disalin" : "Share"}
+                              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                              </svg>
+                              <span>{copiedIdx === `share-${messageId}` ? "Disalin" : "Share"}</span>
                             </button>
                           </div>
 
@@ -934,12 +1126,22 @@ function App() {
                     }
                   })}
 
-                  {/* Active Loading response card using single existing loading container */}
+                  {/* Active Loading response card */}
                   {load && (
                     <div className="ai-card animate-slide">
                       <div className="ai-card-body">
                         <div className="loading-card">
                           <span className="loading-text">
+                            <svg className="animate-spin" stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg" style={{ animation: "spinProcess 1.2s linear infinite" }}>
+                              <line x1="12" y1="2" x2="12" y2="6"></line>
+                              <line x1="12" y1="18" x2="12" y2="22"></line>
+                              <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+                              <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                              <line x1="2" y1="12" x2="6" y2="12"></line>
+                              <line x1="18" y1="12" x2="22" y2="12"></line>
+                              <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+                              <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                            </svg>
                             {loadingStatus}
                           </span>
                         </div>
@@ -960,7 +1162,7 @@ function App() {
                     value={msg}
                     onChange={(e) => setMsg(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Tanya Nexa apa sahaja... (Shift+Enter untuk baris baru)"
+                    placeholder="Tanya AXMchat apa sahaja... (Shift+Enter untuk baris baru)"
                     disabled={load}
                   />
                   <button
@@ -969,7 +1171,10 @@ function App() {
                     disabled={load || !msg.trim()}
                     aria-label="Send"
                   >
-                    ➤
+                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
                   </button>
                 </div>
               </div>
@@ -981,7 +1186,7 @@ function App() {
         {activeNav === "models" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <h2 className="panel-title">Nexa AI Models</h2>
+              <h2 className="panel-title">AXMchat AI Models</h2>
               <p className="panel-subtitle">Tetapkan Model ID tersuai untuk General AI, Coding AI, dan Fallback AI.</p>
 
               <div className="grid-container">
@@ -1053,6 +1258,53 @@ function App() {
           </div>
         )}
 
+        {activeNav === "brain" && (
+          <div className="sub-panel-container animate-fade">
+            <div className="sub-panel-inner">
+              <h2 className="panel-title">AXMchat Brain</h2>
+              <p className="panel-subtitle">Memory History & Versioning — lihat perubahan memory dan restore versi lama.</p>
+
+              <div className="flat-card brain-history-search-card">
+                <label className="flat-card-title" htmlFor="brain-memory-id">Memory ID</label>
+                <div className="brain-history-input-row">
+                  <input id="brain-memory-id" value={brainMemoryId} onChange={(e) => setBrainMemoryId(e.target.value)} placeholder="Contoh: mem_a1b2c3d4e5f6" />
+                  <button className="card-action-btn brain-primary-btn" onClick={loadBrainHistory} disabled={brainHistoryLoading}>
+                    {brainHistoryLoading ? "Memuat..." : "Lihat History"}
+                  </button>
+                </div>
+                <span className="flat-card-desc">Buat masa ini UI menggunakan knowledge scope. User/project/session scope akan disambungkan selepas layer permissions siap.</span>
+              </div>
+
+              {brainHistoryError && <div className="error-banner brain-history-error">{brainHistoryError}</div>}
+
+              {brainHistory.length > 0 ? (
+                <div className="brain-history-list">
+                  {[...brainHistory].reverse().map((item) => (
+                    <div className="flat-card brain-history-item" key={item.version}>
+                      <div className="brain-history-item-top">
+                        <div>
+                          <div className="flat-card-title">v{item.version} <span className="brain-operation">{item.operation}</span></div>
+                          <div className="flat-card-desc">{item.snapshotCreatedAt ? new Date(item.snapshotCreatedAt).toLocaleString() : "Tarikh tidak tersedia"}</div>
+                        </div>
+                        <button className="card-action-btn" onClick={() => restoreBrainVersion(item.version)} disabled={brainRestoringVersion !== null}>
+                          {brainRestoringVersion === item.version ? "Restoring..." : "Restore"}
+                        </button>
+                      </div>
+                      <div className="brain-history-meta">
+                        {item.previousVersion ? `Previous: v${item.previousVersion}` : "Initial snapshot"}
+                        {item.restoredFromVersion ? ` · Restored from: v${item.restoredFromVersion}` : ""}
+                        {item.contentHash ? ` · Hash: ${item.contentHash.slice(0, 10)}…` : ""}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                !brainHistoryLoading && <div className="flat-card brain-empty-state">Tiada history ditemui untuk Memory ID ini.</div>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeNav === "history" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
@@ -1099,7 +1351,43 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">Settings</h2>
-              <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran Nexa AI.</p>
+              <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran AXMchat AI.</p>
+
+              <div className="flat-card">
+                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>GitHub & Brain</h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", padding: "12px 0" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ display: "block", fontSize: "14px" }}>
+                      {githubConnected ? "GitHub Connected" : "Connect GitHub"}
+                    </strong>
+                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>
+                      {githubConnected
+                        ? `Connected sebagai @${githubUsername || "GitHub user"}. Brain boleh mengasingkan memory per-user.`
+                        : "Login dengan GitHub untuk mengaktifkan Brain memory per-user dan endpoint Brain yang dilindungi."}
+                    </span>
+                    {githubAuthError && (
+                      <span style={{ display: "block", marginTop: "6px", fontSize: "12px", color: "#EF4444" }}>{githubAuthError}</span>
+                    )}
+                  </div>
+                  {githubConnected ? (
+                    <button
+                      className="card-action-btn"
+                      onClick={disconnectGitHub}
+                      disabled={githubAuthLoading}
+                    >
+                      {githubAuthLoading ? "Memproses..." : "Disconnect"}
+                    </button>
+                  ) : (
+                    <button
+                      className="card-action-btn"
+                      onClick={connectGitHub}
+                      disabled={githubAuthLoading}
+                    >
+                      {githubAuthLoading ? "Menyemak..." : "Connect GitHub"}
+                    </button>
+                  )}
+                </div>
+              </div>
 
               <div className="flat-card">
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
@@ -1134,12 +1422,12 @@ function App() {
         {activeNav === "about" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <h2 className="panel-title">About NEXA AI</h2>
-              <p className="panel-subtitle">Nexa is a minimalist, clean, and highly productive workspace designed from the ground up for developer efficiency.</p>
+              <h2 className="panel-title">About AXMchat AI</h2>
+              <p className="panel-subtitle">AXMchat is a minimalist, clean, and highly productive workspace designed from the ground up for developer efficiency.</p>
 
               <div className="flat-card">
                 <p style={{ lineHeight: "1.6", color: "var(--primary-text)" }}>
-                  Nexa is built upon a dual-column flat structural philosophy: an organized sidebar navigation for immediate interaction and a broad central workspace providing a clean layout with zero visual clutter.
+                  AXMchat is built upon a dual-column flat structural philosophy: an organized sidebar navigation for immediate interaction and a broad central workspace providing a clean layout with zero visual clutter.
                 </p>
                 <p style={{ marginTop: "16px", fontWeight: "500", color: "var(--secondary-text)" }}>
                   Made with focus, clarity, and precision for professional builders.

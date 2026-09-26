@@ -1,0 +1,16 @@
+const assert = require("assert");
+const fs = require("fs");
+const os = require("os");
+const path = require("path");
+const { inspectMemoryHealth } = require("./memory_maintenance");
+const vault = fs.mkdtempSync(path.join(os.tmpdir(), "axmchat-health-"));
+fs.mkdirSync(path.join(vault, "Knowledge"), { recursive: true });
+const note = "---\ntype: knowledge\nconfidence: 0.9\nimportance: 0.8\nupdated: 2026-09-01T00:00:00Z\n---\nSame memory";
+fs.writeFileSync(path.join(vault, "Knowledge/a.md"), note);
+fs.writeFileSync(path.join(vault, "Knowledge/b.md"), note);
+const health = inspectMemoryHealth(vault, { staleDays: 1 });
+assert.strictEqual(health.total, 2);
+assert.strictEqual(health.duplicates.length, 1);
+assert.strictEqual(health.stale.length, 2);
+fs.rmSync(vault, { recursive: true, force: true });
+console.log("memory_maintenance.test.js passed");
