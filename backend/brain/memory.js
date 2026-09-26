@@ -81,7 +81,7 @@ function extractMemoryRules(input, options = {}) {
       continue;
     }
 
-    if (/(nama saya|saya seorang|i am a|my name is|saya bekerja|umur saya)\b/i.test(lower)) {
+    if (/(nama saya|saya seorang|saya orang|aku seorang|aku orang|i am|i'm|my name is|saya bekerja|umur saya)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
       const memId = generateMemoryId(content, options.scope);
       rawMemories.push({
