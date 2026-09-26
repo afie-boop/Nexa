@@ -51,6 +51,33 @@ if (!fs.existsSync(distPath) || !fs.existsSync(path.join(distPath, "index.html")
 
 app.use(express.static(distPath));
 
+// OAuth URL compatibility: normalize malformed/legacy callback paths before route matching.
+app.use((req, res, next) => {
+  let pathname = req.originalUrl.split("?")[0];
+  try {
+    pathname = decodeURIComponent(pathname);
+  } catch (_) {
+    // Keep the original path when decoding fails.
+  }
+
+  if (pathname === "/api/auth github" || pathname === "/api/auth/github/") {
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    return res.redirect(302, "/api/auth/github" + query);
+  }
+
+  if (pathname === "/auth/github/callback" || pathname === "/auth/github/callback/") {
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    return res.redirect(302, "/api/auth/github/callback" + query);
+  }
+
+  if (pathname === "/api/auth/github/callback/") {
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    return res.redirect(302, "/api/auth/github/callback" + query);
+  }
+
+  next();
+});
+
 app.post("/api/feedback", handlePostFeedback);
 
 // GET /api/auth/github - Start OAuth flow
