@@ -25,7 +25,7 @@ function normalizeAuthenticatedUser(session) {
 
 function requireBrainAuth(getSession) {
   return (req, res, next) => {
-    const session = getSession();
+    const session = getSession(req);
     const userScope = normalizeAuthenticatedUser(session);
 
     if (!userScope) {
