@@ -65,8 +65,8 @@ class Brain {
     return resolveNotePath(this.vaultDir, targetNote);
   }
 
-  getBacklinks(targetNote) {
-    return getBacklinks(this.vaultDir, targetNote);
+  getBacklinks(targetNote, options) {
+    return getBacklinks(this.vaultDir, targetNote, options);
   }
 
   // Tags & Properties / YAML Frontmatter
@@ -87,8 +87,8 @@ class Brain {
   }
 
   // Graph Builder
-  buildGraph() {
-    return buildGraph(this.vaultDir);
+  buildGraph(options) {
+    return buildGraph(this.vaultDir, options);
   }
 
   // Full-Text Search
