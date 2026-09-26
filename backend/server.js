@@ -512,7 +512,7 @@ app.post("/api/brain/history/restore", brainNoStore, rateLimitBrain("restore"), 
     return res.status(400).json({ status: "error", message: "memory_id dan version yang sah diperlukan." });
   }
   try {
-    const result = await brain.restoreMemory(memory_id.trim(), Number(version), { scope: { type: "knowledge" } });
+    const result = await brain.restoreMemory(memory_id.trim(), Number(version), { scope: req.brainUser });
     return res.status(200).json({ status: "ok", result });
   } catch (error) {
     console.error("[Brain Restore Error]:", error.message);
