@@ -115,7 +115,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
   // 3. Graph Relationships Expansion (Scope filtered)
   if (graphLimit > 0) {
     try {
-      const vaultGraph = buildGraph(absoluteVault);
+      const vaultGraph = buildGraph(absoluteVault, { scope: filterScope });
       let graphAddedCount = 0;
 
       const graphAdjacency = new Map();
@@ -201,7 +201,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
       const wikiLinks = parseWikiLinks(content);
       for (const link of wikiLinks) {
         try {
-          const resolvedPath = resolveNotePath(absoluteVault, link.target);
+          const resolvedPath = resolveNotePath(absoluteVault, link.target, { scope: filterScope });
           const relPath = path.relative(absoluteVault, resolvedPath).replace(/\\/g, '/');
 
           if (fs.existsSync(resolvedPath)) {
@@ -232,7 +232,7 @@ async function retrieveContext(vaultDir, query, options = {}) {
       }
 
       // Expand Incoming Backlinks
-      const backlinks = getBacklinks(absoluteVault, primaryItem.path);
+      const backlinks = getBacklinks(absoluteVault, primaryItem.path, { scope: filterScope });
       for (const bl of backlinks) {
         const relPath = bl.relativePath.replace(/\\/g, '/');
         if (fs.existsSync(bl.sourcePath)) {
