@@ -68,7 +68,7 @@ function extractMemoryRules(input, options = {}) {
 
     if (/(saya|i)\s+(suka|gemar|prefer|pilih|favorite|tidak suka|benci)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
-      const memId = generateMemoryId(content);
+      const memId = generateMemoryId(content, options.scope);
       rawMemories.push({
         content,
         type: 'preference',
@@ -83,7 +83,7 @@ function extractMemoryRules(input, options = {}) {
 
     if (/(nama saya|saya seorang|i am a|my name is|saya bekerja|umur saya)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
-      const memId = generateMemoryId(content);
+      const memId = generateMemoryId(content, options.scope);
       rawMemories.push({
         content,
         type: 'fact',
@@ -98,7 +98,7 @@ function extractMemoryRules(input, options = {}) {
 
     if (/(matlamat|goal|target|saya mahu|i want to|impian)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
-      const memId = generateMemoryId(content);
+      const memId = generateMemoryId(content, options.scope);
       rawMemories.push({
         content,
         type: 'goal',
@@ -113,7 +113,7 @@ function extractMemoryRules(input, options = {}) {
 
     if (/(projek|project|sistem|aplikasi|sumber)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
-      const memId = generateMemoryId(content);
+      const memId = generateMemoryId(content, options.scope);
       rawMemories.push({
         content,
         type: 'project',
@@ -128,7 +128,7 @@ function extractMemoryRules(input, options = {}) {
 
     if (/(definisi|fakta|konsep|teori|maksud)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
-      const memId = generateMemoryId(content);
+      const memId = generateMemoryId(content, options.scope);
       rawMemories.push({
         content,
         type: 'knowledge',
@@ -465,7 +465,12 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
 
   const updatedFrontmatter = {
     ...frontmatter,
-    id: frontmatter.id || generateMemoryId(body),
+    id: frontmatter.id || generateMemoryId(body, {
+      type: frontmatter.scopeType || 'knowledge',
+      userId: frontmatter.userId || undefined,
+      projectId: frontmatter.projectId || undefined,
+      sessionId: frontmatter.sessionId || undefined
+    }),
     title: updates.title || frontmatter.title,
     type: updates.type || frontmatter.type || 'fact',
     tags: updates.tags ? Array.from(new Set(updates.tags)) : frontmatter.tags,
