@@ -107,6 +107,10 @@ function App() {
   const [brainHistoryLoading, setBrainHistoryLoading] = useState(false);
   const [brainHistoryError, setBrainHistoryError] = useState("");
   const [brainRestoringVersion, setBrainRestoringVersion] = useState(null);
+  const [githubConnected, setGithubConnected] = useState(false);
+  const [githubUsername, setGithubUsername] = useState(null);
+  const [githubAuthLoading, setGithubAuthLoading] = useState(true);
+  const [githubAuthError, setGithubAuthError] = useState("");
   const [copiedIdx, setCopiedIdx] = useState(null);
   const chatEndRef = useRef(null);
 
@@ -116,6 +120,49 @@ function App() {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "dark");
   }, []);
+  useEffect(() => {
+    let cancelled = false;
+    async function checkGitHubStatus() {
+      try {
+        const res = await fetch("/api/auth/github/status", { credentials: "same-origin" });
+        const data = await res.json();
+        if (!cancelled) {
+          setGithubConnected(!!data.connected);
+          setGithubUsername(data.username || null);
+          setGithubAuthError("");
+        }
+      } catch (err) {
+        if (!cancelled) setGithubAuthError("Gagal menyemak sambungan GitHub.");
+      } finally {
+        if (!cancelled) setGithubAuthLoading(false);
+      }
+    }
+    checkGitHubStatus();
+    return () => { cancelled = true; };
+  }, []);
+
+  function connectGitHub() {
+    window.location.assign("/api/auth/github");
+  }
+
+  async function disconnectGitHub() {
+    try {
+      setGithubAuthLoading(true);
+      const res = await fetch("/api/auth/github/disconnect", {
+        method: "POST",
+        credentials: "same-origin"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Gagal memutuskan GitHub.");
+      setGithubConnected(false);
+      setGithubUsername(null);
+      setGithubAuthError("");
+    } catch (err) {
+      setGithubAuthError(err.message || "Gagal memutuskan GitHub.");
+    } finally {
+      setGithubAuthLoading(false);
+    }
+  }
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -1305,6 +1352,42 @@ function App() {
             <div className="sub-panel-inner">
               <h2 className="panel-title">Settings</h2>
               <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran AXMchat AI.</p>
+
+              <div className="flat-card">
+                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>GitHub & Brain</h3>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", padding: "12px 0" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <strong style={{ display: "block", fontSize: "14px" }}>
+                      {githubConnected ? "GitHub Connected" : "Connect GitHub"}
+                    </strong>
+                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>
+                      {githubConnected
+                        ? `Connected sebagai @${githubUsername || "GitHub user"}. Brain boleh mengasingkan memory per-user.`
+                        : "Login dengan GitHub untuk mengaktifkan Brain memory per-user dan endpoint Brain yang dilindungi."}
+                    </span>
+                    {githubAuthError && (
+                      <span style={{ display: "block", marginTop: "6px", fontSize: "12px", color: "#EF4444" }}>{githubAuthError}</span>
+                    )}
+                  </div>
+                  {githubConnected ? (
+                    <button
+                      className="card-action-btn"
+                      onClick={disconnectGitHub}
+                      disabled={githubAuthLoading}
+                    >
+                      {githubAuthLoading ? "Memproses..." : "Disconnect"}
+                    </button>
+                  ) : (
+                    <button
+                      className="card-action-btn"
+                      onClick={connectGitHub}
+                      disabled={githubAuthLoading}
+                    >
+                      {githubAuthLoading ? "Menyemak..." : "Connect GitHub"}
+                    </button>
+                  )}
+                </div>
+              </div>
 
               <div className="flat-card">
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
