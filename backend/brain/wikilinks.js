@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { isExcludedVaultPath } = require('./vault_utils');
+const { isNoteInScope } = require('./memory_scope');
 
 /**
  * Parses all WikiLinks from text content.
@@ -55,7 +56,7 @@ function getOutgoingLinks(content) {
  * @returns {string} Absolute resolved file path
  * @throws {Error} If path traversal outside vault is detected
  */
-function resolveNotePath(vaultDir, targetNote) {
+function resolveNotePath(vaultDir, targetNote, options = {}) {
   if (!vaultDir || !targetNote) {
     throw new Error('vaultDir and targetNote are required');
   }
@@ -74,11 +75,14 @@ function resolveNotePath(vaultDir, targetNote) {
   }
 
   if (fs.existsSync(candidatePath)) {
+    if (options.scope !== undefined && !fileMatchesScope(candidatePath, absoluteVault, options.scope)) {
+      throw new Error('Security Violation: Target note is outside the requested scope.');
+    }
     return candidatePath;
   }
 
   const targetFileName = path.basename(cleanTarget).toLowerCase();
-  const found = findFileByBasename(absoluteVault, targetFileName, absoluteVault);
+  const found = findFileByBasename(absoluteVault, targetFileName, absoluteVault, options.scope);
   if (found) {
     return found;
   }
@@ -90,7 +94,7 @@ function resolveNotePath(vaultDir, targetNote) {
  * Helper to recursively search for a file by basename within vault boundaries.
  * Excludes Memory/History snapshots.
  */
-function findFileByBasename(dir, targetBasename, absoluteVault) {
+function findFileByBasename(dir, targetBasename, absoluteVault, scope) {
   if (!fs.existsSync(dir)) return null;
 
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -107,9 +111,10 @@ function findFileByBasename(dir, targetBasename, absoluteVault) {
     }
 
     if (entry.isDirectory()) {
-      const res = findFileByBasename(fullPath, targetBasename, absoluteVault);
+      const res = findFileByBasename(fullPath, targetBasename, absoluteVault, scope);
       if (res) return res;
     } else if (entry.isFile() && entry.name.toLowerCase() === targetBasename) {
+      if (scope !== undefined && !fileMatchesScope(fullPath, absoluteVault, scope)) continue;
       return fullPath;
     }
   }
@@ -124,7 +129,7 @@ function findFileByBasename(dir, targetBasename, absoluteVault) {
  * @param {string} targetNote Target note path or name to find backlinks for
  * @returns {Array<{ sourcePath: string, relativePath: string, link: { target: string, alias: string, raw: string } }>}
  */
-function getBacklinks(vaultDir, targetNote) {
+function getBacklinks(vaultDir, targetNote, options = {}) {
   if (!vaultDir || !targetNote) {
     return [];
   }
@@ -136,13 +141,13 @@ function getBacklinks(vaultDir, targetNote) {
 
   let resolvedTarget;
   try {
-    resolvedTarget = resolveNotePath(absoluteVault, targetNote);
+    resolvedTarget = resolveNotePath(absoluteVault, targetNote, options);
   } catch (err) {
     return [];
   }
 
   const targetBasename = path.basename(resolvedTarget, '.md').toLowerCase();
-  const allMdFiles = getAllMdFiles(absoluteVault, absoluteVault);
+  const allMdFiles = getAllMdFiles(absoluteVault, absoluteVault, options.scope);
   const backlinksMap = new Map();
 
   for (const filePath of allMdFiles) {
@@ -158,7 +163,7 @@ function getBacklinks(vaultDir, targetNote) {
         let isMatch = false;
 
         try {
-          const resolvedLinkPath = resolveNotePath(absoluteVault, link.target);
+          const resolvedLinkPath = resolveNotePath(absoluteVault, link.target, options);
           if (resolvedLinkPath === resolvedTarget) {
             isMatch = true;
           }
@@ -193,7 +198,16 @@ function getBacklinks(vaultDir, targetNote) {
 /**
  * Helper to get all .md files in directory recursively. Excludes Memory/History.
  */
-function getAllMdFiles(dir, absoluteVault) {
+function fileMatchesScope(filePath, absoluteVault, scope) {
+  try {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    const { parseFrontmatter } = require('./properties');
+    const { frontmatter } = parseFrontmatter(raw);
+    return isNoteInScope(frontmatter, scope);
+  } catch (_) { return false; }
+}
+
+function getAllMdFiles(dir, absoluteVault, scope) {
   let results = [];
   if (!fs.existsSync(dir)) return results;
 
@@ -211,8 +225,9 @@ function getAllMdFiles(dir, absoluteVault) {
     }
 
     if (entry.isDirectory()) {
-      results = results.concat(getAllMdFiles(fullPath, absoluteVault));
+      results = results.concat(getAllMdFiles(fullPath, absoluteVault, scope));
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      if (scope !== undefined && !fileMatchesScope(fullPath, absoluteVault, scope)) continue;
       results.push(fullPath);
     }
   }
