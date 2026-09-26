@@ -494,6 +494,17 @@ app.post("/api/agent/task/:task_id/approval", async (req, res) => {
   }
 });
 
+// Brain Memory Intelligence API (authenticated user scope)
+app.get("/api/brain/health", brainNoStore, rateLimitBrain("read"), requireBrainAuth(getGitHubSession), async (req, res) => {
+  try {
+    const health = brain.inspectMemoryHealth({ scope: req.brainUser, staleDays: 180 });
+    return res.status(200).json({ status: "ok", scope: req.brainUser, health });
+  } catch (error) {
+    console.error("[Brain Health Error]:", error.message);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+});
+
 // Brain Memory History API (authenticated user scope)
 app.get("/api/brain/history", brainNoStore, rateLimitBrain("read"), requireBrainAuth(getGitHubSession), async (req, res) => {
   const memoryId = typeof req.query.memory_id === "string" ? req.query.memory_id.trim() : "";
@@ -633,6 +644,9 @@ app.post("/chat", async (req, res) => {
 
       if (learning.updated) {
         sendStatus("Brain mengemas kini " + learning.updated + " memori.");
+      }
+      if (learning.consolidated && learning.consolidated.length) {
+        sendStatus("Brain menggabungkan " + learning.consolidated.length + " memori berkaitan.");
       } else if (learning.saved && learning.saved.some(item => item.created)) {
         sendStatus(
           "Brain menyimpan " +
