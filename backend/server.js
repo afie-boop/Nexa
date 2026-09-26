@@ -576,6 +576,27 @@ app.post("/chat", async (req, res) => {
 
     const { generalModel, codingModel, fallbackModel } = req.body;
 
+    // Brain context is retrieved server-side. If GitHub is authenticated,
+    // private memories are restricted to the authenticated user's scope.
+    // Without authentication, only global knowledge notes are eligible.
+    let brainContext = null;
+    try {
+      const brainSession = getGitHubSession(req);
+      const brainScope = brainSession && brainSession.connected && brainSession.accessToken && brainSession.accessToken !== "mock_token"
+        ? { type: "user", userId: brainSession.username }
+        : null;
+
+      sendStatus("Mencari konteks Brain...");
+      brainContext = await brain.retrieveContext(question.trim(), {
+        scope: brainScope,
+        topK: 5,
+        maxSources: 8,
+        maxContextChars: 5000
+      });
+    } catch (brainError) {
+      console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
+    }
+
     sendStatus("Mengelaskan permintaan...");
 
     const task = await classifyTask(
@@ -583,9 +604,13 @@ app.post("/chat", async (req, res) => {
       history || []
     );
 
+    const brainAugmentedQuestion = brainContext && brainContext.context && brainContext.sources && brainContext.sources.length
+      ? `${question.trim()}\\n\\n[AXMCHAT BRAIN CONTEXT]\\n${brainContext.context}\\n[END AXMCHAT BRAIN CONTEXT]`
+      : question;
+
     const answer = await runPipeline({
       task,
-      question,
+      question: brainAugmentedQuestion,
       history: history || [],
       generalModel,
       codingModel,
