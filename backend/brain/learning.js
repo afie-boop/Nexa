@@ -1,4 +1,5 @@
 const { normalizeScope } = require("./memory_scope");
+const { findContradiction } = require("./contradiction");
 
 const MEMORY_TYPES = new Set(["preference", "fact", "goal", "project", "knowledge", "instruction"]);
 
@@ -28,8 +29,9 @@ function normalizeMemory(memory) {
 
 /**
  * Learns durable user information from a chat turn.
- * Classification is normalized before persistence and duplicate memories are
- * reported without creating a second note. Only the user's message is learned.
+ * Classification is normalized before persistence. Exact duplicates are ignored,
+ * while conservative contradictions update the existing note so history/versioning
+ * preserves the previous value. Only the user's message is learned.
  */
 async function learnFromChat(brain, userMessage, session, options = {}) {
   if (!brain || typeof brain.extractMemory !== "function" || typeof brain.saveMemory !== "function") {
@@ -60,17 +62,49 @@ async function learnFromChat(brain, userMessage, session, options = {}) {
   const memories = Array.isArray(extracted?.memories) ? extracted.memories : [];
   const saved = [];
   let duplicates = 0;
+  let updated = 0;
 
   for (const rawMemory of memories.slice(0, options.maxMemories || 3)) {
     const memory = normalizeMemory(rawMemory);
     if (!memory || !memory.content) continue;
 
     try {
+      const contradiction = findContradiction(brain, memory, scope);
+
+      if (contradiction && contradiction.frontmatter?.id && typeof brain.updateMemory === "function") {
+        const result = await brain.updateMemory(
+          contradiction.path,
+          {
+            content: memory.content,
+            type: memory.type,
+            category: memory.category,
+            tags: memory.tags,
+            importance: Math.max(
+              Number(contradiction.frontmatter.importance) || 0,
+              memory.importance
+            ),
+            confidence: memory.confidence
+          },
+          { scope }
+        );
+
+        updated += 1;
+        saved.push({
+          id: contradiction.frontmatter.id,
+          path: result.path || contradiction.path,
+          type: memory.type,
+          category: memory.category,
+          created: false,
+          updated: true,
+          previousVersion: Number(contradiction.frontmatter.version) || 1,
+          version: result.version
+        });
+        continue;
+      }
+
       const result = await brain.saveMemory(memory, { scope });
 
-      if (result?.duplicate) {
-        duplicates += 1;
-      }
+      if (result?.duplicate) duplicates += 1;
 
       if (result?.created || result?.duplicate) {
         saved.push({
@@ -90,6 +124,7 @@ async function learnFromChat(brain, userMessage, session, options = {}) {
   return {
     saved,
     duplicates,
+    updated,
     classified: saved.map(item => ({
       id: item.id,
       type: item.type,
