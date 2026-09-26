@@ -7,6 +7,7 @@ const { parseFrontmatter, getNoteTags } = require('./properties');
 const { buildGraph } = require('./graph');
 const { isNoteInScope } = require('./memory_scope');
 const { fuseMemories, buildFusedContext } = require('./memory_fusion');
+const { recallMemories, buildRecallContext } = require('./active_recall');
 
 /**
  * Retrieves RAG context with hybrid search (Full-text + Semantic) and graph relationships,
@@ -280,7 +281,16 @@ async function retrieveContext(vaultDir, query, options = {}) {
   const fusedContext = fusedGroups.length
     ? buildFusedContext(cleanQuery, fusedGroups, Math.min(maxContextChars, options.fusionMaxChars || 2500))
     : '';
-  const context = fusedContext || buildContextText(cleanQuery, finalSources, absoluteVault, maxContextChars);
+  const recallSources = recallMemories(absoluteVault, cleanQuery, finalSources, {
+    scope: filterScope,
+    limit: typeof options.recallLimit === 'number' ? options.recallLimit : Math.min(5, maxSources)
+  });
+  const recallContext = recallSources.length
+    ? buildRecallContext(cleanQuery, recallSources, Math.min(maxContextChars, options.recallMaxChars || 2200))
+    : '';
+  const context = [fusedContext || buildContextText(cleanQuery, finalSources, absoluteVault, maxContextChars), recallContext]
+    .filter(Boolean)
+    .join('\n\n');
 
   return {
     query: cleanQuery,
@@ -296,8 +306,10 @@ async function retrieveContext(vaultDir, query, options = {}) {
       path: s.path,
       score: Number(s.score.toFixed(2)),
       sourceTypes: s.sourceTypes,
-      tags: s.tags
-    }))
+      tags: s.tags,
+      recallScore: recallSources.find(r => r.path === s.path)?.recallScore ?? null
+    })),
+    recall: recallSources.map(s => ({ path: s.path, recallScore: s.recallScore, signals: s.recallSignals }))
   };
 }
 
