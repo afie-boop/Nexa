@@ -23,6 +23,7 @@ const { handlePostFeedback } = require("./feedback/feedbackController");
 const Brain = require("./brain/brain");
 const brain = new Brain(path.join(__dirname, "brain", "vault"));
 const { rateLimitBrain, brainNoStore, validateMemoryIdInput, validateVersionInput } = require("./brain/brain_security");
+const { requireBrainAuth } = require("./brain/brain_auth");
 
 const app = express();
 
@@ -523,7 +524,7 @@ app.post("/api/agent/task/:task_id/approval", async (req, res) => {
 });
 
 // Brain Memory History API (knowledge scope only until authenticated user scopes are wired)
-app.get("/api/brain/history", brainNoStore, rateLimitBrain("read"), async (req, res) => {
+app.get("/api/brain/history", brainNoStore, rateLimitBrain("read"), requireBrainAuth(getGitHubSession), async (req, res) => {
   const memoryId = typeof req.query.memory_id === "string" ? req.query.memory_id.trim() : "";
   if (!validateMemoryIdInput(memoryId)) return res.status(400).json({ status: "error", message: "memory_id tidak sah." });
   try {
@@ -535,7 +536,7 @@ app.get("/api/brain/history", brainNoStore, rateLimitBrain("read"), async (req, 
   }
 });
 
-app.post("/api/brain/history/restore", brainNoStore, rateLimitBrain("restore"), async (req, res) => {
+app.post("/api/brain/history/restore", brainNoStore, rateLimitBrain("restore"), requireBrainAuth(getGitHubSession), async (req, res) => {
   const { memory_id, version } = req.body || {};
   if (!validateMemoryIdInput(memory_id) || !validateVersionInput(version)) {
     return res.status(400).json({ status: "error", message: "memory_id dan version yang sah diperlukan." });
