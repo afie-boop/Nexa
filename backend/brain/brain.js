@@ -38,6 +38,7 @@ const {
   restoreMemory
 } = require('./memory_history');
 const { consolidateMemories } = require('./memory_consolidation');
+const { inspectMemoryHealth } = require('./memory_maintenance');
 
 // Brain module main entry point
 class Brain {
@@ -130,6 +131,10 @@ class Brain {
 
   async consolidateMemories(options) {
     return await consolidateMemories(this, options);
+  }
+
+  inspectMemoryHealth(options) {
+    return inspectMemoryHealth(this.vaultDir, options);
   }
 
   // Memory Scope Helpers
