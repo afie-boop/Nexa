@@ -1,5 +1,6 @@
 const { normalizeScope } = require("./memory_scope");
 const { findContradiction } = require("./contradiction");
+const { applyMemoryQuality } = require("./memory_quality");
 
 const MEMORY_TYPES = new Set(["preference", "fact", "goal", "project", "knowledge", "instruction"]);
 
@@ -68,22 +69,32 @@ async function learnFromChat(brain, userMessage, session, options = {}) {
     const memory = normalizeMemory(rawMemory);
     if (!memory || !memory.content) continue;
 
+    const quality = applyMemoryQuality(memory, {
+      minConfidence: typeof options.minConfidence === "number" ? options.minConfidence : 0.75,
+      minDurability: typeof options.minDurability === "number" ? options.minDurability : 0.55
+    });
+    if (!quality.memory) continue;
+
+    const qualityMemory = quality.memory;
+
     try {
-      const contradiction = findContradiction(brain, memory, scope);
+      const contradiction = findContradiction(brain, qualityMemory, scope);
 
       if (contradiction && contradiction.frontmatter?.id && typeof brain.updateMemory === "function") {
         const result = await brain.updateMemory(
           contradiction.path,
           {
-            content: memory.content,
-            type: memory.type,
-            category: memory.category,
-            tags: memory.tags,
+            content: qualityMemory.content,
+            type: qualityMemory.type,
+            category: qualityMemory.category,
+            tags: qualityMemory.tags,
             importance: Math.max(
               Number(contradiction.frontmatter.importance) || 0,
-              memory.importance
+              qualityMemory.importance
             ),
-            confidence: memory.confidence
+            confidence: qualityMemory.confidence,
+            durability: qualityMemory.durability,
+            quality: qualityMemory.quality
           },
           { scope }
         );
@@ -92,8 +103,8 @@ async function learnFromChat(brain, userMessage, session, options = {}) {
         saved.push({
           id: contradiction.frontmatter.id,
           path: result.path || contradiction.path,
-          type: memory.type,
-          category: memory.category,
+          type: qualityMemory.type,
+          category: qualityMemory.category,
           created: false,
           updated: true,
           previousVersion: Number(contradiction.frontmatter.version) || 1,
@@ -102,7 +113,7 @@ async function learnFromChat(brain, userMessage, session, options = {}) {
         continue;
       }
 
-      const result = await brain.saveMemory(memory, { scope });
+      const result = await brain.saveMemory(qualityMemory, { scope });
 
       if (result?.duplicate) duplicates += 1;
 
