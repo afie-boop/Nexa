@@ -25,6 +25,7 @@ const brain = new Brain(path.join(__dirname, "brain", "vault"));
 const { rateLimitBrain, brainNoStore, validateMemoryIdInput, validateVersionInput } = require("./brain/brain_security");
 const { requireBrainAuth } = require("./brain/brain_auth");
 const { saveGitHubSession, getGitHubSession, clearGitHubSession } = require("./github_session");
+const { learnFromChat } = require("./brain/learning");
 
 const app = express();
 
@@ -618,6 +619,30 @@ app.post("/chat", async (req, res) => {
       sendStatus,
       sendProcessStep
     });
+
+    // Brain Learning Loop: learn only durable information from the user's
+    // own message, scoped to the authenticated GitHub user. The assistant
+    // response is never persisted as memory.
+    try {
+      const learningSession = getGitHubSession(req);
+      const learning = await learnFromChat(brain, question, learningSession, {
+        mode: process.env.BRAIN_MEMORY_MODE || "rules",
+        confidenceThreshold: 0.75,
+        maxMemories: 3
+      });
+
+      if (learning.updated) {
+        sendStatus("Brain mengemas kini " + learning.updated + " memori.");
+      } else if (learning.saved && learning.saved.some(item => item.created)) {
+        sendStatus(
+          "Brain menyimpan " +
+          learning.saved.filter(item => item.created).length +
+          " memori."
+        );
+      }
+    } catch (learningError) {
+      console.warn("[Brain Learning Loop Warning]:", learningError.message);
+    }
 
     sendAnswer(answer);
 
