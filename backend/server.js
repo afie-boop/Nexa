@@ -83,14 +83,18 @@ app.post("/api/feedback", handlePostFeedback);
 // GET /api/auth/github - Start OAuth flow
 app.get("/api/auth/github", (req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
+  const callbackUrl = process.env.GITHUB_CALLBACK_URL;
   if (!clientId) {
     return res.status(500).json({
       message: "GITHUB_CLIENT_ID belum dikonfigurasi dalam persekitaran server."
     });
   }
-  const protocol = req.headers["x-forwarded-proto"] || req.protocol;
-  const host = req.get("host");
-  const redirectUri = encodeURIComponent(`${protocol}://${host}/api/auth/github/callback`);
+  if (!callbackUrl) {
+    return res.status(500).json({
+      message: "GITHUB_CALLBACK_URL belum dikonfigurasi dalam persekitaran server."
+    });
+  }
+  const redirectUri = encodeURIComponent(callbackUrl);
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo,user`;
   return res.redirect(githubAuthUrl);
 });
