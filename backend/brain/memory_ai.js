@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const askOpenRouter = require('../openrouter');
 
 const ALLOWED_TYPES = new Set([
   'fact',
@@ -62,11 +63,56 @@ async function extractMemoryWithAI(input, options = {}) {
     return { memories: [] };
   }
 
-  const llmExtractor = options.llmExtractor;
+  // Use AXMchat's OpenRouter provider by default. A custom extractor can
+  // still be injected for tests or alternative providers.
+  const llmExtractor = options.llmExtractor || (async (text, extractorOptions = {}) => {
+    const model = extractorOptions.model ||
+      process.env.BRAIN_MEMORY_MODEL ||
+      process.env.OPENROUTER_MEMORY_MODEL ||
+      'openai/gpt-oss-20b:free';
 
-  if (!llmExtractor || typeof llmExtractor !== 'function') {
-    throw new Error('LLM extractor is not configured');
-  }
+    const system = [
+      'You are AXMchat Brain Memory, an AI memory selector.',
+      'Decide what durable information from the USER message should be remembered across future chats.',
+      'Do NOT store greetings, casual conversation, temporary states, one-off requests, questions, jokes, or information invented by you.',
+      'Prefer explicit user facts, identity, preferences, goals, projects, durable instructions, relationships, and useful knowledge the user explicitly states.',
+      'Only extract information directly supported by the user message.',
+      'Return JSON only with this exact shape: {"memories":[...]}',
+      'Each memory must contain content, type, category, importance, confidence, tags, and source.',
+      'type must be one of fact, preference, goal, project, instruction, relationship, knowledge.',
+      'importance and confidence must be numbers from 0 to 1.',
+      'source must be an EXACT short quote copied verbatim from the user message.',
+      'If nothing deserves to be remembered, return {"memories":[]}.',
+      'Never include assistant text or assumptions.'
+    ].join('\\n');
+
+    const raw = await askOpenRouter(text, {
+      model,
+      fallbackModel: extractorOptions.fallbackModel ||
+        process.env.BRAIN_MEMORY_FALLBACK_MODEL ||
+        'openrouter/free',
+      system
+    });
+
+    let jsonText = String(raw || '').trim();
+    if (jsonText.startsWith('\\`\\`\\`')) {
+      jsonText = jsonText
+        .replace(/^\\`\\`\\`(?:json)?\\s*/i, '')
+        .replace(/\\s*\\`\\`\\`$/i, '')
+        .trim();
+    }
+
+    try {
+      return JSON.parse(jsonText);
+    } catch (error) {
+      const start = jsonText.indexOf('{');
+      const end = jsonText.lastIndexOf('}');
+      if (start >= 0 && end > start) {
+        return JSON.parse(jsonText.slice(start, end + 1));
+      }
+      throw new Error('Memory AI returned invalid JSON.');
+    }
+  });
 
   const rawOutput = await llmExtractor(cleanInput, options);
 
