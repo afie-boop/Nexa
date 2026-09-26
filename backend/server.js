@@ -668,7 +668,7 @@ app.post("/chat", async (req, res) => {
     try {
       const learningSession = getGitHubSession(req);
       const learning = await learnFromChat(brain, question, learningSession, {
-        mode: process.env.BRAIN_MEMORY_MODE || "rules",
+        mode: process.env.BRAIN_MEMORY_MODE || "auto",
         confidenceThreshold: 0.75,
         maxMemories: 3
       });
