@@ -55,7 +55,7 @@ async function learnFromChat(brain, userMessage, session, options = {}) {
   }
 
   const extracted = await brain.extractMemory(text, {
-    mode: options.mode || "rules",
+    mode: options.mode || "auto",
     confidenceThreshold: typeof options.confidenceThreshold === "number" ? options.confidenceThreshold : 0.75,
     scope
   });
