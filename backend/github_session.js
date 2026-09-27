@@ -101,12 +101,9 @@ function clearGitHubSession(req) {
       const file = sessionPath(sessionId);
       if (fs.existsSync(file)) fs.unlinkSync(file);
     }
-    req.res.clearCookie(SESSION_COOKIE, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/"
-    });
+    // Keep the browser session cookie intact so Brain memory remains linked
+    // to the same user after GitHub disconnects. Only the GitHub credentials
+    // are removed here.
   } catch (err) {
     console.error("[GitHub Session Clear Error]:", err.message);
   }
