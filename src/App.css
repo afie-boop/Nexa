@@ -1468,26 +1468,60 @@ button, input, textarea, select {
 
 /* react-syntax-highlighter injects inline token colors; these force monochrome. */
 .code-block-body pre span {
-  color: #d7d7d7 !important;
+  color: #d9dee8 !important;
   text-shadow: none !important;
 }
 
+/* Soft syntax highlighting — readable colors without turning the UI into a rainbow. */
 .code-block-body pre span[class*="comment"] {
-  color: #707070 !important;
+  color: #6f7b8a !important;
+  font-style: italic;
 }
 
 .code-block-body pre span[class*="string"],
-.code-block-body pre span[class*="attr"],
-.code-block-body pre span[class*="property"] {
-  color: #bdbdbd !important;
+.code-block-body pre span[class*="char"] {
+  color: #a8d5a2 !important;
 }
 
 .code-block-body pre span[class*="keyword"],
-.code-block-body pre span[class*="boolean"],
-.code-block-body pre span[class*="number"],
-.code-block-body pre span[class*="function"] {
-  color: #f0f0f0 !important;
+.code-block-body pre span[class*="selector"],
+.code-block-body pre span[class*="doctype"] {
+  color: #c4a7ff !important;
   font-weight: 600;
+}
+
+.code-block-body pre span[class*="boolean"],
+.code-block-body pre span[class*="number"] {
+  color: #e8b875 !important;
+}
+
+.code-block-body pre span[class*="function"],
+.code-block-body pre span[class*="method"] {
+  color: #8fc7ff !important;
+  font-weight: 600;
+}
+
+.code-block-body pre span[class*="class-name"],
+.code-block-body pre span[class*="builtin"] {
+  color: #72d6d0 !important;
+}
+
+.code-block-body pre span[class*="attr-name"],
+.code-block-body pre span[class*="property"] {
+  color: #d8b4fe !important;
+}
+
+.code-block-body pre span[class*="tag"] {
+  color: #ff9f9f !important;
+}
+
+.code-block-body pre span[class*="operator"],
+.code-block-body pre span[class*="punctuation"] {
+  color: #aeb7c5 !important;
+}
+
+.code-block-body pre span[class*="variable"] {
+  color: #f1c8a0 !important;
 }
 
 .inline-code {
