@@ -564,6 +564,47 @@ app.post("/api/brain/history/restore", brainNoStore, rateLimitBrain("restore"), 
   }
 });
 
+
+/**
+ * Brain Memory List API.
+ * Uses the same stable per-browser Brain identity as /chat.
+ */
+app.get("/api/brain/memories", brainNoStore, rateLimitBrain("read"), async (req, res) => {
+  try {
+    const brainUserId = ensureSessionId(req);
+    const scope = { type: "user", userId: brainUserId };
+    const limit = typeof req.query.limit === "string" ? Number(req.query.limit) : 100;
+    const memories = brain.listMemories({ scope, limit });
+    return res.status(200).json({ status: "ok", scope, memories });
+  } catch (error) {
+    console.error("[Brain Memory List Error]:", error.message);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+});
+
+/**
+ * Brain Memory Delete API.
+ * Deletes only a memory belonging to the current browser Brain scope.
+ * History snapshots are retained for audit/restore.
+ */
+app.delete("/api/brain/memories/:memory_id", brainNoStore, rateLimitBrain("delete"), async (req, res) => {
+  const memoryId = typeof req.params.memory_id === "string" ? req.params.memory_id.trim() : "";
+  if (!validateMemoryIdInput(memoryId)) {
+    return res.status(400).json({ status: "error", message: "memory_id tidak sah." });
+  }
+
+  try {
+    const brainUserId = ensureSessionId(req);
+    const scope = { type: "user", userId: brainUserId };
+    const result = await brain.deleteMemory(memoryId, { scope });
+    return res.status(200).json({ status: "ok", result });
+  } catch (error) {
+    console.error("[Brain Memory Delete Error]:", error.message);
+    const status = /not found/i.test(error.message) ? 404 : /Unauthorized|Security Violation/i.test(error.message) ? 403 : 400;
+    return res.status(status).json({ status: "error", message: error.message });
+  }
+});
+
 app.post("/chat", async (req, res) => {
   const { question, history } = req.body;
 
