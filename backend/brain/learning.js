@@ -34,21 +34,21 @@ function normalizeMemory(memory) {
  * while conservative contradictions update the existing note so history/versioning
  * preserves the previous value. Only the user's message is learned.
  */
-async function learnFromChat(brain, userMessage, session, options = {}) {
+async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
   if (!brain || typeof brain.extractMemory !== "function" || typeof brain.saveMemory !== "function") {
     return { saved: [], skipped: "brain_unavailable" };
   }
 
-  if (!session || !session.connected || !session.accessToken || session.accessToken === "mock_token") {
-    return { saved: [], skipped: "unauthenticated" };
+  let scope;
+  try {
+    scope = normalizeScope(scopeInput);
+  } catch (error) {
+    return { saved: [], skipped: "invalid_scope", error: error.message };
   }
 
-  const username = typeof session.username === "string" ? session.username.trim() : "";
-  if (!username) {
+  if (scope.type !== "user" || !scope.userId) {
     return { saved: [], skipped: "missing_user" };
   }
-
-  const scope = normalizeScope({ type: "user", userId: username });
   const text = typeof userMessage === "string" ? userMessage.trim() : "";
   if (!text) {
     return { saved: [], skipped: "empty_message" };
