@@ -517,6 +517,89 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
   };
 }
 
+
+/**
+ * Permanently removes a memory note from the active vault while keeping its
+ * version history so the deletion can be audited/restored when appropriate.
+ */
+async function deleteMemory(vaultDir, notePathOrId, options = {}) {
+  if (!vaultDir || !notePathOrId || typeof notePathOrId !== 'string') {
+    throw new Error('Delete Memory Error: vaultDir and memory id/path are required.');
+  }
+
+  const absoluteVault = path.resolve(vaultDir);
+  const filterScope = options.scope !== undefined ? options.scope : null;
+  const targetInput = notePathOrId.trim();
+
+  let targetFullPath = null;
+  let cleanRelPath = null;
+
+  // Prefer a validated memory ID, then fall back to a relative note path.
+  if (/^mem_[a-zA-Z0-9_-]+$/.test(targetInput)) {
+    const mdFiles = getAllMdFiles(absoluteVault, absoluteVault);
+    for (const filePath of mdFiles) {
+      try {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        const { frontmatter } = parseFrontmatter(raw);
+        if (frontmatter.id === targetInput && isNoteInScope(frontmatter, filterScope)) {
+          targetFullPath = filePath;
+          break;
+        }
+      } catch (_) {}
+    }
+  }
+
+  if (!targetFullPath) {
+    cleanRelPath = targetInput.endsWith('.md') ? targetInput : targetInput + '.md';
+    if (path.isAbsolute(cleanRelPath) || cleanRelPath.includes('..') || cleanRelPath.includes('\\')) {
+      throw new Error(`Security Violation: Unsafe memory path "${notePathOrId}".`);
+    }
+    targetFullPath = path.resolve(absoluteVault, cleanRelPath);
+  }
+
+  if (!targetFullPath.startsWith(absoluteVault + path.sep)) {
+    throw new Error(`Security Violation: Memory path escapes vault: "${notePathOrId}".`);
+  }
+
+  if (!fs.existsSync(targetFullPath)) {
+    throw new Error(`Delete Memory Error: Memory "${notePathOrId}" was not found.`);
+  }
+
+  const raw = fs.readFileSync(targetFullPath, 'utf-8');
+  const { frontmatter, body } = parseFrontmatter(raw);
+
+  if (!isNoteInScope(frontmatter, filterScope)) {
+    throw new Error(`Security Violation: Unauthorized scope delete attempt on memory "${notePathOrId}".`);
+  }
+
+  const memoryId = frontmatter.id || targetInput;
+  if (!/^mem_[a-zA-Z0-9_-]+$/.test(memoryId)) {
+    throw new Error('Delete Memory Error: Invalid memory id in note.');
+  }
+
+  const currentVersion = Number(frontmatter.version) || 1;
+  const deleteVersion = currentVersion + 1;
+
+  saveHistorySnapshot(absoluteVault, {
+    memoryId,
+    version: deleteVersion,
+    operation: 'delete',
+    previousVersion: currentVersion,
+    content: body.trim(),
+    frontmatter
+  });
+
+  fs.unlinkSync(targetFullPath);
+
+  return {
+    deleted: true,
+    memoryId,
+    path: path.relative(absoluteVault, targetFullPath).replace(/\\/g, '/'),
+    previousVersion: currentVersion,
+    deleteVersion
+  };
+}
+
 function buildYamlFrontmatter(obj) {
   let lines = ['---'];
   for (const [key, val] of Object.entries(obj)) {
@@ -567,5 +650,6 @@ module.exports = {
   extractMemory,
   findExistingMemory,
   saveMemory,
-  updateMemory
+  updateMemory,
+  deleteMemory
 };
