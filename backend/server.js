@@ -21,10 +21,11 @@ const classifyTask = require("./router");
 const { runPipeline } = require("./pipeline/pipeline");
 const { handlePostFeedback } = require("./feedback/feedbackController");
 const Brain = require("./brain/brain");
-const brain = new Brain(path.join(__dirname, "brain", "vault"));
+const brainVaultDir = process.env.BRAIN_VAULT_DIR || path.join(__dirname, "brain", "vault");
+const brain = new Brain(brainVaultDir);
 const { rateLimitBrain, brainNoStore, validateMemoryIdInput, validateVersionInput } = require("./brain/brain_security");
 const { requireBrainAuth } = require("./brain/brain_auth");
-const { saveGitHubSession, getGitHubSession, clearGitHubSession } = require("./github_session");
+const { saveGitHubSession, getGitHubSession, clearGitHubSession, ensureSessionId } = require("./github_session");
 const { learnFromChat } = require("./brain/learning");
 
 const app = express();
@@ -566,6 +567,12 @@ app.post("/api/brain/history/restore", brainNoStore, rateLimitBrain("restore"), 
 app.post("/chat", async (req, res) => {
   const { question, history } = req.body;
 
+  // Brain identity is independent from GitHub authentication. The same
+  // httpOnly session cookie is reused across chat requests, so memory can
+  // persist across new chats without requiring GitHub login.
+  const brainUserId = ensureSessionId(req);
+  const brainScope = { type: "user", userId: brainUserId };
+
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -619,16 +626,10 @@ app.post("/chat", async (req, res) => {
 
     const { generalModel, codingModel, fallbackModel } = req.body;
 
-    // Brain context is retrieved server-side. If GitHub is authenticated,
-    // private memories are restricted to the authenticated user's scope.
-    // Without authentication, only global knowledge notes are eligible.
+    // Brain context is retrieved server-side using the stable per-browser
+    // Brain identity, not GitHub authentication.
     let brainContext = null;
     try {
-      const brainSession = getGitHubSession(req);
-      const brainScope = brainSession && brainSession.connected && brainSession.accessToken && brainSession.accessToken !== "mock_token"
-        ? { type: "user", userId: brainSession.username }
-        : null;
-
       sendStatus("Mencari konteks Brain...");
       brainContext = await brain.retrieveContext(question.trim(), {
         scope: brainScope,
@@ -663,11 +664,10 @@ app.post("/chat", async (req, res) => {
     });
 
     // Brain Learning Loop: learn only durable information from the user's
-    // own message, scoped to the authenticated GitHub user. The assistant
-    // response is never persisted as memory.
+    // own message, scoped to the stable Brain user identity. GitHub is not
+    // required for personal memory. The assistant response is never persisted.
     try {
-      const learningSession = getGitHubSession(req);
-      const learning = await learnFromChat(brain, question, learningSession, {
+      const learning = await learnFromChat(brain, question, brainScope, {
         mode: process.env.BRAIN_MEMORY_MODE || "auto",
         confidenceThreshold: 0.75,
         maxMemories: 3
