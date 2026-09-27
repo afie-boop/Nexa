@@ -21,6 +21,15 @@ function createSessionId() {
   return crypto.randomBytes(32).toString("hex");
 }
 
+function ensureSessionId(req) {
+  const existing = getSessionId(req);
+  if (existing) return existing;
+
+  const sessionId = createSessionId();
+  setSessionCookie(req.res, sessionId);
+  return sessionId;
+}
+
 function setSessionCookie(res, sessionId) {
   res.cookie(SESSION_COOKIE, sessionId, {
     httpOnly: true,
@@ -106,5 +115,7 @@ function clearGitHubSession(req) {
 module.exports = {
   saveGitHubSession,
   getGitHubSession,
-  clearGitHubSession
+  clearGitHubSession,
+  getSessionId,
+  ensureSessionId
 };
