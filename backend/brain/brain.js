@@ -24,7 +24,8 @@ const {
   extractMemory,
   findExistingMemory,
   saveMemory,
-  updateMemory
+  updateMemory,
+  deleteMemory
 } = require('./memory');
 const { extractMemoryWithAI } = require('./memory_ai');
 const {
@@ -127,6 +128,10 @@ class Brain {
 
   async updateMemory(notePath, updates, options) {
     return await updateMemory(this.vaultDir, notePath, updates, options);
+  }
+
+  async deleteMemory(notePathOrId, options) {
+    return await deleteMemory(this.vaultDir, notePathOrId, options);
   }
 
   async consolidateMemories(options) {
