@@ -320,6 +320,37 @@ body {
 }
 
 /* ---------- Composer ---------- */
+.quick-prompts {
+  display: flex;
+  gap: 8px;
+  padding: 0 28px 8px;
+  justify-content: center;
+}
+
+.quick-prompt {
+  width: auto;
+  height: auto;
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  border: 0;
+  font-size: 13px;
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.quick-prompt:hover {
+  background: var(--panel-2);
+  transform: translateY(-1px);
+}
+
+.quick-prompt:active {
+  transform: scale(0.98);
+}
+
 .inputBox {
   display: flex;
   align-items: center;
@@ -446,5 +477,34 @@ input:focus-visible {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+
+/* Send button: optical center, slightly raised inside the composer */
+.inputBox > button {
+  transform: translateY(-3px);
+}
+
+.inputBox > button:hover:not(:disabled) {
+  transform: translateY(-4px) scale(1.06);
+}
+
+.inputBox > button:active:not(:disabled) {
+  transform: translateY(-2px) scale(0.96);
+}
+
+@media (max-width: 560px) {
+  .quick-prompts {
+    padding: 0 16px 8px;
+    overflow-x: auto;
+    justify-content: flex-start;
+    scrollbar-width: none;
+  }
+  .quick-prompts::-webkit-scrollbar {
+    display: none;
+  }
+  .quick-prompt {
+    white-space: nowrap;
   }
 }
