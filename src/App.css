@@ -1197,3 +1197,449 @@ body {
 .brain-empty-state { color: var(--secondary-text); text-align: center; }
 .brain-history-error { margin: 0; }
 @media (max-width: 600px) { .brain-history-input-row { flex-direction: column; align-items: stretch; } .brain-history-input-row .card-action-btn { justify-content: center; } .brain-history-item-top { align-items: flex-start; flex-direction: column; } }
+
+
+/* ==========================================================================
+   AXMchat monochrome refinement — black / white / clean typography
+   ========================================================================== */
+:root {
+  --bg: #050505;
+  --surface: #0d0d0d;
+  --surface-hover: #161616;
+  --surface-active: #202020;
+  --border: #242424;
+  --border-subtle: #1a1a1a;
+  --border-focus: #555;
+  --primary-text: #f5f5f5;
+  --secondary-text: #a6a6a6;
+  --muted-text: #666;
+  --accent: #ffffff;
+  --accent-light: #1c1c1c;
+  --code-bg: #090909;
+  --code-text: #e8e8e8;
+}
+
+/* Keep the whole interface strictly monochrome. */
+html, body, #root,
+.app, .app-container, .workspace {
+  background: var(--bg) !important;
+  color: var(--primary-text);
+}
+
+button, input, textarea, select {
+  font-family: Inter, "Google Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/* AXMchat logo — simple geometric AX mark instead of a plain letter. */
+.logo-icon,
+.hero-logo {
+  position: relative;
+  overflow: hidden;
+  background: #fff !important;
+  color: #000 !important;
+  box-shadow: none !important;
+  border: 1px solid #fff;
+  font-size: 0 !important;
+  font-weight: 900;
+  letter-spacing: -0.12em;
+}
+
+.logo-icon::before,
+.hero-logo::before {
+  content: "AX";
+  display: block;
+  color: #000;
+  font-family: Inter, "Arial Black", sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.14em;
+  transform: translateX(-0.04em);
+}
+
+.logo-icon::before { font-size: 15px; }
+.hero-logo::before { font-size: 28px; }
+
+.logo-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+}
+
+.hero-logo {
+  width: 72px;
+  height: 72px;
+  border-radius: 23px;
+  margin-bottom: 20px;
+}
+
+/* Brand text */
+.logo-text {
+  color: #f5f5f5 !important;
+  background: none !important;
+  -webkit-text-fill-color: #f5f5f5 !important;
+  font-weight: 750;
+  letter-spacing: -0.035em;
+}
+
+/* Top bar / AXM identity */
+.top-bar {
+  background: rgba(5, 5, 5, .94) !important;
+  border-bottom-color: #181818 !important;
+  box-shadow: none !important;
+}
+
+.ai-status-container {
+  gap: 9px;
+}
+
+.ai-name {
+  color: #fff !important;
+  font-size: 15px;
+  font-weight: 720;
+  letter-spacing: -0.025em;
+}
+
+/* Status uses grayscale too — no green/blue accent. */
+.status-indicator {
+  color: #9b9b9b !important;
+  background: #111 !important;
+  border-color: #222 !important;
+}
+
+.status-dot,
+.status-dot.thinking {
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+/* Hero */
+.hero-title {
+  color: #fff !important;
+  background: none !important;
+  -webkit-text-fill-color: #fff !important;
+  font-weight: 760;
+  letter-spacing: -0.055em;
+}
+
+.hero-tagline {
+  color: #777 !important;
+  letter-spacing: .11em;
+  font-weight: 600;
+}
+
+/* User message — clean white bubble, no purple/gradient. */
+.user-message-row {
+  padding-right: 2px;
+}
+
+.user-message-content {
+  background: #f4f4f4 !important;
+  color: #090909 !important;
+  border: 0 !important;
+  border-radius: 22px 22px 7px 22px !important;
+  box-shadow: none !important;
+  font-size: 14px;
+  line-height: 1.62;
+  font-weight: 450;
+  padding: 12px 17px;
+}
+
+/* AI answer — remove heavy card/dashboard appearance. */
+.ai-card {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 2px 0 3px !important;
+  gap: 13px;
+}
+
+.ai-card-body {
+  color: #dedede !important;
+  font-size: 14.5px;
+  line-height: 1.75;
+  letter-spacing: .002em;
+}
+
+.ai-card-body p {
+  margin: 0 0 13px;
+}
+
+.ai-card-body h1,
+.ai-card-body h2,
+.ai-card-body h3,
+.ai-card-body h4 {
+  color: #fff !important;
+  font-weight: 720;
+  letter-spacing: -.025em;
+}
+
+.ai-card-body strong {
+  color: #fff !important;
+  font-weight: 700;
+}
+
+.ai-card-body a {
+  color: #fff !important;
+  text-decoration-color: #555;
+}
+
+.ai-card-body blockquote {
+  color: #999 !important;
+  border-left: 2px solid #555 !important;
+  background: #0d0d0d !important;
+}
+
+/* AI action row */
+.ai-card-actions {
+  border-top: 0 !important;
+  padding-top: 0 !important;
+  gap: 5px;
+}
+
+.card-action-btn {
+  background: transparent !important;
+  color: #777 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  padding: 7px 10px !important;
+  font-size: 11px;
+}
+
+.card-action-btn:hover {
+  background: #181818 !important;
+  color: #fff !important;
+}
+
+/* Code — compact, readable, monochrome. */
+.code-block-wrapper {
+  margin: 16px 0 18px !important;
+  background: var(--code-bg) !important;
+  border: 1px solid #292929 !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+  overflow: hidden;
+}
+
+.code-block-header {
+  min-height: 40px;
+  padding: 0 11px 0 14px !important;
+  background: #111 !important;
+  border-bottom: 1px solid #242424 !important;
+  color: #999 !important;
+  font-size: 10px !important;
+  letter-spacing: .04em;
+}
+
+.code-block-header .code-lang {
+  color: #ddd !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
+  font-size: 10px !important;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.code-block-header .copy-btn {
+  color: #aaa !important;
+  background: #1b1b1b !important;
+  border: 1px solid #292929 !important;
+  border-radius: 9px !important;
+  padding: 5px 8px !important;
+  font-size: 10px !important;
+}
+
+.code-block-header .copy-btn:hover {
+  color: #fff !important;
+  background: #282828 !important;
+}
+
+.code-block-body {
+  background: #090909 !important;
+}
+
+.code-block-body pre {
+  margin: 0 !important;
+  padding: 15px 16px !important;
+  background: #090909 !important;
+  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace !important;
+  font-size: 12.5px !important;
+  line-height: 1.7 !important;
+  tab-size: 2;
+}
+
+/* react-syntax-highlighter injects inline token colors; these force monochrome. */
+.code-block-body pre span {
+  color: #d7d7d7 !important;
+  text-shadow: none !important;
+}
+
+.code-block-body pre span[class*="comment"] {
+  color: #707070 !important;
+}
+
+.code-block-body pre span[class*="string"],
+.code-block-body pre span[class*="attr"],
+.code-block-body pre span[class*="property"] {
+  color: #bdbdbd !important;
+}
+
+.code-block-body pre span[class*="keyword"],
+.code-block-body pre span[class*="boolean"],
+.code-block-body pre span[class*="number"],
+.code-block-body pre span[class*="function"] {
+  color: #f0f0f0 !important;
+  font-weight: 600;
+}
+
+.inline-code {
+  color: #eee !important;
+  background: #181818 !important;
+  border: 1px solid #2a2a2a !important;
+  border-radius: 6px !important;
+  font-family: "JetBrains Mono", monospace !important;
+  padding: 2px 6px !important;
+}
+
+/* Composer — Pixel-like black surface with white send control. */
+.composer-sticky-container {
+  padding: 10px 24px 22px !important;
+  background: #050505 !important;
+}
+
+.composer-workspace {
+  background: #111 !important;
+  border: 1px solid #292929 !important;
+  border-radius: 27px !important;
+  box-shadow: 0 10px 35px rgba(0,0,0,.35) !important;
+}
+
+.composer-workspace:focus-within {
+  background: #141414 !important;
+  border-color: #484848 !important;
+  box-shadow: 0 10px 35px rgba(0,0,0,.45) !important;
+}
+
+.composer-textarea {
+  color: #f5f5f5 !important;
+  font-size: 14px;
+}
+
+.composer-textarea::placeholder {
+  color: #666 !important;
+}
+
+.send-btn-round {
+  background: #fff !important;
+  color: #000 !important;
+  box-shadow: none !important;
+}
+
+.send-btn-round:hover:not(:disabled) {
+  background: #ddd !important;
+  box-shadow: none !important;
+}
+
+/* Suggestions */
+.suggestion-btn {
+  background: #0e0e0e !important;
+  color: #ddd !important;
+  border-color: #262626 !important;
+  box-shadow: none !important;
+}
+
+.suggestion-btn:hover {
+  background: #1a1a1a !important;
+  border-color: #444 !important;
+  transform: translateY(-1px);
+}
+
+/* Sidebar */
+.sidebar {
+  background: #080808 !important;
+  border-right-color: #1d1d1d !important;
+}
+
+.nav-item {
+  color: #929292 !important;
+}
+
+.nav-item:hover {
+  color: #fff !important;
+  background: #151515 !important;
+}
+
+.nav-item.active {
+  color: #000 !important;
+  background: #fff !important;
+}
+
+.new-chat-btn {
+  background: #fff !important;
+  color: #000 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.new-chat-btn:hover {
+  background: #ddd !important;
+}
+
+.sidebar-conv-item.active,
+.sidebar-conv-item:hover {
+  background: #171717 !important;
+  color: #fff !important;
+  border-left-color: #fff !important;
+}
+
+.profile-avatar {
+  background: #fff !important;
+  color: #000 !important;
+  box-shadow: none !important;
+}
+
+.profile-plan {
+  color: #777 !important;
+}
+
+/* Panels / settings */
+.flat-card {
+  background: #0e0e0e !important;
+  border-color: #242424 !important;
+  box-shadow: none !important;
+}
+
+.panel-title {
+  color: #fff !important;
+}
+
+.panel-subtitle,
+.flat-card-desc {
+  color: #777 !important;
+}
+
+/* Keep error state visible without introducing a colored theme. */
+.error-banner {
+  background: #171111 !important;
+  border-color: #3a2626 !important;
+  color: #ddd !important;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .conversation-area {
+    padding: 22px 16px !important;
+  }
+
+  .user-message-content {
+    max-width: 88%;
+  }
+
+  .ai-card-body {
+    font-size: 14px;
+  }
+
+  .composer-sticky-container {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
+  }
+}
