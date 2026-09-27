@@ -25,7 +25,8 @@ const {
   findExistingMemory,
   saveMemory,
   updateMemory,
-  deleteMemory
+  deleteMemory,
+  listMemories
 } = require('./memory');
 const { extractMemoryWithAI } = require('./memory_ai');
 const {
@@ -62,6 +63,7 @@ module.exports = {
   saveMemory,
   updateMemory,
   deleteMemory,
+  listMemories,
   sanitizeScopeId,
   normalizeScope,
   getScopeDirectory,
