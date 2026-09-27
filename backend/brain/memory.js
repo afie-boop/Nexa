@@ -518,6 +518,44 @@ async function updateMemory(vaultDir, notePath, updates = {}, options = {}) {
 }
 
 
+
+/**
+ * Lists active memories visible to a scope.
+ */
+function listMemories(vaultDir, options = {}) {
+  if (!vaultDir) return [];
+  const absoluteVault = path.resolve(vaultDir);
+  if (!fs.existsSync(absoluteVault)) return [];
+
+  const filterScope = options.scope !== undefined ? options.scope : null;
+  const limit = Math.min(Math.max(Number(options.limit) || 100, 1), 500);
+  const results = [];
+
+  for (const filePath of getAllMdFiles(absoluteVault, absoluteVault)) {
+    if (results.length >= limit) break;
+    try {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const { frontmatter, body } = parseFrontmatter(raw);
+      if (!isNoteInScope(frontmatter, filterScope)) continue;
+
+      results.push({
+        id: frontmatter.id || null,
+        title: frontmatter.title || body.trim().slice(0, 80),
+        content: body.trim(),
+        type: frontmatter.type || 'memory',
+        category: frontmatter.category || 'memory',
+        tags: Array.isArray(frontmatter.tags) ? frontmatter.tags : [],
+        version: Number(frontmatter.version) || 1,
+        created: frontmatter.created || null,
+        updated: frontmatter.updated || null,
+        path: path.relative(absoluteVault, filePath).replace(/\\/g, '/')
+      });
+    } catch (_) {}
+  }
+
+  return results.sort((a, b) => String(b.updated || b.created || '').localeCompare(String(a.updated || a.created || '')));
+}
+
 /**
  * Permanently removes a memory note from the active vault while keeping its
  * version history so the deletion can be audited/restored when appropriate.
@@ -651,5 +689,6 @@ module.exports = {
   findExistingMemory,
   saveMemory,
   updateMemory,
-  deleteMemory
+  deleteMemory,
+  listMemories
 };
