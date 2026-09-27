@@ -200,6 +200,17 @@ function App() {
         <div ref={chatEndRef} />
       </div>
 
+      {chat.length === 0 && !load && (
+        <div className="quick-prompts" aria-label="Cadangan">
+          <button className="quick-prompt" onClick={() => setMsg("Bina Kod Fibonacci")}>
+            Bina Kod Fibonacci
+          </button>
+          <button className="quick-prompt" onClick={() => setMsg("Strategi Pemasaran")}>
+            Strategi Pemasaran
+          </button>
+        </div>
+      )}
+
       {error && <div className="error-banner">{error}</div>}
 
       <div className="inputBox">
