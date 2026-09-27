@@ -5,6 +5,40 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./App.css";
 
+// AXMchat syntax theme: real Prism token colours, kept soft for the dark UI.
+const axmCodeTheme = {
+  ...oneDark,
+  'comment': { color: '#6f7b8a', fontStyle: 'italic' },
+  'prolog': { color: '#6f7b8a' },
+  'doctype': { color: '#c4a7ff' },
+  'cdata': { color: '#6f7b8a' },
+  'punctuation': { color: '#aeb7c5' },
+  'property': { color: '#d8b4fe' },
+  'tag': { color: '#ff9f9f' },
+  'boolean': { color: '#e8b875' },
+  'number': { color: '#e8b875' },
+  'constant': { color: '#72d6d0' },
+  'symbol': { color: '#72d6d0' },
+  'deleted': { color: '#ff9f9f' },
+  'selector': { color: '#c4a7ff' },
+  'attr-name': { color: '#d8b4fe' },
+  'string': { color: '#a8d5a2' },
+  'char': { color: '#a8d5a2' },
+  'builtin': { color: '#72d6d0' },
+  'inserted': { color: '#a8d5a2' },
+  'operator': { color: '#aeb7c5' },
+  'entity': { color: '#e8b875', cursor: 'help' },
+  'url': { color: '#8fc7ff' },
+  'variable': { color: '#f1c8a0' },
+  'atrule': { color: '#c4a7ff' },
+  'attr-value': { color: '#a8d5a2' },
+  'keyword': { color: '#c4a7ff', fontWeight: 600 },
+  'function': { color: '#8fc7ff', fontWeight: 600 },
+  'class-name': { color: '#72d6d0' },
+  'regex': { color: '#e8b875' },
+  'important': { color: '#ffcf8a', fontWeight: 700 },
+};
+
 function App() {
   const [msg, setMsg] = useState("");
 
@@ -633,7 +667,7 @@ function App() {
           <div className="code-block-body">
             <SyntaxHighlighter
               language={lang}
-              style={oneDark}
+              style={axmCodeTheme}
               wrapLongLines={true}
               customStyle={{
                 margin: 0,
