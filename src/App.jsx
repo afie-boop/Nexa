@@ -1222,7 +1222,7 @@ function App() {
                     ref={sendButtonRef}
                     className="send-btn-round"
                     onClick={() => send()}
-                    disabled={load || true}
+                    disabled={load}
                     aria-label="Send"
                   >
                     <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
