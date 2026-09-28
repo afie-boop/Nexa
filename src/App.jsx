@@ -878,7 +878,7 @@ function App() {
                         </div>
                       );
                     }
-                  })}
+                  })
   ), [chat, copiedIdx, dislikeReasonMsgId]);
 
   return (
