@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ReactMarkdown from "react-markdown";
@@ -40,7 +40,7 @@ const axmCodeTheme = {
 };
 
 function App() {
-  const [msg, setMsg] = useState("");
+  const msgRef = useRef(null);
 
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
@@ -346,7 +346,10 @@ function App() {
   };
 
   const handleSuggestionClick = (promptText) => {
-    setMsg(promptText);
+    if (msgRef.current) {
+      msgRef.current.value = promptText;
+      msgRef.current.focus();
+    }
   };
 
   const getUserMessageBeforeId = (msgId) => {
@@ -491,7 +494,7 @@ function App() {
 
   // Main Send Function
   async function send(overrideMsg, overrideHistory) {
-    const textToSend = overrideMsg || msg;
+    const textToSend = overrideMsg || msgRef.current?.value || "";
     if (!textToSend.trim() || load) return;
 
     if (!generalModel.trim() || !codingModel.trim() || !fallbackModel.trim()) {
@@ -509,7 +512,7 @@ function App() {
     if (!overrideMsg) {
       const userMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
       updateActiveMessages((prev) => [...prev, { id: userMsgId, type: "user", text: textToSend }]);
-      setMsg("");
+      if (msgRef.current) msgRef.current.value = "";
     }
 
     setLoad(true);
@@ -761,6 +764,113 @@ function App() {
   };
 
   const currentStatus = getDynamicStatus();
+
+  const renderedChat = useMemo(() => (
+                  {chat.map((c, i) => {
+                    const messageId = c.id || `msg_legacy_${i}`;
+                    if (c.type === "user") {
+                      return (
+                        <div key={messageId} className="user-message-row animate-slide">
+                          <div className="user-message-content">{c.text}</div>
+                        </div>
+                      );
+                    } else {
+                      // RENDER REGULAR CHAT AI CARD
+                      if (!c.text) return null;
+
+                      return (
+                        <div key={messageId} className="ai-card animate-slide">
+                          <div className="ai-card-body">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm]}
+                              components={MarkdownComponents}
+                            >
+                              {c.text}
+                            </ReactMarkdown>
+                          </div>
+
+                          {/* Control actions for AI response: Copy, Like, Dislike, Regenerate, Share */}
+                          <div className="ai-card-actions">
+                            <button
+                              className="card-action-btn"
+                              onClick={() => copyCode(c.text, `ai-${messageId}`)}
+                            >
+                              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                              </svg>
+                              <span>{copiedIdx === `ai-${messageId}` ? "Disalin" : "Salin Respon"}</span>
+                            </button>
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleLike(messageId)}
+                              style={c.feedback === "like" ? { color: "var(--accent)", borderColor: "var(--accent)", backgroundColor: "var(--accent-light)" } : {}}
+                            >
+                              <svg stroke="currentColor" fill={c.feedback === "like" ? "currentColor" : "none"} strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                              </svg>
+                              <span>Like</span>
+                            </button>
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleDislike(messageId)}
+                              style={c.feedback === "dislike" ? { color: "#EF4444", borderColor: "#EF4444", backgroundColor: "rgba(239, 68, 68, 0.08)" } : {}}
+                            >
+                              <svg stroke="currentColor" fill={c.feedback === "dislike" ? "currentColor" : "none"} strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
+                              </svg>
+                              <span>Dislike</span>
+                            </button>
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleRegenerate(messageId)}
+                            >
+                              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
+                                <polyline points="1 4 1 10 7 10"></polyline>
+                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                              </svg>
+                              <span>Regenerate</span>
+                            </button>
+                            <button
+                              className="card-action-btn"
+                              onClick={() => handleShare(c.text, `share-${messageId}`)}
+                            >
+                              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                              </svg>
+                              <span>{copiedIdx === `share-${messageId}` ? "Disalin" : "Share"}</span>
+                            </button>
+                          </div>
+
+                          {/* Dislike reason picker */}
+                          {c.feedback === "dislike" && dislikeReasonMsgId === messageId && (
+                            <div className="dislike-reason-popup animate-slide">
+                              <span className="reason-title">Sila pilih alasan (pilihan):</span>
+                              <div className="reason-options">
+                                {["Wrong", "Incomplete", "Didn't follow instruction", "Bad code", "Other"].map(opt => (
+                                  <button
+                                    key={opt}
+                                    className="reason-opt-btn"
+                                    onClick={() => handleSelectReason(messageId, opt)}
+                                  >
+                                    {opt}
+                                  </button>
+                                ))}
+                              </div>
+                              <button className="reason-close-btn" onClick={() => setDislikeReasonMsgId(null)}>
+                                Tutup
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    }
+                  })}
+  ), [chat, copiedIdx, dislikeReasonMsgId]);
 
   return (
     <div className="app-container">
@@ -1055,110 +1165,7 @@ function App() {
               /* 3. Conversation Area */
               <div className="conversation-area">
                 <div className="conversation-inner">
-                  {chat.map((c, i) => {
-                    const messageId = c.id || `msg_legacy_${i}`;
-                    if (c.type === "user") {
-                      return (
-                        <div key={messageId} className="user-message-row animate-slide">
-                          <div className="user-message-content">{c.text}</div>
-                        </div>
-                      );
-                    } else {
-                      // RENDER REGULAR CHAT AI CARD
-                      if (!c.text) return null;
-
-                      return (
-                        <div key={messageId} className="ai-card animate-slide">
-                          <div className="ai-card-body">
-                            <ReactMarkdown
-                              remarkPlugins={[remarkGfm]}
-                              components={MarkdownComponents}
-                            >
-                              {c.text}
-                            </ReactMarkdown>
-                          </div>
-
-                          {/* Control actions for AI response: Copy, Like, Dislike, Regenerate, Share */}
-                          <div className="ai-card-actions">
-                            <button
-                              className="card-action-btn"
-                              onClick={() => copyCode(c.text, `ai-${messageId}`)}
-                            >
-                              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                                <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                              </svg>
-                              <span>{copiedIdx === `ai-${messageId}` ? "Disalin" : "Salin Respon"}</span>
-                            </button>
-                            <button
-                              className="card-action-btn"
-                              onClick={() => handleLike(messageId)}
-                              style={c.feedback === "like" ? { color: "var(--accent)", borderColor: "var(--accent)", backgroundColor: "var(--accent-light)" } : {}}
-                            >
-                              <svg stroke="currentColor" fill={c.feedback === "like" ? "currentColor" : "none"} strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
-                              </svg>
-                              <span>Like</span>
-                            </button>
-                            <button
-                              className="card-action-btn"
-                              onClick={() => handleDislike(messageId)}
-                              style={c.feedback === "dislike" ? { color: "#EF4444", borderColor: "#EF4444", backgroundColor: "rgba(239, 68, 68, 0.08)" } : {}}
-                            >
-                              <svg stroke="currentColor" fill={c.feedback === "dislike" ? "currentColor" : "none"} strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"></path>
-                              </svg>
-                              <span>Dislike</span>
-                            </button>
-                            <button
-                              className="card-action-btn"
-                              onClick={() => handleRegenerate(messageId)}
-                            >
-                              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
-                                <polyline points="1 4 1 10 7 10"></polyline>
-                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-                              </svg>
-                              <span>Regenerate</span>
-                            </button>
-                            <button
-                              className="card-action-btn"
-                              onClick={() => handleShare(c.text, `share-${messageId}`)}
-                            >
-                              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="13" width="13" xmlns="http://www.w3.org/2000/svg">
-                                <circle cx="18" cy="5" r="3"></circle>
-                                <circle cx="6" cy="12" r="3"></circle>
-                                <circle cx="18" cy="19" r="3"></circle>
-                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                              </svg>
-                              <span>{copiedIdx === `share-${messageId}` ? "Disalin" : "Share"}</span>
-                            </button>
-                          </div>
-
-                          {/* Dislike reason picker */}
-                          {c.feedback === "dislike" && dislikeReasonMsgId === messageId && (
-                            <div className="dislike-reason-popup animate-slide">
-                              <span className="reason-title">Sila pilih alasan (pilihan):</span>
-                              <div className="reason-options">
-                                {["Wrong", "Incomplete", "Didn't follow instruction", "Bad code", "Other"].map(opt => (
-                                  <button
-                                    key={opt}
-                                    className="reason-opt-btn"
-                                    onClick={() => handleSelectReason(messageId, opt)}
-                                  >
-                                    {opt}
-                                  </button>
-                                ))}
-                              </div>
-                              <button className="reason-close-btn" onClick={() => setDislikeReasonMsgId(null)}>
-                                Tutup
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    }
-                  })}
+                  {renderedChat}
 
                   {/* Active Loading response card */}
                   {load && (
@@ -1192,9 +1199,8 @@ function App() {
               <div className="composer-workspace">
                 <div className="composer-input-row">
                   <textarea
+                    ref={msgRef}
                     className="composer-textarea"
-                    value={msg}
-                    onChange={(e) => setMsg(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Tanya AXMchat apa sahaja... (Shift+Enter untuk baris baru)"
                     disabled={load}
@@ -1202,7 +1208,7 @@ function App() {
                   <button
                     className="send-btn-round"
                     onClick={() => send()}
-                    disabled={load || !msg.trim()}
+                    disabled={load}
                     aria-label="Send"
                   >
                     <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
