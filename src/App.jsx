@@ -135,6 +135,13 @@ function App() {
   });
 
   const [load, setLoad] = useState(false);
+
+  useEffect(() => {
+    if (sendButtonRef.current) {
+      sendButtonRef.current.disabled = load || !(msgRef.current?.value || "").trim();
+    }
+  }, [load]);
+
   const [loadingStatus, setLoadingStatus] = useState("AXMchat sedang berfikir...");
   const [error, setError] = useState(null);
   const [brainMemoryId, setBrainMemoryId] = useState("");
@@ -151,12 +158,6 @@ function App() {
 
   // Feedback popup state based on message ID
   const [dislikeReasonMsgId, setDislikeReasonMsgId] = useState(null);
-
-  useEffect(() => {
-    if (sendButtonRef.current) {
-      sendButtonRef.current.disabled = load || !(msgRef.current?.value || "").trim();
-    }
-  }, [load]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "dark");
