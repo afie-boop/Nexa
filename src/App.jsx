@@ -41,6 +41,7 @@ const axmCodeTheme = {
 
 function App() {
   const msgRef = useRef(null);
+  const sendButtonRef = useRef(null);
 
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
@@ -150,6 +151,12 @@ function App() {
 
   // Feedback popup state based on message ID
   const [dislikeReasonMsgId, setDislikeReasonMsgId] = useState(null);
+
+  useEffect(() => {
+    if (sendButtonRef.current) {
+      sendButtonRef.current.disabled = load || !(msgRef.current?.value || "").trim();
+    }
+  }, [load]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "dark");
@@ -513,6 +520,7 @@ function App() {
       const userMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
       updateActiveMessages((prev) => [...prev, { id: userMsgId, type: "user", text: textToSend }]);
       if (msgRef.current) msgRef.current.value = "";
+      if (sendButtonRef.current) sendButtonRef.current.disabled = true;
     }
 
     setLoad(true);
@@ -1201,14 +1209,20 @@ function App() {
                   <textarea
                     ref={msgRef}
                     className="composer-textarea"
+                    onInput={(e) => {
+                      if (sendButtonRef.current) {
+                        sendButtonRef.current.disabled = load || !e.currentTarget.value.trim();
+                      }
+                    }}
                     onKeyDown={handleKeyDown}
                     placeholder="Tanya AXMchat apa sahaja... (Shift+Enter untuk baris baru)"
                     disabled={load}
                   />
                   <button
+                    ref={sendButtonRef}
                     className="send-btn-round"
                     onClick={() => send()}
-                    disabled={load}
+                    disabled={load || true}
                     aria-label="Send"
                   >
                     <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
