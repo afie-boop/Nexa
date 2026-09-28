@@ -775,7 +775,7 @@ function App() {
   const currentStatus = getDynamicStatus();
 
   const renderedChat = useMemo(() => (
-                  {chat.map((c, i) => {
+                  chat.map((c, i) => {
                     const messageId = c.id || `msg_legacy_${i}`;
                     if (c.type === "user") {
                       return (
