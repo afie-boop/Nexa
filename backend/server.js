@@ -729,6 +729,17 @@ app.post("/chat", async (req, res) => {
       history || []
     );
 
+    const requestedResponseMode = typeof req.body?.responseMode === "string" ? req.body.responseMode : "balance";
+    const responseMode = ["fast", "balance", "thinking"].includes(requestedResponseMode)
+      ? requestedResponseMode
+      : "balance";
+
+    const responseModeContext = {
+      fast: "[AXMCHAT RESPONSE MODE]\nMode: Fast\nPrioritize speed and concise answers. Keep reasoning and explanation minimal while still being correct.\n[END AXMCHAT RESPONSE MODE]",
+      balance: "[AXMCHAT RESPONSE MODE]\nMode: Balance\nBalance response speed, reasoning depth, clarity, and completeness. This is the default everyday mode.\n[END AXMCHAT RESPONSE MODE]",
+      thinking: "[AXMCHAT RESPONSE MODE]\nMode: Thinking\nUse deeper reasoning before answering. Carefully check assumptions, calculations, code, edge cases, and instructions. Prefer correctness and completeness over speed.\n[END AXMCHAT RESPONSE MODE]"
+    }[responseMode];
+
     const realtimeClock = getRealtimeClock(req.body && req.body.clientTime);
     const realtimeClockContext =
       `[AXMCHAT REAL-TIME CLOCK]
@@ -741,8 +752,8 @@ Use this clock data for questions about the current date/time. It is generated a
 [END AXMCHAT REAL-TIME CLOCK]`;
 
     const brainAugmentedQuestion = brainContext && brainContext.context && brainContext.sources && brainContext.sources.length
-      ? `${question.trim()}\\n\\n${realtimeClockContext}\\n\\n[AXMCHAT BRAIN CONTEXT]\\n${brainContext.context}\\n[END AXMCHAT BRAIN CONTEXT]`
-      : `${question.trim()}\\n\\n${realtimeClockContext}`;
+      ? `${question.trim()}\\n\\n${responseModeContext}\\n\\n${realtimeClockContext}\\n\\n[AXMCHAT BRAIN CONTEXT]\\n${brainContext.context}\\n[END AXMCHAT BRAIN CONTEXT]`
+      : `${question.trim()}\\n\\n${responseModeContext}\\n\\n${realtimeClockContext}`;
 
     const answer = await runPipeline({
       task,
