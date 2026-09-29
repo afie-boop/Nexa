@@ -136,6 +136,31 @@ function App() {
 
   const [load, setLoad] = useState(false);
 
+  const [responseMode, setResponseMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem("axmchat_response_mode");
+      return ["fast", "balance", "thinking"].includes(saved) ? saved : "balance";
+    } catch {
+      return "balance";
+    }
+  });
+
+  const responseModes = {
+    fast: { label: "Fast", description: "Jawapan pantas & ringkas", icon: "⚡" },
+    balance: { label: "Balance", description: "Seimbang antara kelajuan & kualiti", icon: "⚖" },
+    thinking: { label: "Thinking", description: "Reasoning lebih mendalam", icon: "🧠" }
+  };
+
+  const [modeMenuOpen, setModeMenuOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("axmchat_response_mode", responseMode);
+    } catch (err) {
+      console.error(err);
+    }
+  }, [responseMode]);
+
   useEffect(() => {
     if (sendButtonRef.current) {
       sendButtonRef.current.disabled = load || !(msgRef.current?.value || "").trim();
@@ -538,6 +563,7 @@ function App() {
           generalModel: generalModel.trim(),
           codingModel: codingModel.trim(),
           fallbackModel: fallbackModel.trim(),
+          responseMode,
           clientTime: {
             iso: new Date().toISOString(),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
@@ -1210,6 +1236,53 @@ function App() {
             {/* 5. Composer Workspace (Sticky Bottom) */}
             <div className="composer-sticky-container">
               <div className="composer-workspace">
+                <div className="composer-mode-row">
+                  <div className="mode-picker">
+                    <button
+                      type="button"
+                      className="mode-picker-trigger"
+                      onClick={() => setModeMenuOpen((open) => !open)}
+                      aria-expanded={modeMenuOpen}
+                      aria-haspopup="menu"
+                    >
+                      <span className="mode-picker-icon">{responseModes[responseMode].icon}</span>
+                      <span className="mode-picker-copy">
+                        <strong>{responseModes[responseMode].label}</strong>
+                        <span>{responseModes[responseMode].description}</span>
+                      </span>
+                      <svg className="mode-picker-chevron" stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="14" width="14">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                      </svg>
+                    </button>
+
+                    {modeMenuOpen && (
+                      <div className="mode-picker-menu" role="menu">
+                        <div className="mode-picker-heading">Response Mode</div>
+                        {Object.entries(responseModes).map(([key, mode]) => (
+                          <button
+                            key={key}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={responseMode === key}
+                            className={`mode-option ${responseMode === key ? "active" : ""}`}
+                            onClick={() => {
+                              setResponseMode(key);
+                              setModeMenuOpen(false);
+                            }}
+                          >
+                            <span className="mode-option-icon">{mode.icon}</span>
+                            <span className="mode-option-copy">
+                              <strong>{mode.label}</strong>
+                              <span>{mode.description}</span>
+                            </span>
+                            {responseMode === key && <span className="mode-option-check">✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="composer-input-row">
                   <textarea
                     ref={msgRef}
