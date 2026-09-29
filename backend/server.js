@@ -10,6 +10,31 @@ const { execSync } = require("child_process");
 
 const HERMES_SERVICE_URL = process.env.HERMES_SERVICE_URL || "http://127.0.0.1:8000";
 
+function getRealtimeMalaysiaClock() {
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Kuala_Lumpur",
+    weekday: "long",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).formatToParts(now);
+
+  const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+
+  return {
+    timezone: "Asia/Kuala_Lumpur",
+    date: `${values.year}-${values.month}-${values.day}`,
+    weekday: values.weekday,
+    time: `${values.hour}:${values.minute}:${values.second}`,
+    iso: now.toISOString()
+  };
+}
+
 console.log("=================================");
 console.log("Nexa Boot");
 console.log("=================================");
@@ -689,9 +714,20 @@ app.post("/chat", async (req, res) => {
       history || []
     );
 
+    const realtimeClock = getRealtimeMalaysiaClock();
+    const realtimeClockContext =
+      `[AXMCHAT REAL-TIME CLOCK]
+Timezone: ${realtimeClock.timezone}
+Date: ${realtimeClock.date}
+Day: ${realtimeClock.weekday}
+Time: ${realtimeClock.time}
+ISO: ${realtimeClock.iso}
+Use this clock data for questions about the current date/time. It is generated at request time.
+[END AXMCHAT REAL-TIME CLOCK]`;
+
     const brainAugmentedQuestion = brainContext && brainContext.context && brainContext.sources && brainContext.sources.length
-      ? `${question.trim()}\\n\\n[AXMCHAT BRAIN CONTEXT]\\n${brainContext.context}\\n[END AXMCHAT BRAIN CONTEXT]`
-      : question;
+      ? `${question.trim()}\\n\\n${realtimeClockContext}\\n\\n[AXMCHAT BRAIN CONTEXT]\\n${brainContext.context}\\n[END AXMCHAT BRAIN CONTEXT]`
+      : `${question.trim()}\\n\\n${realtimeClockContext}`;
 
     const answer = await runPipeline({
       task,
