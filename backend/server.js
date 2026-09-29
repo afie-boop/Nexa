@@ -10,10 +10,24 @@ const { execSync } = require("child_process");
 
 const HERMES_SERVICE_URL = process.env.HERMES_SERVICE_URL || "http://127.0.0.1:8000";
 
-function getRealtimeMalaysiaClock() {
-  const now = new Date();
+function getRealtimeClock(clientTime) {
+  const fallbackNow = new Date();
+  const clientIso = clientTime && typeof clientTime.iso === "string" ? clientTime.iso : null;
+  const clientTimezone = clientTime && typeof clientTime.timezone === "string" ? clientTime.timezone : null;
+  const now = clientIso && !Number.isNaN(Date.parse(clientIso)) ? new Date(clientIso) : fallbackNow;
+
+  let timezone = "Asia/Kuala_Lumpur";
+  if (clientTimezone) {
+    try {
+      new Intl.DateTimeFormat("en-GB", { timeZone: clientTimezone }).format(now);
+      timezone = clientTimezone;
+    } catch (_) {
+      // Invalid/unavailable device timezone; use Malaysia as a safe fallback.
+    }
+  }
+
   const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kuala_Lumpur",
+    timeZone: timezone,
     weekday: "long",
     year: "numeric",
     month: "2-digit",
@@ -27,11 +41,12 @@ function getRealtimeMalaysiaClock() {
   const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
 
   return {
-    timezone: "Asia/Kuala_Lumpur",
+    timezone,
     date: `${values.year}-${values.month}-${values.day}`,
     weekday: values.weekday,
     time: `${values.hour}:${values.minute}:${values.second}`,
-    iso: now.toISOString()
+    iso: now.toISOString(),
+    source: clientIso && clientTimezone ? "device" : "server-fallback"
   };
 }
 
@@ -714,7 +729,7 @@ app.post("/chat", async (req, res) => {
       history || []
     );
 
-    const realtimeClock = getRealtimeMalaysiaClock();
+    const realtimeClock = getRealtimeClock(req.body && req.body.clientTime);
     const realtimeClockContext =
       `[AXMCHAT REAL-TIME CLOCK]
 Timezone: ${realtimeClock.timezone}
