@@ -537,7 +537,11 @@ function App() {
           history: historyForRequest,
           generalModel: generalModel.trim(),
           codingModel: codingModel.trim(),
-          fallbackModel: fallbackModel.trim()
+          fallbackModel: fallbackModel.trim(),
+          clientTime: {
+            iso: new Date().toISOString(),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+          }
         }),
       });
 
