@@ -780,6 +780,14 @@ app.post("/chat", async (req, res) => {
       if (task === "general" && !aiAvailability.general) task = "code";
     }
 
+    const mainAiDisabled = !aiAvailability.general && !aiAvailability.coding;
+    if (mainAiDisabled && !aiAvailability.fallback) {
+      return sendError("General AI, Coding AI dan Fallback AI semuanya dimatikan.");
+    }
+    if (mainAiDisabled) {
+      task = "fallback";
+    }
+
     const responseModeContext = {
       fast: "[AXMCHAT RESPONSE MODE]\nMode: Fast\nPrioritize speed with a direct single-pass response.\n[END AXMCHAT RESPONSE MODE]",
       balance: "[AXMCHAT RESPONSE MODE]\nMode: Balance\nBalance response speed, reasoning depth, clarity, and completeness. This is the default everyday mode.\n[END AXMCHAT RESPONSE MODE]",
@@ -818,6 +826,8 @@ Use this clock data for questions about the current date/time. It is generated a
       codingModel,
       fallbackModel,
       fallbackEnabled: aiAvailability.fallback,
+      forcedTask: mainAiDisabled ? "fallback" : null,
+      aiAvailability,
       responseMode,
       sendStatus,
       sendProcessStep
