@@ -12,6 +12,9 @@ async function coder(data) {
     question,
     history = [],
     system = "",
+    maxTokens,
+    reasoningEffort,
+    maxRetries,
     sendStatus = () => {}
   } = data;
 
