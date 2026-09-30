@@ -535,12 +535,10 @@ function App() {
       return;
     }
 
-    const historyForRequest = memoryEnabled
-      ? (overrideHistory || chat).map((m) => ({
-          role: m.type === "user" ? "user" : "assistant",
-          content: m.text || "",
-        }))
-      : [];
+    const historyForRequest = (overrideHistory || chat).map((m) => ({
+      role: m.type === "user" ? "user" : "assistant",
+      content: m.text || "",
+    }));
 
     if (!overrideMsg) {
       const userMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
