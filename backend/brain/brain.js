@@ -26,6 +26,7 @@ const {
   saveMemory,
   updateMemory,
   deleteMemory,
+  deleteAllMemories,
   listMemories
 } = require('./memory');
 const { extractMemoryWithAI } = require('./memory_ai');
@@ -144,6 +145,11 @@ class Brain {
   async deleteMemory(notePathOrId, options) {
     if (persistentStore.enabled()) return await persistentStore.deleteMemory(notePathOrId, options?.scope);
     return await deleteMemory(this.vaultDir, notePathOrId, options);
+  }
+
+  async deleteAllMemories(options = {}) {
+    if (persistentStore.enabled()) return await persistentStore.deleteAllMemories(options?.scope);
+    return await deleteAllMemories(this.vaultDir, options);
   }
 
   async listMemories(options) {
