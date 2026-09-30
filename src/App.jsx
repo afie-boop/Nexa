@@ -986,7 +986,7 @@ function App() {
     <div className="app-container">
       {/* Mobile Overlay */}
       {sidebarOpen && (
-        <div className="sidebar-mobile-overlay" onClick={() => setSidebarOpen(false)} />
+        <div className="sidebar-mobile-overlay" onClick={() => { setSidebarOpen(false); setSessionActionMenuId(null); }} />
       )}
 
       {/* ==========================================================================
@@ -1142,24 +1142,7 @@ function App() {
                   </span>
                 </button>
 
-                {sessionActionMenuId === c.id && (
-                  <div
-                    className="session-history-popover animate-fade"
-                    style={{ position: "fixed", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: "min(340px, calc(100vw - 40px))", zIndex: 9999, padding: "16px" }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", marginBottom: "6px" }} onClick={(e) => { handlePinConversation(c.id, e); setSessionActionMenuId(null); }}>
-                      {c.pinned ? "Unpin" : "Pinned"}
-                    </button>
-                    <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", marginBottom: "6px" }} onClick={(e) => { handleArchiveConversation(c.id, e); setSessionActionMenuId(null); }}>
-                      {c.archived ? "Nyaharkib" : "Arkib"}
-                    </button>
-                    <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", color: "#EF4444" }} onClick={(e) => { handleDeleteConversation(c.id, e); setSessionActionMenuId(null); }}>
-                      Delete
-                    </button>
-                  </div>
-                )}
+}
               </div>
             ))}
           </div>
@@ -1181,6 +1164,36 @@ function App() {
           <span>Version 1.2.4</span>
         </div>
       </aside>
+
+      {sessionActionMenuId && (() => {
+        const session = conversations.find((item) => item.id === sessionActionMenuId);
+        if (!session) return null;
+        return (
+          <>
+            <div
+              className="session-mobile-overlay"
+              style={{ position: "fixed", inset: 0, zIndex: 9998, background: "rgba(0,0,0,0.45)" }}
+              onClick={() => setSessionActionMenuId(null)}
+            />
+            <div
+              className="session-history-popover animate-fade"
+              style={{ position: "fixed", left: "50vw", top: "50vh", transform: "translate(-50%, -50%)", width: "min(360px, calc(100vw - 32px))", zIndex: 9999, padding: "18px" }}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", marginBottom: "8px", padding: "14px 16px", fontSize: "15px" }} onClick={(e) => { handlePinConversation(session.id, e); setSessionActionMenuId(null); }}>
+                {session.pinned ? "Unpin" : "Pinned"}
+              </button>
+              <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", marginBottom: "8px", padding: "14px 16px", fontSize: "15px" }} onClick={(e) => { handleArchiveConversation(session.id, e); setSessionActionMenuId(null); }}>
+                {session.archived ? "Nyaharkib" : "Arkib"}
+              </button>
+              <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", color: "#EF4444", padding: "14px 16px", fontSize: "15px" }} onClick={(e) => { handleDeleteConversation(session.id, e); setSessionActionMenuId(null); }}>
+                Delete
+              </button>
+            </div>
+          </>
+        );
+      })()}
 
       {sessionHistoryOpen && (
         <>
@@ -1271,7 +1284,7 @@ function App() {
           <div className="top-bar-left">
             <button
               className="mobile-toggle"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
+              onClick={() => { const next = !sidebarOpen; setSidebarOpen(next); if (!next) setSessionActionMenuId(null); }}
             >
               <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="20" width="20" xmlns="http://www.w3.org/2000/svg">
                 <line x1="3" y1="12" x2="21" y2="12"></line>
