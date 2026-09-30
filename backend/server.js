@@ -789,6 +789,31 @@ Use this clock data for questions about the current date/time. It is generated a
       sendProcessStep
     });
 
+    // Fast mode returns immediately after the model response. Persistence and
+    // learning continue in the background so they cannot hold up the user-visible latency.
+    if (responseMode === "fast") {
+      sendAnswer(answer);
+
+      void saveWorkContext(brainUserId, {
+        lastTaskType: task,
+        lastQuestion: question,
+        lastAnswer: answer,
+        currentTask: question
+      }).catch((workContextError) => {
+        console.warn("[Fast WorkContext Save Warning]:", workContextError.message);
+      });
+
+      void learnFromChat(brain, question, brainScope, {
+        mode: process.env.BRAIN_MEMORY_MODE || "auto",
+        confidenceThreshold: 0.75,
+        maxMemories: 3
+      }).catch((learningError) => {
+        console.warn("[Fast Brain Learning Warning]:", learningError.message);
+      });
+
+      return;
+    }
+
     // Persist this exchange as shared working state for both AI roles.
     try {
       await saveWorkContext(brainUserId, {
