@@ -67,6 +67,7 @@ const { rateLimitBrain, brainNoStore, validateMemoryIdInput, validateVersionInpu
 const { requireBrainAuth } = require("./brain/brain_auth");
 const { saveGitHubSession, getGitHubSession, clearGitHubSession, ensureSessionId } = require("./github_session");
 const { learnFromChat } = require("./brain/learning");
+const { getWorkContext, saveWorkContext, formatWorkContext } = require("./brain/workContext");
 
 const app = express();
 
@@ -707,6 +708,15 @@ app.post("/chat", async (req, res) => {
 
     const { generalModel, codingModel, fallbackModel } = req.body;
 
+    // Shared Work Context connects General and Coding AI across chats.
+    let sharedWorkContext = null;
+    try {
+      sharedWorkContext = await getWorkContext(brainUserId);
+      if (sharedWorkContext) sendStatus("Menyambung Shared Work Context...");
+    } catch (workContextError) {
+      console.warn("[WorkContext Retrieval Warning]:", workContextError.message);
+    }
+
     // Brain context is retrieved server-side using the stable per-browser
     // Brain identity, not GitHub authentication.
     let brainContext = null;
@@ -751,9 +761,12 @@ ISO: ${realtimeClock.iso}
 Use this clock data for questions about the current date/time. It is generated at request time.
 [END AXMCHAT REAL-TIME CLOCK]`;
 
-    const brainAugmentedQuestion = brainContext && brainContext.context && brainContext.sources && brainContext.sources.length
-      ? `${question.trim()}\\n\\n${responseModeContext}\\n\\n${realtimeClockContext}\\n\\n[AXMCHAT BRAIN CONTEXT]\\n${brainContext.context}\\n[END AXMCHAT BRAIN CONTEXT]`
-      : `${question.trim()}\\n\\n${responseModeContext}\\n\\n${realtimeClockContext}`;
+    const sharedWorkPrompt = formatWorkContext(sharedWorkContext);
+    const contextBlocks = [responseModeContext, realtimeClockContext, sharedWorkPrompt];
+    if (brainContext && brainContext.context && brainContext.sources && brainContext.sources.length) {
+      contextBlocks.push(`[AXMCHAT BRAIN CONTEXT]\\n${brainContext.context}\\n[END AXMCHAT BRAIN CONTEXT]`);
+    }
+    const brainAugmentedQuestion = `${question.trim()}\\n\\n${contextBlocks.filter(Boolean).join("\\n\\n")}`;
 
     const answer = await runPipeline({
       task,
@@ -765,6 +778,18 @@ Use this clock data for questions about the current date/time. It is generated a
       sendStatus,
       sendProcessStep
     });
+
+    // Persist this exchange as shared working state for both AI roles.
+    try {
+      await saveWorkContext(brainUserId, {
+        lastTaskType: task,
+        lastQuestion: question,
+        lastAnswer: answer,
+        currentTask: question
+      });
+    } catch (workContextError) {
+      console.warn("[WorkContext Save Warning]:", workContextError.message);
+    }
 
     // Brain Learning Loop: learn only durable information from the user's
     // own message, scoped to the stable Brain user identity. GitHub is not
