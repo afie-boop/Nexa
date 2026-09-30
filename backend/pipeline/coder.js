@@ -24,7 +24,10 @@ async function coder(data) {
       model,
       fallbackModel,
       history,
-      system
+      system,
+      maxTokens,
+      reasoningEffort,
+      maxRetries
     });
 
     if (!response || !response.trim()) {
