@@ -385,23 +385,32 @@ function App() {
 
   const handleDeleteConversation = (id, e) => {
     if (e) e.stopPropagation();
-    if (conversations.length === 1) {
-      const newId = "conv_" + Date.now();
-      setConversations([{
-        id: newId,
-        title: "Sesi Baru",
-        messages: [],
-        pinned: false,
-        archived: false,
-        createdAt: Date.now()
-      }]);
-      setActiveId(newId);
-    } else {
-      const remaining = conversations.filter(c => c.id !== id);
-      setConversations(remaining);
-      if (activeId === id) {
-        setActiveId(remaining[0].id);
-      }
+
+    // Never allow the session list to become empty.
+    const remaining = conversations.filter(c => c.id !== id);
+
+    if (remaining.length === 0) {
+      // Keep the current session slot instead of deleting the last session.
+      setConversations(prev => prev.map(c => (
+        c.id === id
+          ? {
+              ...c,
+              title: "Sesi Baru",
+              messages: [],
+              pinned: false,
+              archived: false,
+              createdAt: Date.now()
+            }
+          : c
+      )));
+      setActiveId(id);
+      return;
+    }
+
+    setConversations(remaining);
+    if (activeId === id) {
+      const nextActive = remaining.find(c => !c.archived) || remaining[0];
+      setActiveId(nextActive.id);
     }
   };
 
@@ -497,8 +506,7 @@ function App() {
     }
   };
 
-  const handleDislike = (msgId) => {
-    const targetMsg = chat.find(m => m.id === msgId);
+  const handleDislike = (msgId) => {    const targetMsg = chat.find(m => m.id === msgId);
     const isCurrentlyDisliked = targetMsg?.feedback === "dislike";
     const nextFeedback = isCurrentlyDisliked ? null : "dislike";
 
@@ -997,8 +1005,7 @@ function App() {
           <div className="logo-container">
             <div className="logo-icon">A</div>
             <div className="logo-text">AXMchat</div>
-          </div>
-          <button className="new-chat-btn" onClick={handleNewChat}>
+          </div>          <button className="new-chat-btn" onClick={handleNewChat}>
             <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -1141,8 +1148,6 @@ function App() {
                     {c.pinned ? "📌 " : ""}{c.title || "Sesi Baru"}
                   </span>
                 </button>
-
-}
               </div>
             ))}
           </div>
@@ -1497,8 +1502,7 @@ function App() {
               </div>
 
               <div className="grid-container">
-                <div className="flat-card">
-                  <span className="flat-card-title">General AI</span>
+                <div className="flat-card">                  <span className="flat-card-title">General AI</span>
                   <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model utama untuk tugasan am / sembang biasa.</p>
                   <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>General AI Model ID</label>
                   <input
