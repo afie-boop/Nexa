@@ -1019,17 +1019,7 @@ function App() {
           <button
             className={`nav-item ${activeNav === "chats" ? "active" : ""}`}
             onClick={() => { setActiveNav("chats"); setSidebarOpen(false); }}
-            onPointerDown={startChatsLongPress}
-            onPointerUp={cancelChatsLongPress}
-            onPointerLeave={cancelChatsLongPress}
-            onPointerCancel={cancelChatsLongPress}
-            onContextMenu={(e) => {
-              e.preventDefault();
-              cancelChatsLongPress();
-              setHistoryMenuVisible(true);
-              setActiveNav("chats");
-            }}
-            title="Tahan untuk lihat sejarah sesi"
+            title="Chats"
           >
             <span className="nav-icon">
               <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
@@ -1038,21 +1028,19 @@ function App() {
             </span>
             <span>Chats</span>
           </button>
-          {historyMenuVisible && (
-            <button
-              className={`nav-item ${activeNav === "history" ? "active" : ""}`}
-              onClick={() => { setActiveNav("history"); setSidebarOpen(false); }}
-              title="Sejarah sesi"
-            >
-              <span className="nav-icon">
-                <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-              </span>
-              <span>History</span>
-            </button>
-          )}
+          <button
+            className={`nav-item ${activeNav === "history" ? "active" : ""}`}
+            onClick={() => { setActiveNav("history"); setSidebarOpen(false); }}
+            title="Sejarah sesi"
+          >
+            <span className="nav-icon">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </span>
+            <span>History</span>
+          </button>
           <button
             className={`nav-item ${activeNav === "models" ? "active" : ""}`}
             onClick={() => { setActiveNav("models"); setSidebarOpen(false); }}
