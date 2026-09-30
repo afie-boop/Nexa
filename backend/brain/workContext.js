@@ -51,7 +51,7 @@ async function saveWorkContext(sessionId, update) {
   const previous=await getWorkContext(sessionId);
   const now=new Date().toISOString();
   const next={
-    project: cleanText(update.project || previous?.project,500),
+    project: cleanText(update.project || previous?.project || "AXMchat",500),
     currentTask: cleanText(update.currentTask || previous?.currentTask,1000),
     lastQuestion: cleanText(update.lastQuestion || previous?.lastQuestion,3000),
     lastAnswer: cleanText(update.lastAnswer || previous?.lastAnswer,6000),
@@ -75,7 +75,7 @@ async function saveWorkContext(sessionId, update) {
 function formatWorkContext(context) {
   if (!context) return "";
   const turns=(context.recentTurns||[]).slice(-4).map((t,i)=>`Turn ${i+1} [${t.taskType}]:\nUser: ${t.question}\nAI: ${t.answer}`).join("\n\n");
-  return `[AXMCHAT SHARED WORK CONTEXT]
+  return `[AXMCHAT SHARED PROJECT CONTEXT]
 Project: ${context.project||"Not specified"}
 Current task: ${context.currentTask||"Not specified"}
 Last AI type: ${context.lastUpdatedBy||"unknown"}
@@ -87,11 +87,14 @@ Recent shared turns:
 ${turns||"None"}
 
 Rules:
+- This is the persistent shared project context for AXMchat, not merely the current chat session.
+- Treat this context as the shared workspace between General AI and Coding AI across chats.
+- When referring to remembered work, say "shared project context" or "shared project memory", not "memory sesi ini" or "in this session".
 - Continue useful progress from the previous AI.
 - General AI should understand Coding AI progress when relevant.
 - Coding AI should understand General AI decisions when relevant.
 - Do not blindly repeat old answers; use this as working context.
-[END AXMCHAT SHARED WORK CONTEXT]`;
+[END AXMCHAT SHARED PROJECT CONTEXT]`;
 }
 
 module.exports={getWorkContext,saveWorkContext,formatWorkContext};
