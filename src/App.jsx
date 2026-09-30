@@ -95,13 +95,13 @@ function App() {
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
-  const [chatActionMenuOpen, setChatActionMenuOpen] = useState(false);
+  const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
   const longPressTimerRef = useRef(null);
 
   const startChatsLongPress = () => {
     window.clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = window.setTimeout(() => {
-      setChatActionMenuOpen(true);
+      setHistoryMenuVisible(true);
       setActiveNav("chats");
       longPressTimerRef.current = null;
     }, 520);
@@ -114,7 +114,6 @@ function App() {
 
   const closeSessionHistory = () => {
     setSessionHistoryOpen(false);
-    setChatActionMenuOpen(false);
   };
 
   const activeConversation = conversations.find(c => c.id === activeId) || conversations[0] || { id: "", messages: [], title: "" };
@@ -1018,7 +1017,7 @@ function App() {
             onContextMenu={(e) => {
               e.preventDefault();
               cancelChatsLongPress();
-              setChatActionMenuOpen(true);
+              setHistoryMenuVisible(true);
               setActiveNav("chats");
             }}
             title="Tahan untuk lihat sejarah sesi"
@@ -1112,40 +1111,6 @@ function App() {
           <span>Version 1.2.4</span>
         </div>
       </aside>
-
-      {chatActionMenuOpen && (
-        <>
-          <div
-            className="session-history-backdrop"
-            onClick={() => setChatActionMenuOpen(false)}
-          />
-          <section
-            className="session-history-popover animate-fade"
-            role="menu"
-            aria-label="Menu sembang"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="session-history-header">
-              <div>
-                <strong>{activeConversation.title || "Sesi Baru"}</strong>
-                <span>Menu sembang</span>
-              </div>
-              <button type="button" className="session-history-close" onClick={() => setChatActionMenuOpen(false)} aria-label="Tutup menu">×</button>
-            </div>
-            <div style={{ display: "grid", gap: "8px", marginTop: "12px" }}>
-              <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start" }} onClick={(e) => { handlePinConversation(activeId, e); setChatActionMenuOpen(false); }}>
-                {activeConversation.pinned ? "Unpin" : "Pinned"}
-              </button>
-              <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start" }} onClick={(e) => { handleArchiveConversation(activeId, e); setChatActionMenuOpen(false); }}>
-                {activeConversation.archived ? "Nyaharkib" : "Arkib"}
-              </button>
-              <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", color: "#EF4444" }} onClick={(e) => { handleDeleteConversation(activeId, e); setChatActionMenuOpen(false); }}>
-                Delete
-              </button>
-            </div>
-          </section>
-        </>
-      )}
 
       {sessionHistoryOpen && (
         <>
