@@ -14,6 +14,25 @@ async function runPipeline(data) {
   const responseMode = normalizeResponseMode(data?.responseMode);
   const modePolicy = getModePolicy(responseMode);
 
+  // If both primary AIs are disabled, Fallback AI becomes the sole execution path.
+  if (data.forcedTask === "fallback") {
+    if (!data.fallbackModel) throw new Error("Fallback AI tidak dikonfigurasi.");
+    data.sendStatus?.("Fallback AI: laluan terus...");
+    const response = await askOpenRouter(data.question, {
+      model: data.fallbackModel,
+      fallbackModel: null,
+      fallbackEnabled: false,
+      history: (data.history || []).slice(-6),
+      system: "Kamu ialah AXMchat Fallback AI. Jawab terus dan bantu pengguna sebaik mungkin.",
+      maxRetries: modePolicy.maxRetries,
+      maxTokens: modePolicy.maxTokens,
+      reasoningEffort: modePolicy.reasoningEffort
+    });
+    if (!response || !response.trim()) throw new Error("Fallback AI tidak memberikan jawapan.");
+    data.sendProcessStep?.({ id: "completed", label: "Completed", status: "completed" });
+    return response.trim();
+  }
+
   // Fast is a genuinely different execution path: one model call, no
   // planner/reviewer/validator chain, and no extra LLM routing work.
   if (responseMode === "fast") {
@@ -64,6 +83,12 @@ async function runPipeline(data) {
     logger.moduleStart("Router");
 
     data = await router(data);
+    if (data.forcedTask === "code" || data.forcedTask === "general") {
+      data.task = data.forcedTask;
+      data.model = data.task === "code"
+        ? (data.codingModel || "openrouter/free")
+        : (data.generalModel || "qwen/qwen3-235b-a22b-2507");
+    }
     data = { ...data, maxTokens: modePolicy.maxTokens, reasoningEffort: modePolicy.reasoningEffort, maxRetries: modePolicy.maxRetries };
     chosenProvider = data.provider;
     chosenModel = data.model;
