@@ -1236,6 +1236,32 @@ function App() {
             {/* 5. Composer Workspace (Sticky Bottom) */}
             <div className="composer-sticky-container">
               <div className="composer-workspace">
+                <div className="composer-input-row">
+                  <textarea
+                    ref={msgRef}
+                    className="composer-textarea"
+                    onInput={(e) => {
+                      if (sendButtonRef.current) {
+                        sendButtonRef.current.disabled = load || !e.currentTarget.value.trim();
+                      }
+                    }}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Tanya AXMchat apa sahaja... (Shift+Enter untuk baris baru)"
+                    disabled={load}
+                  />
+                  <button
+                    ref={sendButtonRef}
+                    className="send-btn-round"
+                    onClick={() => send()}
+                    disabled={load}
+                    aria-label="Send"
+                  >
+                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                      <line x1="22" y1="2" x2="11" y2="13"></line>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                  </button>
+                </div>
                 <div className="composer-mode-row">
                   <div className="mode-picker">
                     <button
@@ -1283,32 +1309,6 @@ function App() {
                   </div>
                 </div>
 
-                <div className="composer-input-row">
-                  <textarea
-                    ref={msgRef}
-                    className="composer-textarea"
-                    onInput={(e) => {
-                      if (sendButtonRef.current) {
-                        sendButtonRef.current.disabled = load || !e.currentTarget.value.trim();
-                      }
-                    }}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Tanya AXMchat apa sahaja... (Shift+Enter untuk baris baru)"
-                    disabled={load}
-                  />
-                  <button
-                    ref={sendButtonRef}
-                    className="send-btn-round"
-                    onClick={() => send()}
-                    disabled={load}
-                    aria-label="Send"
-                  >
-                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
-                      <line x1="22" y1="2" x2="11" y2="13"></line>
-                      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                  </button>
-                </div>
               </div>
             </div>
           </>
