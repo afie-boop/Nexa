@@ -193,6 +193,17 @@ async function updateMemory(notePathOrId, updates, scope) {
   return { updated: true, path: `db://memory/${id}`, version: nextVersion, frontmatter: { ...rowToMemory(updated.rows[0]), id } };
 }
 
+async function deleteAllMemories(scope) {
+  await ensureSchema();
+  const db = getPool();
+  const where = scopeWhere(scope, 1);
+  const result = await db.query(
+    `DELETE FROM axmchat_memories WHERE ${where.sql}`,
+    where.values
+  );
+  return { deleted: result.rowCount || 0 };
+}
+
 async function deleteMemory(notePathOrId, scope) {
   await ensureSchema();
   const db = getPool();
@@ -257,6 +268,7 @@ module.exports = {
   findExisting,
   updateMemory,
   deleteMemory,
+  deleteAllMemories,
   listMemories,
   retrieveContext,
   health
