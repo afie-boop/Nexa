@@ -7,7 +7,7 @@ const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const SESSION_ID_RE = /^[a-f0-9]{64}$/;
 
 function getSessionDir() {
-  const dir = path.join(__dirname, "feedback", "data", "sessions");
+  const dir = process.env.GITHUB_SESSION_DIR\n    ? path.resolve(process.env.GITHUB_SESSION_DIR)\n    : path.join(__dirname, "feedback", "data", "sessions");
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
