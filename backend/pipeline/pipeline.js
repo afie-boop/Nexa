@@ -63,6 +63,7 @@ async function runPipeline(data) {
     logger.moduleStart("Router");
 
     data = await router(data);
+    data = { ...data, maxTokens: modePolicy.maxTokens, reasoningEffort: modePolicy.reasoningEffort, maxRetries: modePolicy.maxRetries };
     chosenProvider = data.provider;
     chosenModel = data.model;
     taskCategory = data.task;
