@@ -31,6 +31,7 @@ async function runPipeline(data) {
     const response = await askOpenRouter(data.question, {
       model: fastModel,
       fallbackModel: data.fallbackModel || "openrouter/free",
+      fallbackEnabled: data.fallbackEnabled !== false,
       history: (data.history || []).slice(-6),
       system: fastSystem,
       maxRetries: modePolicy.maxRetries,
