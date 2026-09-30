@@ -6,9 +6,43 @@ const coder = require("./coder");
 const reviewer = require("./reviewer");
 const validator = require("./validator");
 const formatter = require("./formatter");
+const askOpenRouter = require("../openrouter");
+const { normalizeResponseMode, getModePolicy } = require("../responseModes");
 
 async function runPipeline(data) {
   const startTime = Date.now();
+  const responseMode = normalizeResponseMode(data?.responseMode);
+  const modePolicy = getModePolicy(responseMode);
+
+  // Fast is a genuinely different execution path: one model call, no
+  // planner/reviewer/validator chain, and no extra LLM routing work.
+  if (responseMode === "fast") {
+    const fastTask = data.task === "code" ? "code" : "general";
+    const fastModel = fastTask === "code"
+      ? (data.codingModel || "openrouter/free")
+      : (data.generalModel || "qwen/qwen3-235b-a22b-2507");
+
+    const fastSystem = fastTask === "code"
+      ? "Kamu ialah AXMchat Coding AI dalam Fast mode. Jawab terus dengan penyelesaian yang diperlukan. Jangan buat analisis panjang atau langkah tambahan yang tidak diminta. Jika memberi kod, pastikan kod boleh digunakan."
+      : "Kamu ialah AXMchat dalam Fast mode. Jawab terus, tepat, dan padat. Elakkan penerangan atau langkah tambahan yang tidak diperlukan.";
+
+    data.sendStatus?.("Fast mode: terus ke AI...");
+    const fastStart = Date.now();
+    const response = await askOpenRouter(data.question, {
+      model: fastModel,
+      fallbackModel: data.fallbackModel || "openrouter/free",
+      history: (data.history || []).slice(-6),
+      system: fastSystem,
+      maxRetries: modePolicy.maxRetries,
+      maxTokens: modePolicy.maxTokens,
+      reasoningEffort: modePolicy.reasoningEffort
+    });
+
+    if (!response || !response.trim()) throw new Error("AI tidak memberikan jawapan.");
+    logger.success("Fast", "Jawapan diterima dalam " + (Date.now() - fastStart) + "ms.");
+    data.sendProcessStep?.({ id: "completed", label: "Completed", status: "completed" });
+    return response.trim();
+  }
   let chosenProvider = null;
   let chosenModel = null;
   let taskCategory = data ? data.task : "general";
