@@ -41,6 +41,7 @@ const {
 } = require('./memory_history');
 const { consolidateMemories } = require('./memory_consolidation');
 const { inspectMemoryHealth } = require('./memory_maintenance');
+const persistentStore = require('./persistent_store');
 
 // Brain module main entry point
 class Brain {
@@ -53,6 +54,11 @@ class Brain {
   }
 
   async initialize() {
+    if (persistentStore.enabled()) {
+      await persistentStore.ensureSchema();
+      console.log('Brain initialized with persistent Postgres memory store.');
+      return;
+    }
     console.log('Brain initialized successfully with vault at:', this.vaultDir);
   }
 
@@ -107,6 +113,7 @@ class Brain {
 
   // RAG Context Retrieval
   async retrieveContext(query, options) {
+    if (persistentStore.enabled()) return await persistentStore.retrieveContext(query, options?.scope, options || {});
     return await retrieveContext(this.vaultDir, query, options);
   }
 
@@ -120,22 +127,27 @@ class Brain {
   }
 
   async findExistingMemory(memory, options) {
+    if (persistentStore.enabled()) return { found: !!(await persistentStore.findExisting(memory, options?.scope)) };
     return await findExistingMemory(this.vaultDir, memory, options);
   }
 
   async saveMemory(memory, options) {
+    if (persistentStore.enabled()) return await persistentStore.saveMemory(memory, options?.scope);
     return await saveMemory(this.vaultDir, memory, options);
   }
 
   async updateMemory(notePath, updates, options) {
+    if (persistentStore.enabled()) return await persistentStore.updateMemory(notePath, updates, options?.scope);
     return await updateMemory(this.vaultDir, notePath, updates, options);
   }
 
   async deleteMemory(notePathOrId, options) {
+    if (persistentStore.enabled()) return await persistentStore.deleteMemory(notePathOrId, options?.scope);
     return await deleteMemory(this.vaultDir, notePathOrId, options);
   }
 
-  listMemories(options) {
+  async listMemories(options) {
+    if (persistentStore.enabled()) return await persistentStore.listMemories(options?.scope, options?.limit);
     return listMemories(this.vaultDir, options);
   }
 
