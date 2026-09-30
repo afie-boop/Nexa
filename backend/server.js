@@ -781,6 +781,7 @@ app.post("/chat", async (req, res) => {
     }
 
     const mainAiDisabled = !aiAvailability.general && !aiAvailability.coding;
+    const forcedAiTask = mainAiDisabled ? "fallback" : (!aiAvailability.general ? "code" : (!aiAvailability.coding ? "general" : null));
     if (mainAiDisabled && !aiAvailability.fallback) {
       return sendError("General AI, Coding AI dan Fallback AI semuanya dimatikan.");
     }
@@ -826,7 +827,7 @@ Use this clock data for questions about the current date/time. It is generated a
       codingModel,
       fallbackModel,
       fallbackEnabled: aiAvailability.fallback,
-      forcedTask: mainAiDisabled ? "fallback" : null,
+      forcedTask: forcedAiTask,
       aiAvailability,
       responseMode,
       sendStatus,
