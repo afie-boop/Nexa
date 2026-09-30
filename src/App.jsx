@@ -95,12 +95,13 @@ function App() {
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
+  const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
   const longPressTimerRef = useRef(null);
 
   const startChatsLongPress = () => {
     window.clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = window.setTimeout(() => {
-      setSessionHistoryOpen(true);
+      setHistoryMenuVisible(true);
       setActiveNav("chats");
       longPressTimerRef.current = null;
     }, 520);
@@ -1016,7 +1017,7 @@ function App() {
             onContextMenu={(e) => {
               e.preventDefault();
               cancelChatsLongPress();
-              setSessionHistoryOpen(true);
+              setHistoryMenuVisible(true);
               setActiveNav("chats");
             }}
             title="Tahan untuk lihat sejarah sesi"
@@ -1028,6 +1029,21 @@ function App() {
             </span>
             <span>Chats</span>
           </button>
+          {historyMenuVisible && (
+            <button
+              className={`nav-item ${activeNav === "history" ? "active" : ""}`}
+              onClick={() => { setActiveNav("history"); setSidebarOpen(false); }}
+              title="Sejarah sesi"
+            >
+              <span className="nav-icon">
+                <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+              </span>
+              <span>History</span>
+            </button>
+          )}
           <button
             className={`nav-item ${activeNav === "models" ? "active" : ""}`}
             onClick={() => { setActiveNav("models"); setSidebarOpen(false); }}
