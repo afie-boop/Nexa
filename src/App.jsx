@@ -1177,7 +1177,7 @@ function App() {
             />
             <div
               className="session-history-popover animate-fade"
-              style={{ position: "fixed", left: "50vw", top: "50vh", transform: "translate(-50%, -50%)", width: "min(360px, calc(100vw - 32px))", zIndex: 9999, padding: "18px" }}
+              style={{ position: "fixed", left: "50vw", top: "50vh", translate: "-50% -50%", width: "min(360px, calc(100vw - 32px))", zIndex: 9999, padding: "18px" }}
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
