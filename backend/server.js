@@ -725,6 +725,16 @@ app.post("/chat", async (req, res) => {
     }
 
     const { generalModel, codingModel, fallbackModel } = req.body;
+    const aiAvailability = {
+      general: req.body?.aiAvailability?.general !== false,
+      coding: req.body?.aiAvailability?.coding !== false,
+      fallback: req.body?.aiAvailability?.fallback !== false
+    };
+
+    if (!aiAvailability.general && !aiAvailability.coding && !aiAvailability.fallback) {
+      return sendError("Semua AI AXMchat dimatikan. Hidupkan sekurang-kurangnya satu AI untuk meneruskan.");
+    }
+
     const responseMode = normalizeResponseMode(req.body?.responseMode);
     const memoryEnabled = req.body?.memoryEnabled !== false;
 
@@ -737,6 +747,8 @@ app.post("/chat", async (req, res) => {
 
     if (responseMode === "fast") {
       task = classifyFastTask(question);
+      if (task === "code" && !aiAvailability.coding) task = "general";
+      if (task === "general" && !aiAvailability.general) task = "code";
       sendStatus("Fast mode: laluan terus...");
     } else {
       // Shared Work Context connects General and Coding AI across chats.
@@ -764,6 +776,8 @@ app.post("/chat", async (req, res) => {
 
       sendStatus("Mengelaskan permintaan...");
       task = await classifyTask(question, history || []);
+      if (task === "code" && !aiAvailability.coding) task = "general";
+      if (task === "general" && !aiAvailability.general) task = "code";
     }
 
     const responseModeContext = {
@@ -803,6 +817,7 @@ Use this clock data for questions about the current date/time. It is generated a
       generalModel,
       codingModel,
       fallbackModel,
+      fallbackEnabled: aiAvailability.fallback,
       responseMode,
       sendStatus,
       sendProcessStep
