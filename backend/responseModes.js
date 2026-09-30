@@ -15,7 +15,7 @@ function classifyFastTask(question = "") {
 }
 
 const MODE_POLICIES = {
-  fast: { maxRetries: 0, maxTokens: 900, reasoningEffort: "low" },
+  fast: { maxRetries: 0, maxTokens: 900, reasoningEffort: "none" },
   balance: { maxRetries: 2, maxTokens: 2200, reasoningEffort: "medium" },
   thinking: { maxRetries: 2, maxTokens: 5000, reasoningEffort: "high" }
 };
