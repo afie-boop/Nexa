@@ -614,7 +614,7 @@ app.get("/api/brain/memories", brainNoStore, rateLimitBrain("read"), async (req,
     const brainUserId = ensureSessionId(req);
     const scope = { type: "user", userId: brainUserId };
     const limit = typeof req.query.limit === "string" ? Number(req.query.limit) : 100;
-    const memories = brain.listMemories({ scope, limit });
+    const memories = await brain.listMemories({ scope, limit });
     return res.status(200).json({ status: "ok", scope, memories });
   } catch (error) {
     console.error("[Brain Memory List Error]:", error.message);
