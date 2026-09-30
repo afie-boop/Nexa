@@ -386,31 +386,37 @@ function App() {
   const handleDeleteConversation = (id, e) => {
     if (e) e.stopPropagation();
 
-    // Never allow the session list to become empty.
-    const remaining = conversations.filter(c => c.id !== id);
+    const deletingActiveSession = activeId === id;
+    const newSession = {
+      id: "conv_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+      title: "Sesi Baru",
+      messages: [],
+      pinned: false,
+      archived: false,
+      createdAt: Date.now()
+    };
 
-    if (remaining.length === 0) {
-      // Keep the current session slot instead of deleting the last session.
-      setConversations(prev => prev.map(c => (
-        c.id === id
-          ? {
-              ...c,
-              title: "Sesi Baru",
-              messages: [],
-              pinned: false,
-              archived: false,
-              createdAt: Date.now()
-            }
-          : c
-      )));
-      setActiveId(id);
-      return;
-    }
+    setConversations(prev => {
+      const remaining = prev.filter(c => c.id !== id);
 
-    setConversations(remaining);
-    if (activeId === id) {
-      const nextActive = remaining.find(c => !c.archived) || remaining[0];
-      setActiveId(nextActive.id);
+      // If the session currently being viewed is deleted, remove it from
+      // the list and immediately create/activate a fresh session.
+      if (deletingActiveSession) {
+        return [newSession, ...remaining];
+      }
+
+      // Keep the app with at least one session if the deleted session was
+      // the only session available.
+      if (remaining.length === 0) {
+        return [newSession];
+      }
+
+      return remaining;
+    });
+
+    if (deletingActiveSession || conversations.length === 1) {
+      setActiveId(newSession.id);
+      setActiveNav("chats");
     }
   };
 
