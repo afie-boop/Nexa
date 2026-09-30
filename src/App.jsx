@@ -1145,7 +1145,7 @@ function App() {
                 {sessionActionMenuId === c.id && (
                   <div
                     className="session-history-popover animate-fade"
-                    style={{ position: "fixed", left: "14px", top: "120px", width: "220px", zIndex: 9999, padding: "10px" }}
+                    style={{ position: "fixed", left: "50%", top: "50%", transform: "translate(-50%, -50%)", width: "min(340px, calc(100vw - 40px))", zIndex: 9999, padding: "16px" }}
                     onPointerDown={(e) => e.stopPropagation()}
                     onClick={(e) => e.stopPropagation()}
                   >
