@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const SESSION_COOKIE = "nexa_session_id";
+const GITHUB_COOKIE = "nexa_github_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const SESSION_ID_RE = /^[a-f0-9]{64}$/;
 
@@ -30,6 +31,35 @@ function ensureSessionId(req) {
   return sessionId;
 }
 
+function getCookieSecret() {
+  return process.env.GITHUB_SESSION_SECRET || process.env.GITHUB_CLIENT_SECRET || "change-me-nexa-github-session";
+}
+
+function encryptSession(data) {
+  const key = crypto.createHash("sha256").update(getCookieSecret()).digest();
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify(data), "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return Buffer.concat([iv, tag, encrypted]).toString("base64url");
+}
+
+function decryptSession(value) {
+  try {
+    const raw = Buffer.from(String(value || ""), "base64url");
+    if (raw.length < 28) return null;
+    const key = crypto.createHash("sha256").update(getCookieSecret()).digest();
+    const iv = raw.subarray(0, 12);
+    const tag = raw.subarray(12, 28);
+    const encrypted = raw.subarray(28);
+    const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(tag);
+    return JSON.parse(Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8"));
+  } catch (_) {
+    return null;
+  }
+}
+
 function setSessionCookie(res, sessionId) {
   res.cookie(SESSION_COOKIE, sessionId, {
     httpOnly: true,
@@ -38,6 +68,20 @@ function setSessionCookie(res, sessionId) {
     path: "/",
     maxAge: SESSION_TTL_MS
   });
+}
+
+function setGitHubCookie(res, sessionData) {
+  res.cookie(GITHUB_COOKIE, encryptSession(sessionData), {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: SESSION_TTL_MS
+  });
+}
+
+function clearGitHubCookie(res) {
+  res.clearCookie(GITHUB_COOKIE, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" });
 }
 
 function sessionPath(sessionId) {
@@ -59,6 +103,9 @@ function saveGitHubSession(req, sessionData) {
 
     fs.writeFileSync(sessionPath(sessionId), JSON.stringify(safeData), "utf8");
     setSessionCookie(req.res, sessionId);
+    // Render Free has an ephemeral filesystem. Keep an encrypted copy in the browser
+    // so a restart/redeploy does not disconnect the user from GitHub.
+    setGitHubCookie(req.res, safeData);
     return sessionId;
   } catch (err) {
     console.error("[GitHub Session Write Error]:", err.message);
@@ -68,6 +115,11 @@ function saveGitHubSession(req, sessionData) {
 
 function getGitHubSession(req) {
   try {
+    const cookieSession = req && req.cookies ? decryptSession(req.cookies[GITHUB_COOKIE]) : null;
+    if (cookieSession && cookieSession.connected && cookieSession.accessToken && cookieSession.accessToken !== "mock_token") {
+      const updatedAt = Date.parse(cookieSession.updatedAt || "");
+      if (updatedAt && Date.now() - updatedAt <= SESSION_TTL_MS) return cookieSession;
+    }
     const sessionId = getSessionId(req);
     if (!sessionId) {
       return { connected: false, username: null, accessToken: null };
@@ -101,9 +153,8 @@ function clearGitHubSession(req) {
       const file = sessionPath(sessionId);
       if (fs.existsSync(file)) fs.unlinkSync(file);
     }
-    // Keep the browser session cookie intact so Brain memory remains linked
-    // to the same user after GitHub disconnects. Only the GitHub credentials
-    // are removed here.
+    clearGitHubCookie(req.res);
+    // Keep the Brain session cookie intact so memory remains linked to the same user.
   } catch (err) {
     console.error("[GitHub Session Clear Error]:", err.message);
   }
