@@ -72,7 +72,8 @@ async function askOpenRouter(message, options = {}) {
     history,
     maxRetries = 2,
     maxTokens,
-    reasoningEffort
+    reasoningEffort,
+    fallbackEnabled = true
   } = options;
 
   const messages = [];
@@ -108,7 +109,7 @@ async function askOpenRouter(message, options = {}) {
     }
   }
 
-  if (backupModel && backupModel !== primaryModel) {
+  if (fallbackEnabled && backupModel && backupModel !== primaryModel) {
     try {
       return await executeOpenRouterCall(messages, backupModel, { maxTokens, reasoningEffort });
     } catch (fallbackErr) {
