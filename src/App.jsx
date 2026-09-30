@@ -96,6 +96,8 @@ function App() {
   const [editTitle, setEditTitle] = useState("");
   const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
   const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
+  const [sessionActionMenuId, setSessionActionMenuId] = useState(null);
+  const sessionLongPressTimerRef = useRef(null);
   const longPressTimerRef = useRef(null);
 
   const startChatsLongPress = () => {
@@ -1007,6 +1009,73 @@ function App() {
 
         {/* Sidebar Menu Options */}
         <nav className="sidebar-nav">
+          <div className="sidebar-sessions" style={{ margin: "8px 10px 14px", display: "grid", gap: "4px" }}>
+            <div style={{ padding: "8px 10px", fontSize: "11px", fontWeight: 700, color: "var(--secondary-text)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+              Sesi
+            </div>
+            {conversations.filter(c => !c.archived).map((c) => (
+              <div
+                key={c.id}
+                style={{ position: "relative" }}
+                onPointerDown={(e) => {
+                  if (e.button !== 0) return;
+                  window.clearTimeout(sessionLongPressTimerRef.current);
+                  sessionLongPressTimerRef.current = window.setTimeout(() => {
+                    setSessionActionMenuId(c.id);
+                    sessionLongPressTimerRef.current = null;
+                  }, 520);
+                }}
+                onPointerUp={() => window.clearTimeout(sessionLongPressTimerRef.current)}
+                onPointerLeave={() => window.clearTimeout(sessionLongPressTimerRef.current)}
+                onPointerCancel={() => window.clearTimeout(sessionLongPressTimerRef.current)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  window.clearTimeout(sessionLongPressTimerRef.current);
+                  setSessionActionMenuId(c.id);
+                }}
+              >
+                <button
+                  type="button"
+                  className="nav-item"
+                  style={{ width: "100%", textAlign: "left", opacity: c.id === activeId ? 1 : 0.78 }}
+                  onClick={() => {
+                    setActiveId(c.id);
+                    setActiveNav("chats");
+                    setSidebarOpen(false);
+                  }}
+                  title={c.title}
+                >
+                  <span className="nav-icon">
+                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="15" width="15">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                  </span>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {c.pinned ? "📌 " : ""}{c.title || "Sesi Baru"}
+                  </span>
+                </button>
+
+                {sessionActionMenuId === c.id && (
+                  <div
+                    className="session-history-popover animate-fade"
+                    style={{ position: "absolute", left: "calc(100% + 8px)", top: 0, width: "190px", zIndex: 1000, padding: "10px" }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", marginBottom: "6px" }} onClick={(e) => { handlePinConversation(c.id, e); setSessionActionMenuId(null); }}>
+                      {c.pinned ? "Unpin" : "Pinned"}
+                    </button>
+                    <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", marginBottom: "6px" }} onClick={(e) => { handleArchiveConversation(c.id, e); setSessionActionMenuId(null); }}>
+                      {c.archived ? "Nyaharkib" : "Arkib"}
+                    </button>
+                    <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", color: "#EF4444" }} onClick={(e) => { handleDeleteConversation(c.id, e); setSessionActionMenuId(null); }}>
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
           <button
             className={`nav-item ${activeNav === "chats" ? "active" : ""}`}
             onClick={() => { setActiveNav("chats"); setSidebarOpen(false); }}
