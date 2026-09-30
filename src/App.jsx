@@ -94,6 +94,26 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
+  const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
+  const longPressTimerRef = useRef(null);
+
+  const startChatsLongPress = () => {
+    window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => {
+      setSessionHistoryOpen(true);
+      setActiveNav("chats");
+      longPressTimerRef.current = null;
+    }, 520);
+  };
+
+  const cancelChatsLongPress = () => {
+    window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+  };
+
+  const closeSessionHistory = () => {
+    setSessionHistoryOpen(false);
+  };
 
   const activeConversation = conversations.find(c => c.id === activeId) || conversations[0] || { id: "", messages: [], title: "" };
   const chat = activeConversation.messages || [];
@@ -989,6 +1009,17 @@ function App() {
           <button
             className={`nav-item ${activeNav === "chats" ? "active" : ""}`}
             onClick={() => { setActiveNav("chats"); setSidebarOpen(false); }}
+            onPointerDown={startChatsLongPress}
+            onPointerUp={cancelChatsLongPress}
+            onPointerLeave={cancelChatsLongPress}
+            onPointerCancel={cancelChatsLongPress}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              cancelChatsLongPress();
+              setSessionHistoryOpen(true);
+              setActiveNav("chats");
+            }}
+            title="Tahan untuk lihat sejarah sesi"
           >
             <span className="nav-icon">
               <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
@@ -1059,98 +1090,7 @@ function App() {
             <span>About</span>
           </button>
 
-          {/* Sesi Aktif List inside Sidebar for easy access when Chats navigation is active */}
-          {activeNav === "chats" && (
-            <div className="sidebar-sub-section animate-fade">
-              <span className="sidebar-sub-title">Sesi Aktif</span>
-              <div className="sidebar-search-box">
-                <input
-                  type="text"
-                  placeholder="Cari perbualan..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="sidebar-conv-list">
-                {filteredConversations.filter(c => !c.archived).map((c) => (
-                  <div
-                    key={c.id}
-                    className={`sidebar-conv-item ${c.id === activeId ? "active" : ""}`}
-                    onClick={() => { setActiveId(c.id); setSidebarOpen(false); }}
-                  >
-                    {editingId === c.id ? (
-                      <div className="sidebar-item-edit-wrapper" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="text"
-                          value={editTitle}
-                          onChange={(e) => setEditTitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              handleRenameConversation(c.id, editTitle);
-                            } else if (e.key === "Escape") {
-                              setEditingId(null);
-                            }
-                          }}
-                          autoFocus
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <span className="sidebar-conv-title">{c.title}</span>
-                        <div className="sidebar-conv-actions">
-                          <button
-                            className="sidebar-action-btn"
-                            onClick={(e) => handlePinConversation(c.id, e)}
-                            title="Pin Sembang"
-                          >
-                            <svg stroke="currentColor" fill={c.pinned ? "currentColor" : "none"} strokeWidth="2" viewBox="0 0 24 24" height="12" width="12" xmlns="http://www.w3.org/2000/svg">
-                              <line x1="12" y1="17" x2="12" y2="22"></line>
-                              <path d="M5 17h14l-1.5-6V5a1 1 0 0 0-1-1h-9a1 1 0 0 0-1 1v6L5 17z"></path>
-                            </svg>
-                          </button>
-                          <button
-                            className="sidebar-action-btn"
-                            onClick={(e) => handleArchiveConversation(c.id, e)}
-                            title="Arkib Sembang"
-                          >
-                            <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="12" width="12" xmlns="http://www.w3.org/2000/svg">
-                              <polyline points="21 8 21 21 3 21 3 8"></polyline>
-                              <rect x="1" y="3" width="22" height="5"></rect>
-                              <line x1="10" y1="12" x2="14" y2="12"></line>
-                            </svg>
-                          </button>
-                          <button
-                            className="sidebar-action-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingId(c.id);
-                              setEditTitle(c.title);
-                            }}
-                            title="Nama Semula"
-                          >
-                            <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="12" width="12" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                          </button>
-                          <button
-                            className="sidebar-action-btn"
-                            onClick={(e) => handleDeleteConversation(c.id, e)}
-                            title="Padam Sembang"
-                          >
-                            <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="12" width="12" xmlns="http://www.w3.org/2000/svg">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+
         </nav>
 
         {/* User Profile Info */}
@@ -1167,6 +1107,86 @@ function App() {
           <span>Version 1.2.4</span>
         </div>
       </aside>
+
+      {sessionHistoryOpen && (
+        <>
+          <div className="session-history-backdrop" onClick={closeSessionHistory} />
+          <section
+            className="session-history-popover animate-fade"
+            role="dialog"
+            aria-label="Sejarah sesi"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="session-history-header">
+              <div>
+                <strong>Sejarah Sesi</strong>
+                <span>{conversations.length} sesi</span>
+              </div>
+              <button
+                type="button"
+                className="session-history-close"
+                onClick={closeSessionHistory}
+                aria-label="Tutup sejarah sesi"
+              >×</button>
+            </div>
+
+            <div className="session-history-search">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <line x1="16.5" y1="16.5" x2="21" y2="21"></line>
+              </svg>
+              <input
+                type="text"
+                placeholder="Cari sesi..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+              />
+            </div>
+
+            <div className="session-history-list">
+              {filteredConversations.filter(c => !c.archived).length > 0 ? (
+                filteredConversations.filter(c => !c.archived).map((c) => (
+                  <div
+                    key={c.id}
+                    className={`session-history-item ${c.id === activeId ? "active" : ""}`}
+                    onClick={() => {
+                      setActiveId(c.id);
+                      setActiveNav("chats");
+                      closeSessionHistory();
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    <div className="session-history-item-icon">
+                      <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" width="15" height="15">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                      </svg>
+                    </div>
+                    <div className="session-history-item-copy">
+                      <strong>{c.title}</strong>
+                      <span>{c.messages?.length || 0} mesej · {new Date(c.createdAt).toLocaleDateString()}</span>
+                    </div>
+                    {c.pinned && <span className="session-history-pin">●</span>}
+                  </div>
+                ))
+              ) : (
+                <div className="session-history-empty">Tiada sesi ditemui.</div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className="session-history-new"
+              onClick={() => {
+                handleNewChat();
+                closeSessionHistory();
+              }}
+            >
+              <span>＋</span> Sesi Baru
+            </button>
+          </section>
+        </>
+      )}
 
       {/* ==========================================================================
          WORKSPACE UTAMA
