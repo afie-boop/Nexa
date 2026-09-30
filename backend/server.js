@@ -647,6 +647,23 @@ app.delete("/api/brain/memories/:memory_id", brainNoStore, rateLimitBrain("delet
   }
 });
 
+app.post("/api/brain/memories/reset", async (req, res) => {
+  try {
+    const brainUserId = ensureSessionId(req);
+    const result = await brain.deleteAllMemories({
+      scope: { type: "user", userId: brainUserId }
+    });
+    return res.status(200).json({
+      status: "ok",
+      deleted: Number(result?.deleted) || 0,
+      message: "Semua memori aktif AXMchat telah direset."
+    });
+  } catch (error) {
+    console.error("[Brain Memory Reset Error]:", error.message);
+    return res.status(500).json({ status: "error", message: error.message });
+  }
+});
+
 app.post("/chat", async (req, res) => {
   const { question, history } = req.body;
 
@@ -709,6 +726,7 @@ app.post("/chat", async (req, res) => {
 
     const { generalModel, codingModel, fallbackModel } = req.body;
     const responseMode = normalizeResponseMode(req.body?.responseMode);
+    const memoryEnabled = req.body?.memoryEnabled !== false;
 
     // Fast mode intentionally avoids the expensive context/retrieval/classifier
     // chain. It uses deterministic local task detection and goes straight to
@@ -729,18 +747,19 @@ app.post("/chat", async (req, res) => {
         console.warn("[WorkContext Retrieval Warning]:", workContextError.message);
       }
 
-      // Brain context is retrieved server-side using the stable per-browser
-      // Brain identity, not GitHub authentication.
-      try {
-        sendStatus("Mencari konteks Brain...");
-        brainContext = await brain.retrieveContext(question.trim(), {
-          scope: brainScope,
-          topK: 5,
-          maxSources: 8,
-          maxContextChars: 5000
-        });
-      } catch (brainError) {
-        console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
+      // Brain retrieval is controlled by the real Memory Toggle.
+      if (memoryEnabled) {
+        try {
+          sendStatus("Mencari konteks Brain...");
+          brainContext = await brain.retrieveContext(question.trim(), {
+            scope: brainScope,
+            topK: 5,
+            maxSources: 8,
+            maxContextChars: 5000
+          });
+        } catch (brainError) {
+          console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
+        }
       }
 
       sendStatus("Mengelaskan permintaan...");
@@ -803,7 +822,7 @@ Use this clock data for questions about the current date/time. It is generated a
         console.warn("[Fast WorkContext Save Warning]:", workContextError.message);
       });
 
-      void learnFromChat(brain, question, brainScope, {
+      if (memoryEnabled) void learnFromChat(brain, question, brainScope, {
         mode: process.env.BRAIN_MEMORY_MODE || "auto",
         confidenceThreshold: 0.75,
         maxMemories: 3
@@ -829,7 +848,7 @@ Use this clock data for questions about the current date/time. It is generated a
     // Brain Learning Loop: learn only durable information from the user's
     // own message, scoped to the stable Brain user identity. GitHub is not
     // required for personal memory. The assistant response is never persisted.
-    try {
+    if (memoryEnabled) try {
       const learning = await learnFromChat(brain, question, brainScope, {
         mode: process.env.BRAIN_MEMORY_MODE || "auto",
         confidenceThreshold: 0.75,
