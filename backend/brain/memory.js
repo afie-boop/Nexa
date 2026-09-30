@@ -576,6 +576,38 @@ function listMemories(vaultDir, options = {}) {
  * Permanently removes a memory note from the active vault while keeping its
  * version history so the deletion can be audited/restored when appropriate.
  */
+async function deleteAllMemories(vaultDir, options = {}) {
+  if (!vaultDir) throw new Error('Reset Memory Error: vaultDir is required.');
+  const absoluteVault = path.resolve(vaultDir);
+  if (!fs.existsSync(absoluteVault)) return { deleted: 0 };
+
+  const filterScope = options.scope !== undefined ? options.scope : null;
+  let deleted = 0;
+  for (const filePath of getAllMdFiles(absoluteVault, absoluteVault)) {
+    try {
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const { frontmatter, body } = parseFrontmatter(raw);
+      if (!isNoteInScope(frontmatter, filterScope)) continue;
+      const memoryId = frontmatter.id;
+      if (memoryId && /^mem_[a-zA-Z0-9_-]+$/.test(memoryId)) {
+        saveHistorySnapshot(absoluteVault, {
+          memoryId,
+          version: (Number(frontmatter.version) || 1) + 1,
+          operation: 'reset-delete',
+          previousVersion: Number(frontmatter.version) || 1,
+          content: body.trim(),
+          frontmatter
+        });
+      }
+      fs.unlinkSync(filePath);
+      deleted += 1;
+    } catch (error) {
+      console.warn('[Brain Reset Warning]:', error.message);
+    }
+  }
+  return { deleted };
+}
+
 async function deleteMemory(vaultDir, notePathOrId, options = {}) {
   if (!vaultDir || !notePathOrId || typeof notePathOrId !== 'string') {
     throw new Error('Delete Memory Error: vaultDir and memory id/path are required.');
