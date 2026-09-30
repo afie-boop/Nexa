@@ -15,6 +15,7 @@ async function coder(data) {
     maxTokens,
     reasoningEffort,
     maxRetries,
+    fallbackEnabled,
     sendStatus = () => {}
   } = data;
 
@@ -30,7 +31,8 @@ async function coder(data) {
       system,
       maxTokens,
       reasoningEffort,
-      maxRetries
+      maxRetries,
+      fallbackEnabled
     });
 
     if (!response || !response.trim()) {
