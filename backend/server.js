@@ -68,6 +68,7 @@ const { requireBrainAuth } = require("./brain/brain_auth");
 const { saveGitHubSession, getGitHubSession, clearGitHubSession, ensureSessionId } = require("./github_session");
 const { learnFromChat } = require("./brain/learning");
 const { getWorkContext, saveWorkContext, formatWorkContext } = require("./brain/workContext");
+const { normalizeResponseMode, classifyFastTask } = require("./responseModes");
 
 const app = express();
 
@@ -707,45 +708,47 @@ app.post("/chat", async (req, res) => {
     }
 
     const { generalModel, codingModel, fallbackModel } = req.body;
+    const responseMode = normalizeResponseMode(req.body?.responseMode);
 
-    // Shared Work Context connects General and Coding AI across chats.
+    // Fast mode intentionally avoids the expensive context/retrieval/classifier
+    // chain. It uses deterministic local task detection and goes straight to
+    // the selected model through the Fast pipeline path.
     let sharedWorkContext = null;
-    try {
-      sharedWorkContext = await getWorkContext(brainUserId);
-      if (sharedWorkContext) sendStatus("Menyambung Shared Work Context...");
-    } catch (workContextError) {
-      console.warn("[WorkContext Retrieval Warning]:", workContextError.message);
-    }
-
-    // Brain context is retrieved server-side using the stable per-browser
-    // Brain identity, not GitHub authentication.
     let brainContext = null;
-    try {
-      sendStatus("Mencari konteks Brain...");
-      brainContext = await brain.retrieveContext(question.trim(), {
-        scope: brainScope,
-        topK: 5,
-        maxSources: 8,
-        maxContextChars: 5000
-      });
-    } catch (brainError) {
-      console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
+    let task;
+
+    if (responseMode === "fast") {
+      task = classifyFastTask(question);
+      sendStatus("Fast mode: laluan terus...");
+    } else {
+      // Shared Work Context connects General and Coding AI across chats.
+      try {
+        sharedWorkContext = await getWorkContext(brainUserId);
+        if (sharedWorkContext) sendStatus("Menyambung Shared Work Context...");
+      } catch (workContextError) {
+        console.warn("[WorkContext Retrieval Warning]:", workContextError.message);
+      }
+
+      // Brain context is retrieved server-side using the stable per-browser
+      // Brain identity, not GitHub authentication.
+      try {
+        sendStatus("Mencari konteks Brain...");
+        brainContext = await brain.retrieveContext(question.trim(), {
+          scope: brainScope,
+          topK: 5,
+          maxSources: 8,
+          maxContextChars: 5000
+        });
+      } catch (brainError) {
+        console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
+      }
+
+      sendStatus("Mengelaskan permintaan...");
+      task = await classifyTask(question, history || []);
     }
-
-    sendStatus("Mengelaskan permintaan...");
-
-    const task = await classifyTask(
-      question,
-      history || []
-    );
-
-    const requestedResponseMode = typeof req.body?.responseMode === "string" ? req.body.responseMode : "balance";
-    const responseMode = ["fast", "balance", "thinking"].includes(requestedResponseMode)
-      ? requestedResponseMode
-      : "balance";
 
     const responseModeContext = {
-      fast: "[AXMCHAT RESPONSE MODE]\nMode: Fast\nPrioritize speed and concise answers. Keep reasoning and explanation minimal while still being correct.\n[END AXMCHAT RESPONSE MODE]",
+      fast: "[AXMCHAT RESPONSE MODE]\nMode: Fast\nPrioritize speed with a direct single-pass response.\n[END AXMCHAT RESPONSE MODE]",
       balance: "[AXMCHAT RESPONSE MODE]\nMode: Balance\nBalance response speed, reasoning depth, clarity, and completeness. This is the default everyday mode.\n[END AXMCHAT RESPONSE MODE]",
       thinking: "[AXMCHAT RESPONSE MODE]\nMode: Thinking\nUse deeper reasoning before answering. Carefully check assumptions, calculations, code, edge cases, and instructions. Prefer correctness and completeness over speed.\n[END AXMCHAT RESPONSE MODE]"
     }[responseMode];
@@ -762,11 +765,17 @@ Use this clock data for questions about the current date/time. It is generated a
 [END AXMCHAT REAL-TIME CLOCK]`;
 
     const sharedWorkPrompt = formatWorkContext(sharedWorkContext);
-    const contextBlocks = [responseModeContext, realtimeClockContext, sharedWorkPrompt];
-    if (brainContext && brainContext.context && brainContext.sources && brainContext.sources.length) {
-      contextBlocks.push(`[AXMCHAT BRAIN CONTEXT]\\n${brainContext.context}\\n[END AXMCHAT BRAIN CONTEXT]`);
+    const contextBlocks = responseMode === "fast"
+      ? []
+      : [responseModeContext, realtimeClockContext, sharedWorkPrompt];
+
+    if (responseMode !== "fast" && brainContext && brainContext.context && brainContext.sources && brainContext.sources.length) {
+      contextBlocks.push(`[AXMCHAT BRAIN CONTEXT]\n${brainContext.context}\n[END AXMCHAT BRAIN CONTEXT]`);
     }
-    const brainAugmentedQuestion = `${question.trim()}\\n\\n${contextBlocks.filter(Boolean).join("\\n\\n")}`;
+
+    const brainAugmentedQuestion = contextBlocks.length
+      ? `${question.trim()}\n\n${contextBlocks.filter(Boolean).join("\n\n")}`
+      : question.trim();
 
     const answer = await runPipeline({
       task,
@@ -775,6 +784,7 @@ Use this clock data for questions about the current date/time. It is generated a
       generalModel,
       codingModel,
       fallbackModel,
+      responseMode,
       sendStatus,
       sendProcessStep
     });
