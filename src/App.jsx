@@ -136,6 +136,19 @@ function App() {
 
   const [load, setLoad] = useState(false);
 
+  const [aiAvailability, setAiAvailability] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("axmchat_ai_availability") || "null");
+      return {
+        general: saved?.general !== false,
+        coding: saved?.coding !== false,
+        fallback: saved?.fallback !== false
+      };
+    } catch {
+      return { general: true, coding: true, fallback: true };
+    }
+  });
+
   const [responseMode, setResponseMode] = useState(() => {
     try {
       const saved = localStorage.getItem("axmchat_response_mode");
@@ -269,6 +282,14 @@ function App() {
       console.error(err);
     }
   }, [memoryEnabled]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("axmchat_ai_availability", JSON.stringify(aiAvailability));
+    } catch (err) {
+      console.error(err);
+    }
+  }, [aiAvailability]);
 
   useEffect(() => {
     try {
@@ -530,7 +551,16 @@ function App() {
     const textToSend = overrideMsg || msgRef.current?.value || "";
     if (!textToSend.trim() || load) return;
 
-    if (!generalModel.trim() || !codingModel.trim() || !fallbackModel.trim()) {
+    if (!aiAvailability.general && !aiAvailability.coding && !aiAvailability.fallback) {
+      setError("Semua AI AXMchat dimatikan. Hidupkan sekurang-kurangnya satu AI.");
+      return;
+    }
+
+    if (
+      (aiAvailability.general && !generalModel.trim()) ||
+      (aiAvailability.coding && !codingModel.trim()) ||
+      (aiAvailability.fallback && !fallbackModel.trim())
+    ) {
       setError("Model ID untuk General AI, Coding AI, dan Fallback AI tidak boleh kosong.");
       return;
     }
@@ -563,6 +593,7 @@ function App() {
           fallbackModel: fallbackModel.trim(),
           responseMode,
           memoryEnabled,
+          aiAvailability,
           clientTime: {
             iso: new Date().toISOString(),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
@@ -1337,6 +1368,26 @@ function App() {
             <div className="sub-panel-inner">
               <h2 className="panel-title">AXMchat AI Models</h2>
               <p className="panel-subtitle">Tetapkan Model ID tersuai untuk General AI, Coding AI, dan Fallback AI.</p>
+
+              <div className="flat-card" style={{ marginBottom: "16px" }}>
+                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "6px" }}>AI Control</h3>
+                <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Hidupkan atau matikan AI yang dibenarkan bekerja. Tetapan ini dikuatkuasakan di server.</p>
+                {[
+                  ["general", "General AI", "AI untuk sembang dan tugasan umum."],
+                  ["coding", "Coding AI", "AI untuk coding, debugging dan tugasan teknikal."],
+                  ["fallback", "Fallback AI", "AI cadangan apabila model utama gagal."]
+                ].map(([key, label, desc], index) => (
+                  <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", padding: "12px 0", borderTop: index === 0 ? "none" : "1px solid var(--border)" }}>
+                    <div>
+                      <strong style={{ display: "block", fontSize: "14px" }}>{label}</strong>
+                      <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>{desc}</span>
+                    </div>
+                    <button type="button" className="card-action-btn" aria-pressed={aiAvailability[key]} onClick={() => setAiAvailability(prev => ({ ...prev, [key]: !prev[key] }))}>
+                      {aiAvailability[key] ? "ON" : "OFF"}
+                    </button>
+                  </div>
+                ))}
+              </div>
 
               <div className="grid-container">
                 <div className="flat-card">
