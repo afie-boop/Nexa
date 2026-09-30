@@ -1700,3 +1700,8 @@ button, input, textarea, select {
 .mode-option-copy span{color:var(--secondary-text);font-size:11px;line-height:1.35}
 .mode-option-check{color:var(--primary-text);font-size:15px;font-weight:700}
 @media(max-width:480px){.mode-picker-copy span{display:none}.mode-picker-menu{width:min(300px,calc(100vw - 32px))}}
+
+
+/* Keep Response Mode and Send on one horizontal row. */
+.composer-mode-row{justify-content:space-between;gap:12px;width:100%;}
+.composer-mode-send-btn{margin-left:auto;width:36px;height:36px;}
