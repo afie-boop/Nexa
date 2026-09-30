@@ -166,17 +166,33 @@ async function extractMemory(input, options = {}) {
   } else if (mode === 'llm') {
     extracted = await extractMemoryWithAI(input, options);
   } else if (mode === 'auto') {
+    // Always run the deterministic extractor first for explicit self-statements.
+    // This prevents an LLM extractor from accidentally dropping clear facts such
+    // as "aku orang ..." when it returns an unrelated/empty memory set.
+    const ruleResult = extractMemoryRules(input, options);
+    const ruleMemories = Array.isArray(ruleResult?.memories) ? ruleResult.memories : [];
+    let aiMemories = [];
+
     try {
       const aiResult = await extractMemoryWithAI(input, options);
-      if (aiResult && Array.isArray(aiResult.memories) && aiResult.memories.length > 0) {
-        extracted = aiResult;
+      if (aiResult && Array.isArray(aiResult.memories)) {
+        aiMemories = aiResult.memories;
       }
     } catch (err) {
       console.warn('Memory Auto Extractor Warning (falling back to rules):', err.message);
     }
-    if (!extracted) {
-      extracted = extractMemoryRules(input, options);
-    }
+
+    // Keep explicit rule-based facts and add AI-discovered memories.
+    const seen = new Set();
+    const memories = [...ruleMemories, ...aiMemories].filter(memory => {
+      if (!memory || typeof memory !== 'object') return false;
+      const key = normalizeContent(memory.content || '');
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    extracted = { memories };
   } else {
     extracted = extractMemoryRules(input, options);
   }
