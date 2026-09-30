@@ -564,6 +564,7 @@ function App() {
           codingModel: codingModel.trim(),
           fallbackModel: fallbackModel.trim(),
           responseMode,
+          memoryEnabled,
           clientTime: {
             iso: new Date().toISOString(),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
@@ -778,6 +779,24 @@ function App() {
       setBrainHistoryError(err.message || "Restore gagal.");
     } finally {
       setBrainRestoringVersion(null);
+    }
+  }
+
+  async function resetMemory() {
+    if (!window.confirm("Reset semua memori AXMchat? Memori aktif yang disimpan tentang anda akan dipadam.")) return;
+    try {
+      const res = await fetch("/api/brain/memories/reset", {
+        method: "POST",
+        credentials: "same-origin"
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Reset memori gagal.");
+      setBrainHistory([]);
+      setBrainMemoryId("");
+      setBrainHistoryError("");
+      window.alert(`Memori berjaya direset. ${Number(data.deleted) || 0} memori dipadam.`);
+    } catch (err) {
+      setError(err.message || "Reset memori gagal.");
     }
   }
 
@@ -1525,15 +1544,17 @@ function App() {
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" }}>
                   <div>
-                    <strong style={{ display: "block", fontSize: "14px" }}>Ingatan Chat (Memory Toggle)</strong>
-                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Sertakan konteks mesej terdahulu secara automatik dalam permintaan API.</span>
+                    <strong style={{ display: "block", fontSize: "14px" }}>Memori AXMchat</strong>
+                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>{memoryEnabled ? "ON — AI boleh membaca dan menyimpan memori." : "OFF — AI tidak membaca atau menyimpan memori."}</span>
                   </div>
-                  <input
-                    type="checkbox"
-                    style={{ width: "20px", height: "20px", cursor: "pointer" }}
-                    checked={memoryEnabled}
-                    onChange={(e) => setMemoryEnabled(e.target.checked)}
-                  />
+                  <button
+                    type="button"
+                    className="card-action-btn"
+                    aria-pressed={memoryEnabled}
+                    onClick={() => setMemoryEnabled(prev => !prev)}
+                  >
+                    {memoryEnabled ? "ON" : "OFF"}
+                  </button>
                 </div>
 
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid var(--border)" }}>
@@ -1543,6 +1564,16 @@ function App() {
                   </div>
                   <button className="card-action-btn" style={{ color: "#EF4444", borderColor: "#EF4444" }} onClick={clearChat}>
                     Padam Sejarah
+                  </button>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid var(--border)" }}>
+                  <div>
+                    <strong style={{ display: "block", fontSize: "14px" }}>Reset Memori</strong>
+                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Padam semua memori aktif AXMchat untuk peranti ini.</span>
+                  </div>
+                  <button className="card-action-btn" style={{ color: "#EF4444", borderColor: "#EF4444" }} onClick={resetMemory}>
+                    Reset Memori
                   </button>
                 </div>
               </div>
