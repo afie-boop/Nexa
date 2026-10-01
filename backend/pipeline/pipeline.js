@@ -192,7 +192,7 @@ async function runPipeline(data) {
     logger.finish();
     emitStep({ id: "completed", label: "Completed", status: "completed" });
 
-    return output;
+    return sanitizeInternalContext(output);
 
   } catch (err) {
 
