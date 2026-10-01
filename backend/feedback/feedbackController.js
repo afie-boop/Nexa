@@ -24,37 +24,9 @@ async function handleFeedbackReason(req, res) {
       system: "Kamu ialah modul analisis maklum balas AXMchat. Fokus pada teks yang diberi. Jangan tambah maklumat yang tidak ada."
     });
     const finalExplanation = String(explanation).trim();
-    sendFeedbackEmail({
-      type,
-      reason: selectedReason,
-      explanation: finalExplanation,
-      userMessage: user_message,
-      aiResponse: ai_response,
-      model,
-      conversationId: req.body.conversation_id,
-      messageId: req.body.message_id
-    }).catch((emailError) => {
-      console.error("[Feedback Email Error]:", emailError.message);
-    });
-
     return res.status(200).json({ success: true, explanation: finalExplanation });
   } catch (error) {
     console.error("[Feedback Reason Error]:", error.message);
-
-    // Hantar feedback ke email walaupun AI gagal menjana penjelasan.
-    // Ini memastikan alasan pengguna tidak hilang hanya kerana provider AI bermasalah.
-    sendFeedbackEmail({
-      type,
-      reason: selectedReason,
-      explanation: "Penjelasan AI gagal dijana.",
-      userMessage: user_message,
-      aiResponse: ai_response,
-      model,
-      conversationId: req.body.conversation_id,
-      messageId: req.body.message_id
-    }).catch((emailError) => {
-      console.error("[Feedback Email Error]:", emailError.message);
-    });
 
     return res.status(503).json({ success: false, message: "Gagal menjana alasan maklum balas." });
   }
@@ -80,7 +52,7 @@ async function handlePostFeedback(req, res) {
     });
   }
 
-  // Run asynchronously so that we don't block the chat experience or the feedback submission experience!
+  // Simpan feedback sedia ada tanpa menghalang respons UI.
   processUserFeedback({
     conversation_id,
     message_id,
@@ -97,6 +69,55 @@ async function handlePostFeedback(req, res) {
   .catch((err) => {
     console.error("[feedbackController] Gagal memproses maklum balas secara tak senkron:", err);
   });
+
+  // /api/feedback memang dipanggil untuk Like dan Dislike. Jadikan ini trigger utama
+  // email supaya penghantaran tidak bergantung pada popup reason / endpoint kedua.
+  if (["positive", "negative"].includes(type)) {
+    const feedbackType = type === "positive" ? "like" : "dislike";
+    const selectedReason = typeof reason === "string" ? reason.trim() : "";
+    const explanationPrompt = feedbackType === "like"
+      ? `Terangkan secara ringkas dalam Bahasa Melayu kenapa jawapan AI ini mungkin disukai pengguna. Jika alasan pengguna kosong, simpulkan alasan munasabah daripada soalan dan jawapan. Jangan mereka-reka perasaan pengguna. Jawab satu ayat sahaja.
+Alasan pengguna: ${selectedReason || "(tiada)"}
+Soalan pengguna: ${user_message.slice(0, 1200)}
+Jawapan AI: ${ai_response.slice(0, 3000)}`
+      : `Terangkan secara ringkas dalam Bahasa Melayu kenapa jawapan AI ini bermasalah berdasarkan alasan pengguna. Jika alasan kosong, kenal pasti masalah paling munasabah daripada soalan dan jawapan. Jangan mereka-reka fakta di luar teks. Jawab satu ayat sahaja.
+Alasan pengguna: ${selectedReason || "(tiada)"}
+Soalan pengguna: ${user_message.slice(0, 1200)}
+Jawapan AI: ${ai_response.slice(0, 3000)}`;
+
+    (async () => {
+      let explanation = "Penjelasan AI gagal dijana.";
+      try {
+        const generated = await askOpenRouter(explanationPrompt, {
+          model: model || "openrouter/free",
+          fallbackEnabled: false,
+          maxRetries: 0,
+          maxTokens: 180,
+          reasoningEffort: "none",
+          system: "Kamu ialah modul analisis maklum balas AXMchat. Fokus pada teks yang diberi. Jangan tambah maklumat yang tidak ada."
+        });
+        explanation = String(generated).trim() || explanation;
+      } catch (error) {
+        console.error("[Feedback Email Analysis Error]:", error.message);
+      }
+
+      try {
+        const result = await sendFeedbackEmail({
+          type: feedbackType,
+          reason: selectedReason,
+          explanation,
+          userMessage: user_message,
+          aiResponse: ai_response,
+          model,
+          conversationId: conversation_id,
+          messageId: message_id
+        });
+        console.log("[Feedback Email] Result:", result.sent ? "sent" : (result.skipped ? "skipped" : "not_sent"));
+      } catch (error) {
+        console.error("[Feedback Email Error]:", error.message);
+      }
+    })();
+  }
 
   return res.status(200).json({
     success: true,
