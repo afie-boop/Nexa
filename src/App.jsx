@@ -997,21 +997,50 @@ function App() {
                             </button>
                           </div>
 
+                          {c.feedback === "like" && (
+                            <div className="feedback-explanation">
+                              <span className="reason-title">👍 Kenapa disukai</span>
+                              <span>
+                                {feedbackGeneratingMsgId === messageId
+                                  ? "AXMchat sedang menganalisis jawapan..."
+                                  : (c.feedbackExplanation || "AXMchat sedang menjana alasan berdasarkan jawapan ini.")}
+                              </span>
+                            </div>
+                          )}
+
                           {/* Dislike reason picker */}
                           {c.feedback === "dislike" && dislikeReasonMsgId === messageId && (
                             <div className="dislike-reason-popup animate-slide">
-                              <span className="reason-title">Sila pilih alasan (pilihan):</span>
+                              <span className="reason-title">👎 Apa masalahnya?</span>
                               <div className="reason-options">
-                                {["Wrong", "Incomplete", "Didn't follow instruction", "Bad code", "Other"].map(opt => (
-                                  <button
-                                    key={opt}
-                                    className="reason-opt-btn"
-                                    onClick={() => handleSelectReason(messageId, opt)}
-                                  >
+                                {["Jawapan salah", "Tidak lengkap", "Tidak ikut arahan", "Kod bermasalah"].map(opt => (
+                                  <button key={opt} className="reason-opt-btn" onClick={() => handleSelectReason(messageId, opt)}>
                                     {opt}
                                   </button>
                                 ))}
                               </div>
+                              <input
+                                className="feedback-custom-input"
+                                value={customFeedbackReason}
+                                onChange={(e) => setCustomFeedbackReason(e.target.value)}
+                                placeholder="Tulis masalah lain..."
+                                maxLength={300}
+                              />
+                              <button
+                                className="reason-opt-btn"
+                                disabled={!customFeedbackReason.trim()}
+                                onClick={() => handleSelectReason(messageId, "Other")}
+                              >
+                                Hantar masalah
+                              </button>
+                              {feedbackGeneratingMsgId === messageId && (
+                                <span className="feedback-generating">AXMchat sedang menganalisis masalah...</span>
+                              )}
+                              {c.feedbackExplanation && (
+                                <div className="feedback-explanation">
+                                  {c.feedbackExplanation}
+                                </div>
+                              )}
                               <button className="reason-close-btn" onClick={() => setDislikeReasonMsgId(null)}>
                                 Tutup
                               </button>
