@@ -13,7 +13,7 @@ async function sendFeedbackEmail({
 }) {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    console.warn("[Feedback Email] RESEND_API_KEY belum ditetapkan; email feedback dilewati.");
+    console.error("[Feedback Email] RESEND_API_KEY belum ditetapkan; email feedback dilewati.");
     return { sent: false, skipped: true };
   }
 
@@ -59,7 +59,9 @@ async function sendFeedbackEmail({
     throw new Error(`Resend ${response.status}: ${body.slice(0, 500)}`);
   }
 
-  return { sent: true };
+  const result = await response.json().catch(() => ({}));
+  console.log("[Feedback Email] Resend accepted email:", result.id || "no-id");
+  return { sent: true, id: result.id || null };
 }
 
 module.exports = { sendFeedbackEmail };
