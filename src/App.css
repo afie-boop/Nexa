@@ -1907,3 +1907,11 @@ button, input, textarea, select {
     border-radius: 18px;
   }
 }
+
+
+/* AI-generated feedback explanations */
+.feedback-explanation{display:flex;flex-direction:column;gap:4px;margin-top:8px;padding:9px 11px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--secondary-text);font-size:11px;line-height:1.45}
+.feedback-explanation .reason-title{color:var(--primary-text);font-weight:700}
+.feedback-generating{display:block;margin-top:6px;color:var(--secondary-text);font-size:11px}
+.feedback-custom-input{width:100%;box-sizing:border-box;margin-top:8px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--primary-text);outline:none;font:inherit;font-size:11px}
+.feedback-custom-input:focus{border-color:#555}
