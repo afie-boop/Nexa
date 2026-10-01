@@ -28,7 +28,7 @@ async function handleFeedbackReason(req, res) {
       type,
       reason: selectedReason,
       explanation: finalExplanation,
-      userMessage,
+      userMessage: user_message,
       aiResponse: ai_response,
       model,
       conversationId: req.body.conversation_id,
@@ -40,6 +40,22 @@ async function handleFeedbackReason(req, res) {
     return res.status(200).json({ success: true, explanation: finalExplanation });
   } catch (error) {
     console.error("[Feedback Reason Error]:", error.message);
+
+    // Hantar feedback ke email walaupun AI gagal menjana penjelasan.
+    // Ini memastikan alasan pengguna tidak hilang hanya kerana provider AI bermasalah.
+    sendFeedbackEmail({
+      type,
+      reason: selectedReason,
+      explanation: "Penjelasan AI gagal dijana.",
+      userMessage: user_message,
+      aiResponse: ai_response,
+      model,
+      conversationId: req.body.conversation_id,
+      messageId: req.body.message_id
+    }).catch((emailError) => {
+      console.error("[Feedback Email Error]:", emailError.message);
+    });
+
     return res.status(503).json({ success: false, message: "Gagal menjana alasan maklum balas." });
   }
 }
