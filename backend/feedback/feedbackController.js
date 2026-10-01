@@ -1,6 +1,7 @@
 const { processUserFeedback } = require("./lessonGenerator");
 
 const askOpenRouter = require("../openrouter");
+const { sendFeedbackEmail } = require("./feedbackMailer");
 
 async function handleFeedbackReason(req, res) {
   const { type, user_message, ai_response, reason, model } = req.body || {};
@@ -22,7 +23,21 @@ async function handleFeedbackReason(req, res) {
       reasoningEffort: "none",
       system: "Kamu ialah modul analisis maklum balas AXMchat. Fokus pada teks yang diberi. Jangan tambah maklumat yang tidak ada."
     });
-    return res.status(200).json({ success: true, explanation: String(explanation).trim() });
+    const finalExplanation = String(explanation).trim();
+    sendFeedbackEmail({
+      type,
+      reason: selectedReason,
+      explanation: finalExplanation,
+      userMessage,
+      aiResponse: ai_response,
+      model,
+      conversationId: req.body.conversation_id,
+      messageId: req.body.message_id
+    }).catch((emailError) => {
+      console.error("[Feedback Email Error]:", emailError.message);
+    });
+
+    return res.status(200).json({ success: true, explanation: finalExplanation });
   } catch (error) {
     console.error("[Feedback Reason Error]:", error.message);
     return res.status(503).json({ success: false, message: "Gagal menjana alasan maklum balas." });
