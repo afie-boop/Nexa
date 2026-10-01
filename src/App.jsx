@@ -221,6 +221,7 @@ function App() {
   const [dislikeReasonMsgId, setDislikeReasonMsgId] = useState(null);
   const [feedbackGeneratingMsgId, setFeedbackGeneratingMsgId] = useState(null);
   const [customFeedbackReason, setCustomFeedbackReason] = useState("");
+  const [customFeedbackMsgId, setCustomFeedbackMsgId] = useState(null);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "dark");
@@ -511,7 +512,7 @@ function App() {
       const res = await fetch("/api/feedback/reason", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, reason, user_message: userMessageText, ai_response: targetMsg.text, model: model || "openrouter/free" })
+        body: JSON.stringify({ type, reason, user_message: userMessageText, ai_response: targetMsg.text, model: model || "openrouter/free", conversation_id: activeId, message_id: msgId })
       });
       const data = await res.json();
       if (!res.ok || !data.explanation) throw new Error(data.message || "Gagal menjana alasan.");
@@ -530,6 +531,7 @@ function App() {
     updateMessageFeedback(msgId, nextFeedback, "");
     setDislikeReasonMsgId(null);
     setCustomFeedbackReason("");
+    setCustomFeedbackMsgId(null);
     if (nextFeedback === "like") {
       sendFeedbackToBackend(msgId, "positive");
       void generateFeedbackReason(msgId, "like");
@@ -542,6 +544,7 @@ function App() {
     const nextFeedback = isCurrentlyDisliked ? null : "dislike";
     updateMessageFeedback(msgId, nextFeedback, "");
     setCustomFeedbackReason("");
+    setCustomFeedbackMsgId(null);
     if (nextFeedback === "dislike") {
       setDislikeReasonMsgId(msgId);
       sendFeedbackToBackend(msgId, "negative");
@@ -551,11 +554,26 @@ function App() {
   };
 
   const handleSelectReason = (msgId, option) => {
-    const reason = option === "Other" ? customFeedbackReason.trim() : option;
-    if (option === "Other" && !reason) return;
+    if (option === "Other") {
+      setCustomFeedbackMsgId(msgId);
+      return;
+    }
+    const reason = option.trim();
     updateMessageFeedback(msgId, "dislike", reason);
     sendFeedbackToBackend(msgId, "negative", reason);
     setDislikeReasonMsgId(null);
+    setCustomFeedbackMsgId(null);
+    setCustomFeedbackReason("");
+    void generateFeedbackReason(msgId, "dislike", reason);
+  };
+
+  const handleSubmitCustomReason = (msgId) => {
+    const reason = customFeedbackReason.trim();
+    if (!reason) return;
+    updateMessageFeedback(msgId, "dislike", reason);
+    sendFeedbackToBackend(msgId, "negative", reason);
+    setDislikeReasonMsgId(null);
+    setCustomFeedbackMsgId(null);
     setCustomFeedbackReason("");
     void generateFeedbackReason(msgId, "dislike", reason);
   };
@@ -1012,7 +1030,34 @@ function App() {
                                   </button>
                                 ))}
                               </div>
-                              <button className="reason-close-btn" onClick={() => setDislikeReasonMsgId(null)}>
+                              {customFeedbackMsgId === messageId && (
+                                <div className="custom-feedback-reason">
+                                  <input
+                                    type="text"
+                                    value={customFeedbackReason}
+                                    onChange={(e) => setCustomFeedbackReason(e.target.value)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleSubmitCustomReason(messageId);
+                                      }
+                                    }}
+                                    placeholder="Tulis masalah anda..."
+                                    autoFocus
+                                  />
+                                  <button
+                                    className="reason-opt-btn"
+                                    onClick={() => handleSubmitCustomReason(messageId)}
+                                  >
+                                    Hantar
+                                  </button>
+                                </div>
+                              )}
+                              <button className="reason-close-btn" onClick={() => {
+                                setDislikeReasonMsgId(null);
+                                setCustomFeedbackMsgId(null);
+                                setCustomFeedbackReason("");
+                              }}>
                                 Tutup
                               </button>
                             </div>
