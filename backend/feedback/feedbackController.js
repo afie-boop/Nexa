@@ -1,5 +1,35 @@
 const { processUserFeedback } = require("./lessonGenerator");
 
+const askOpenRouter = require("../openrouter");
+
+async function handleFeedbackReason(req, res) {
+  const { type, user_message, ai_response, reason, model } = req.body || {};
+  if (!user_message || !ai_response || !["like", "dislike"].includes(type)) {
+    return res.status(400).json({ success: false, message: "type, user_message dan ai_response diperlukan." });
+  }
+
+  const selectedReason = typeof reason === "string" ? reason.trim() : "";
+  const prompt = type === "like"
+    ? `Terangkan secara ringkas dalam Bahasa Melayu kenapa pengguna mungkin menyukai jawapan AI ini. Jika alasan pengguna diberi, gunakan alasan itu; jika kosong, simpulkan alasan yang munasabah berdasarkan jawapan. Jangan dakwa fakta tentang perasaan pengguna yang tidak diketahui. Jawab satu ayat sahaja.\nAlasan pengguna: ${selectedReason || "(tiada)"}\nSoalan pengguna: ${user_message.slice(0, 1200)}\nJawapan AI: ${ai_response.slice(0, 3000)}`
+    : `Terangkan secara ringkas dalam Bahasa Melayu kenapa jawapan AI ini mempunyai masalah berdasarkan alasan pengguna. Jika alasan pengguna kosong, kenal pasti masalah paling munasabah daripada soalan dan jawapan. Jangan mereka-reka fakta di luar teks. Jawab satu ayat sahaja.\nAlasan pengguna: ${selectedReason || "(tiada)"}\nSoalan pengguna: ${user_message.slice(0, 1200)}\nJawapan AI: ${ai_response.slice(0, 3000)}`;
+
+  try {
+    const explanation = await askOpenRouter(prompt, {
+      model: model || "openrouter/free",
+      fallbackEnabled: false,
+      maxRetries: 0,
+      maxTokens: 180,
+      reasoningEffort: "none",
+      system: "Kamu ialah modul analisis maklum balas AXMchat. Fokus pada teks yang diberi. Jangan tambah maklumat yang tidak ada."
+    });
+    return res.status(200).json({ success: true, explanation: String(explanation).trim() });
+  } catch (error) {
+    console.error("[Feedback Reason Error]:", error.message);
+    return res.status(503).json({ success: false, message: "Gagal menjana alasan maklum balas." });
+  }
+}
+
+
 async function handlePostFeedback(req, res) {
   const {
     conversation_id,
@@ -43,4 +73,4 @@ async function handlePostFeedback(req, res) {
   });
 }
 
-module.exports = { handlePostFeedback };
+module.exports = { handlePostFeedback, handleFeedbackReason };
