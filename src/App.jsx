@@ -1066,7 +1066,7 @@ function App() {
                       );
                     }
                   })
-  ), [chat, copiedIdx, dislikeReasonMsgId]);
+  ), [chat, copiedIdx, dislikeReasonMsgId, customFeedbackMsgId, customFeedbackReason]);
 
   return (
     <div className="app-container">
