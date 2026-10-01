@@ -808,7 +808,7 @@ Use this clock data for questions about the current date/time. It is generated a
 
     const sharedWorkPrompt = formatWorkContext(sharedWorkContext);
     const contextBlocks = responseMode === "fast"
-      ? []
+      ? [realtimeClockContext]
       : [responseModeContext, realtimeClockContext, sharedWorkPrompt];
 
     if (responseMode !== "fast" && brainContext && brainContext.context && brainContext.sources && brainContext.sources.length) {
