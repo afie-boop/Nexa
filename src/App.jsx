@@ -219,6 +219,8 @@ function App() {
 
   // Feedback popup state based on message ID
   const [dislikeReasonMsgId, setDislikeReasonMsgId] = useState(null);
+  const [feedbackGeneratingMsgId, setFeedbackGeneratingMsgId] = useState(null);
+  const [customFeedbackReason, setCustomFeedbackReason] = useState("");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "dark");
@@ -482,13 +484,13 @@ function App() {
     }
   };
 
-  const updateMessageFeedback = (msgId, type, reason = "") => {
+  const updateMessageFeedback = (msgId, type, reason = "", explanation = undefined) => {
     setConversations(prevConvs => {
       return prevConvs.map(conv => {
         if (conv.id === activeId) {
           const updatedMessages = conv.messages.map(m => {
             if (m.id === msgId || (m.id === undefined && msgId.startsWith("msg_legacy_"))) {
-              return { ...m, feedback: type, feedbackReason: reason };
+              return { ...m, feedback: type, feedbackReason: reason, feedbackExplanation: explanation === undefined ? m.feedbackExplanation : explanation };
             }
             return m;
           });
@@ -499,25 +501,47 @@ function App() {
     });
   };
 
+  const generateFeedbackReason = async (msgId, type, reason = "") => {
+    const targetMsg = chat.find(m => m.id === msgId);
+    if (!targetMsg?.text) return;
+    const userMessageText = getUserMessageBeforeId(msgId);
+    const model = type === "dislike" && aiAvailability.coding ? codingModel : generalModel;
+    setFeedbackGeneratingMsgId(msgId);
+    try {
+      const res = await fetch("/api/feedback/reason", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, reason, user_message: userMessageText, ai_response: targetMsg.text, model: model || "openrouter/free" })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.explanation) throw new Error(data.message || "Gagal menjana alasan.");
+      updateMessageFeedback(msgId, type, reason, data.explanation);
+    } catch (err) {
+      console.error("Gagal menjana alasan feedback:", err);
+    } finally {
+      setFeedbackGeneratingMsgId(null);
+    }
+  };
+
   const handleLike = (msgId) => {
     const targetMsg = chat.find(m => m.id === msgId);
     const isCurrentlyLiked = targetMsg?.feedback === "like";
     const nextFeedback = isCurrentlyLiked ? null : "like";
-
-    updateMessageFeedback(msgId, nextFeedback);
+    updateMessageFeedback(msgId, nextFeedback, "");
     setDislikeReasonMsgId(null);
-
+    setCustomFeedbackReason("");
     if (nextFeedback === "like") {
       sendFeedbackToBackend(msgId, "positive");
+      void generateFeedbackReason(msgId, "like");
     }
   };
 
-  const handleDislike = (msgId) => {    const targetMsg = chat.find(m => m.id === msgId);
+  const handleDislike = (msgId) => {
+    const targetMsg = chat.find(m => m.id === msgId);
     const isCurrentlyDisliked = targetMsg?.feedback === "dislike";
     const nextFeedback = isCurrentlyDisliked ? null : "dislike";
-
-    updateMessageFeedback(msgId, nextFeedback);
-
+    updateMessageFeedback(msgId, nextFeedback, "");
+    setCustomFeedbackReason("");
     if (nextFeedback === "dislike") {
       setDislikeReasonMsgId(msgId);
       sendFeedbackToBackend(msgId, "negative");
@@ -527,11 +551,14 @@ function App() {
   };
 
   const handleSelectReason = (msgId, option) => {
-    updateMessageFeedback(msgId, "dislike", option);
-    sendFeedbackToBackend(msgId, "negative", option);
+    const reason = option === "Other" ? customFeedbackReason.trim() : option;
+    if (option === "Other" && !reason) return;
+    updateMessageFeedback(msgId, "dislike", reason);
+    sendFeedbackToBackend(msgId, "negative", reason);
     setDislikeReasonMsgId(null);
+    setCustomFeedbackReason("");
+    void generateFeedbackReason(msgId, "dislike", reason);
   };
-
   const handleShare = async (content, key) => {
     if (navigator.share) {
       try {
