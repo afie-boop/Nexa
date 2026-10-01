@@ -1036,14 +1036,19 @@ function App() {
                               {feedbackGeneratingMsgId === messageId && (
                                 <span className="feedback-generating">AXMchat sedang menganalisis masalah...</span>
                               )}
-                              {c.feedbackExplanation && (
-                                <div className="feedback-explanation">
-                                  {c.feedbackExplanation}
-                                </div>
-                              )}
                               <button className="reason-close-btn" onClick={() => setDislikeReasonMsgId(null)}>
                                 Tutup
                               </button>
+                            </div>
+                          )}
+                          {c.feedback === "dislike" && (
+                            <div className="feedback-explanation">
+                              <span className="reason-title">👎 Kenapa bermasalah</span>
+                              <span>
+                                {feedbackGeneratingMsgId === messageId
+                                  ? "AXMchat sedang menganalisis masalah..."
+                                  : (c.feedbackExplanation || "Pilih alasan atau tulis masalah supaya AXMchat boleh menerangkannya.")}
+                              </span>
                             </div>
                           )}
                         </div>
