@@ -59,7 +59,7 @@ console.log("=================================");
 
 const classifyTask = require("./router");
 const { runPipeline } = require("./pipeline/pipeline");
-const { handlePostFeedback } = require("./feedback/feedbackController");
+const { handlePostFeedback, handleFeedbackReason } = require("./feedback/feedbackController");
 const Brain = require("./brain/brain");
 const brainVaultDir = process.env.BRAIN_VAULT_DIR || path.join(__dirname, "brain", "vault");
 const brain = new Brain(brainVaultDir);
@@ -122,6 +122,7 @@ app.use((req, res, next) => {
 });
 
 app.post("/api/feedback", handlePostFeedback);
+app.post("/api/feedback/reason", handleFeedbackReason);
 
 // GET /api/auth/github - Start OAuth flow
 app.get("/api/auth/github", (req, res) => {
