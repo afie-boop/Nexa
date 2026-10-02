@@ -240,18 +240,6 @@ function App() {
     return () => { cancelled = true; };
   }, []);
 
-  async function continueAsGuest() {
-    try {
-      setAuthError("");
-      const res = await fetch("/api/auth/guest", { method: "POST", credentials: "same-origin" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Gagal masuk sebagai Guest.");
-      setAuthUser(data.user || { name: "Guest" });
-    } catch (err) {
-      setAuthError(err.message || "Gagal masuk sebagai Guest.");
-    }
-  }
-
   async function submitAuth(event) {
     event?.preventDefault();
     setAuthError("");
