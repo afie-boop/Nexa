@@ -10,6 +10,7 @@ async function router(data) {
     generalModel,
     codingModel,
     fallbackModel,
+    internalSystemContext = "",
     sendStatus = () => {}
   } = data;
 
@@ -45,6 +46,11 @@ Gunakan Bahasa Melayu atau Indonesia mengikut pengguna.
 `;
   }
 
+
+
+  if (internalSystemContext) {
+    system += "\n\nAdditional runtime context:\n" + internalSystemContext;
+  }
 
   logger.success(
     "Router",
