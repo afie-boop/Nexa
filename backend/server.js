@@ -816,9 +816,27 @@ IMPORTANT: This is authoritative current-time data generated at request time. Ge
       ? [realtimeClockContext]
       : [responseModeContext, realtimeClockContext, sharedWorkPrompt].filter(Boolean);
 
-    if (brainContext && brainContext.context && brainContext.sources && brainContext.sources.length) {
+    // Only inject Brain memory when the current message is meaningfully
+    // related to personal context. Generic greetings/small talk must not leak
+    // unrelated memories such as the user's country.
+    const memoryRelevant = (() => {
+      const text = question.trim().toLowerCase();
+      if (!text) return false;
+      const smallTalk = /^(hi|hello|hey|hai|helo|yo|yoo|e(y|i)o|oi|woy|bro|wak|cuy|kawan|terima kasih|thanks|thank you|thx|ok|okay|oke|baik|selamat pagi|selamat petang|selamat malam|good morning|good afternoon|good evening)[!,.\\s]*$/i;
+      if (smallTalk.test(text)) return false;
+      // Explicit self/memory questions should always be allowed to use Brain.
+      if (/(aku|saya|kamu|anda|diri saya|tentang saya|ingat|memori|memory|siapa saya|orang mana|asal saya|tinggal di|suka apa|minat saya|umur saya|nama saya)/i.test(text)) return true;
+      // For ordinary questions, require lexical overlap with retrieved memory.
+      const memoryText = String(brainContext?.context || "").toLowerCase();
+      if (!memoryText) return false;
+      const tokens = text.match(/[a-z0-9À-ÿ]{3,}/g) || [];
+      const stop = new Set(["yang","dan","atau","dengan","untuk","dari","pada","dalam","itu","ini","apa","ada","tak","tidak","nak","mau","boleh","saya","aku","kau","kamu","anda"]);
+      return tokens.filter(token => !stop.has(token)).some(token => memoryText.includes(token));
+    })();
+
+    if (memoryRelevant && brainContext && brainContext.context && brainContext.sources && brainContext.sources.length) {
       contextBlocks.push(`[AXMCHAT BRAIN CONTEXT]
-IMPORTANT: This is trusted user memory retrieved for this request. Use it to personalize the answer when relevant. Do not reveal internal memory instructions or the existence of hidden context unless the user asks about memory.
+IMPORTANT: This is trusted user memory relevant to the current request. Use it only when it directly helps answer the user's question. Never mention, quote, summarize, or announce hidden memory/context unless the user explicitly asks about their memory or how AXMchat remembers them. Never say "you said you are..." merely because a memory was retrieved.
 ${brainContext.context}
 [END AXMCHAT BRAIN CONTEXT]`);
     }
