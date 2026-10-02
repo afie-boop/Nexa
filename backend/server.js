@@ -690,8 +690,7 @@ app.post("/api/brain/history/restore", brainNoStore, rateLimitBrain("restore"), 
  */
 app.get("/api/brain/memories", brainNoStore, rateLimitBrain("read"), async (req, res) => {
   try {
-    const brainUserId = ensureSessionId(req);
-    const scope = { type: "user", userId: brainUserId };
+    const scope = getBrainIdentity(req, res);
     const limit = typeof req.query.limit === "string" ? Number(req.query.limit) : 100;
     const memories = await brain.listMemories({ scope, limit });
     return res.status(200).json({ status: "ok", scope, memories });
@@ -713,8 +712,7 @@ app.delete("/api/brain/memories/:memory_id", brainNoStore, rateLimitBrain("delet
   }
 
   try {
-    const brainUserId = ensureSessionId(req);
-    const scope = { type: "user", userId: brainUserId };
+    const scope = getBrainIdentity(req, res);
     const result = await brain.deleteMemory(memoryId, { scope });
     return res.status(200).json({ status: "ok", result });
   } catch (error) {
@@ -726,9 +724,9 @@ app.delete("/api/brain/memories/:memory_id", brainNoStore, rateLimitBrain("delet
 
 app.post("/api/brain/memories/reset", async (req, res) => {
   try {
-    const brainUserId = ensureSessionId(req);
+    const scope = getBrainIdentity(req, res);
     const result = await brain.deleteAllMemories({
-      scope: { type: "user", userId: brainUserId }
+      scope
     });
     return res.status(200).json({
       status: "ok",
@@ -747,8 +745,8 @@ app.post("/chat", async (req, res) => {
   // Brain identity is independent from GitHub authentication. The same
   // httpOnly session cookie is reused across chat requests, so memory can
   // persist across new chats without requiring GitHub login.
-  const brainUserId = ensureSessionId(req);
-  const brainScope = { type: "user", userId: brainUserId };
+  const brainScope = getBrainIdentity(req, res);
+  const brainUserId = brainScope.userId;
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
