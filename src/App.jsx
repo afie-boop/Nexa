@@ -1165,7 +1165,13 @@ function App() {
       {!authChecked ? (
         <div className="auth-screen">
           <div className="auth-card">
-            <div className="auth-logo">AXM</div>
+            <div className="auth-logo" aria-label="AXMchat logo">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-hidden="true">
+                <rect width="512" height="512" fill="#000000" />
+                <rect width="512" height="512" rx="160" fill="#ffffff" />
+                <text x="50%" y="54%" fontFamily="Arial, Helvetica, sans-serif" fontSize="220" fontWeight="900" fill="#000000" textAnchor="middle" dominantBaseline="middle" letterSpacing="-12">AX</text>
+              </svg>
+            </div>
             <h1>Welcome to AXMchat</h1>
             <p>Log masuk untuk menggunakan AXMchat.</p>
           </div>
@@ -1173,7 +1179,13 @@ function App() {
       ) : !authUser ? (
         <div className="auth-screen">
           <div className="auth-card">
-            <div className="auth-logo">AXM</div>
+            <div className="auth-logo" aria-label="AXMchat logo">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-hidden="true">
+                <rect width="512" height="512" fill="#000000" />
+                <rect width="512" height="512" rx="160" fill="#ffffff" />
+                <text x="50%" y="54%" fontFamily="Arial, Helvetica, sans-serif" fontSize="220" fontWeight="900" fill="#000000" textAnchor="middle" dominantBaseline="middle" letterSpacing="-12">AX</text>
+              </svg>
+            </div>
             <h1>{authView === "register" ? "Create your account" : "Welcome to AXMchat"}</h1>
             <p>{authView === "register" ? "Buat akaun AXMchat menggunakan username dan password." : "Log masuk atau teruskan sebagai Guest."}</p>
             <form className="auth-actions" onSubmit={submitAuth}>
