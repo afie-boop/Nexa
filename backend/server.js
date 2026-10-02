@@ -66,7 +66,7 @@ const brain = new Brain(brainVaultDir);
 const { rateLimitBrain, brainNoStore, validateMemoryIdInput, validateVersionInput } = require("./brain/brain_security");
 const { requireBrainAuth } = require("./brain/brain_auth");
 const { saveGitHubSession, getGitHubSession, clearGitHubSession, ensureSessionId } = require("./github_session");
-const { googleConfigured, googleState, verifyState, clearState, setAuth, getAuth, clearAuth, ensureGuest, getBrainIdentity } = require("./auth/auth");
+const { setAuth, getAuth, clearAuth, ensureGuest, getBrainIdentity, registerUser, authenticateUser } = require("./auth/auth");
 const { learnFromChat } = require("./brain/learning");
 const { getWorkContext, saveWorkContext, formatWorkContext } = require("./brain/workContext");
 const { normalizeResponseMode, classifyFastTask } = require("./responseModes");
@@ -122,74 +122,43 @@ app.use((req, res, next) => {
   next();
 });
 
-// AXMchat account authentication: Google OAuth + Guest
+// AXMchat account authentication: Username + Password + Guest
 app.get("/api/auth/status", (req, res) => {
   const session = getAuth(req);
   return res.json({
     authenticated: !!session,
     type: session?.type || null,
-    user: session ? { id: session.userId, name: session.name || null, email: session.email || null, picture: session.picture || null } : null
+    user: session ? { id: session.userId, name: session.name || session.username || null, username: session.username || null, isGuest: session.type === "guest" } : null
   });
 });
 
-app.get("/api/auth/google", (req, res) => {
-  if (!googleConfigured()) {
-    return res.status(503).send("Google login belum dikonfigurasi. Tetapkan GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET dan GOOGLE_CALLBACK_URL di Render.");
-  }
-  const state = googleState(res);
-  const params = new URLSearchParams({
-    client_id: process.env.GOOGLE_CLIENT_ID,
-    redirect_uri: process.env.GOOGLE_CALLBACK_URL,
-    response_type: "code",
-    scope: "openid email profile",
-    state,
-    access_type: "online",
-    prompt: "select_account"
-  });
-  return res.redirect("https://accounts.google.com/o/oauth2/v2/auth?" + params.toString());
-});
-
-app.get("/api/auth/google/callback", async (req, res) => {
-  const { code } = req.query;
-  if (!code || !verifyState(req)) return res.status(400).send("Google login tidak sah atau sesi login telah tamat.");
-  clearState(res);
-  if (!googleConfigured()) return res.status(503).send("Google login belum dikonfigurasi di server.");
+app.post("/api/auth/register", async (req, res) => {
   try {
-    const tokenRes = await axios.post("https://oauth2.googleapis.com/token", {
-      code,
-      client_id: process.env.GOOGLE_CLIENT_ID,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: process.env.GOOGLE_CALLBACK_URL,
-      grant_type: "authorization_code"
-    }, { headers: { "Content-Type": "application/json" }, timeout: 10000 });
-
-    const idToken = tokenRes.data?.id_token;
-    if (!idToken) throw new Error("Google tidak mengembalikan ID token.");
-
-    const userRes = await axios.get("https://openidconnect.googleapis.com/v1/userinfo", {
-      headers: { Authorization: "Bearer " + tokenRes.data.access_token },
-      timeout: 10000
-    });
-    const googleUser = userRes.data;
-    if (!googleUser.sub) throw new Error("Identiti Google tidak sah.");
-
-    setAuth(res, {
-      type: "google",
-      userId: "google_" + googleUser.sub,
-      name: googleUser.name || googleUser.email || "Google User",
-      email: googleUser.email || null,
-      picture: googleUser.picture || null
-    });
-    return res.redirect("/");
+    const result = await registerUser(req.body?.username, req.body?.password);
+    if (!result.ok) return res.status(result.status).json({ message: result.message });
+    setAuth(res, { type: "user", userId: result.user.id, username: result.user.username, name: result.user.username });
+    return res.status(201).json({ authenticated: true, type: "user", user: result.user });
   } catch (err) {
-    console.error("[Google OAuth Error]:", err.message);
-    return res.status(502).send("Gagal log masuk dengan Google.");
+    console.error("[Auth Register Error]:", err.message);
+    return res.status(500).json({ message: "Gagal membuat akaun." });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    const result = await authenticateUser(req.body?.username, req.body?.password);
+    if (!result.ok) return res.status(result.status).json({ message: result.message });
+    setAuth(res, { type: "user", userId: result.user.id, username: result.user.username, name: result.user.username });
+    return res.json({ authenticated: true, type: "user", user: result.user });
+  } catch (err) {
+    console.error("[Auth Login Error]:", err.message);
+    return res.status(500).json({ message: "Gagal log masuk." });
   }
 });
 
 app.post("/api/auth/guest", (req, res) => {
   const session = ensureGuest(req, res);
-  return res.json({ authenticated: true, type: session.type, user: { id: session.userId, name: session.name } });
+  return res.json({ authenticated: true, type: session.type, user: { id: session.userId, name: session.name, isGuest: true } });
 });
 
 app.post("/api/auth/logout", (req, res) => {
