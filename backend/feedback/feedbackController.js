@@ -1,7 +1,6 @@
-const { processUserFeedback } = require("./lessonGenerator");
-
 const askOpenRouter = require("../openrouter");
 const { sendFeedbackEmail } = require("./feedbackMailer");
+const feedbackStore = require("./feedbackStore");
 
 async function handleFeedbackReason(req, res) {
   const { type, user_message, ai_response, reason, model } = req.body || {};
@@ -52,23 +51,8 @@ async function handlePostFeedback(req, res) {
     });
   }
 
-  // Simpan feedback sedia ada tanpa menghalang respons UI.
-  processUserFeedback({
-    conversation_id,
-    message_id,
-    user_message,
-    ai_response,
-    provider,
-    model,
-    type,
-    reason
-  })
-  .then((result) => {
-    console.log(`[feedbackController] Maklum balas diproses secara tak senkron:`, result.status);
-  })
-  .catch((err) => {
-    console.error("[feedbackController] Gagal memproses maklum balas secara tak senkron:", err);
-  });
+  const savedFeedback = feedbackStore.addFeedback({ conversation_id, message_id, user_message, ai_response, provider, model, type, reason });
+  console.log("[Feedback] Maklum balas disimpan:", savedFeedback.id);
 
   // /api/feedback memang dipanggil untuk Like dan Dislike. Jadikan ini trigger utama
   // email supaya penghantaran tidak bergantung pada popup reason / endpoint kedua.
