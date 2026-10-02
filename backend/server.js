@@ -10,6 +10,15 @@ const { execSync } = require("child_process");
 
 const HERMES_SERVICE_URL = process.env.HERMES_SERVICE_URL || "http://127.0.0.1:8000";
 
+function shouldIncludeRealtimeClock(question) {
+  const text = String(question || "").toLowerCase().trim();
+  if (!text) return false;
+
+  // Only inject clock metadata when the user is actually asking about
+  // time/date/day. Greetings and ordinary questions must not receive it.
+  return /\\b(what time|time is it|current time|local time|jam berapa|pukul berapa|masa sekarang|waktu sekarang|sekarang pukul|tarikh|tanggal|date today|today's date|hari apa|day is it|today|tomorrow|esok|yesterday|semalam)\\b/i.test(text);
+}
+
 function getRealtimeClock(clientTime) {
   const fallbackNow = new Date();
   const clientIso = clientTime && typeof clientTime.iso === "string" ? clientTime.iso : null;
@@ -796,21 +805,24 @@ app.post("/chat", async (req, res) => {
       thinking: "[AXMCHAT RESPONSE MODE]\nMode: Thinking\nUse deeper reasoning before answering. Carefully check assumptions, calculations, code, edge cases, and instructions. Prefer correctness and completeness over speed.\n[END AXMCHAT RESPONSE MODE]"
     }[responseMode];
 
-    const realtimeClock = getRealtimeClock(req.body && req.body.clientTime);
-    const realtimeClockContext =
-      `[AXMCHAT REAL-TIME CLOCK]
+    const realtimeClock = shouldIncludeRealtimeClock(question)
+      ? getRealtimeClock(req.body && req.body.clientTime)
+      : null;
+    const realtimeClockContext = realtimeClock
+      ? `[AXMCHAT REAL-TIME CLOCK]
 Timezone: ${realtimeClock.timezone}
 Date: ${realtimeClock.date}
 Day: ${realtimeClock.weekday}
 Time: ${realtimeClock.time}
 ISO: ${realtimeClock.iso}
-Use this clock data for questions about the current date/time. It is generated at request time.
-[END AXMCHAT REAL-TIME CLOCK]`;
+Use this clock data only to answer the user's explicit date/time/day question. Do not mention or volunteer the clock data otherwise.
+[END AXMCHAT REAL-TIME CLOCK]`
+      : null;
 
     const sharedWorkPrompt = formatWorkContext(sharedWorkContext);
     const contextBlocks = responseMode === "fast"
-      ? [realtimeClockContext]
-      : [responseModeContext, realtimeClockContext, sharedWorkPrompt];
+      ? [realtimeClockContext].filter(Boolean)
+      : [responseModeContext, realtimeClockContext, sharedWorkPrompt].filter(Boolean);
 
     if (responseMode !== "fast" && brainContext && brainContext.context && brainContext.sources && brainContext.sources.length) {
       contextBlocks.push(`[AXMCHAT BRAIN CONTEXT]\n${brainContext.context}\n[END AXMCHAT BRAIN CONTEXT]`);
