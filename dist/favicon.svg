@@ -1,5 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AXMchat">
-  <rect width="64" height="64" rx="18" fill="#fff"/>
-  <path fill="#111" d="M12 50 27.7 14h8.6L52 50h-8.8l-3.2-8H23.8l-3.1 8H12Zm14.7-15h10.6L32 21.7 26.7 35Z"/>
-  <path fill="#111" d="M35.5 14H44l-5.8 12.7L47.8 50h-9.1l-5.8-15.2 5.9-13.2L35.5 14Z"/>
+  <defs>
+    <linearGradient id="axm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#axm)"/>
+  <text x="32" y="43" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="36" font-weight="800" fill="#fff">A</text>
 </svg>
