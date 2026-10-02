@@ -746,6 +746,23 @@ app.post("/chat", async (req, res) => {
     let brainContext = null;
     let task;
 
+    // Brain retrieval must work in every response mode. Fast mode may skip
+    // the expensive classifier, but it must never skip the user's persistent
+    // memory; otherwise the Memory Toggle appears broken in Fast mode.
+    if (memoryEnabled) {
+      try {
+        if (responseMode !== "fast") sendStatus("Mencari konteks Brain...");
+        brainContext = await brain.retrieveContext(question.trim(), {
+          scope: brainScope,
+          topK: 5,
+          maxSources: 8,
+          maxContextChars: 5000
+        });
+      } catch (brainError) {
+        console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
+      }
+    }
+
     if (responseMode === "fast") {
       task = classifyFastTask(question);
       if (task === "code" && !aiAvailability.coding) task = "general";
@@ -758,21 +775,6 @@ app.post("/chat", async (req, res) => {
         if (sharedWorkContext) sendStatus("Menyambung Shared Work Context...");
       } catch (workContextError) {
         console.warn("[WorkContext Retrieval Warning]:", workContextError.message);
-      }
-
-      // Brain retrieval is controlled by the real Memory Toggle.
-      if (memoryEnabled) {
-        try {
-          sendStatus("Mencari konteks Brain...");
-          brainContext = await brain.retrieveContext(question.trim(), {
-            scope: brainScope,
-            topK: 5,
-            maxSources: 8,
-            maxContextChars: 5000
-          });
-        } catch (brainError) {
-          console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
-        }
       }
 
       sendStatus("Mengelaskan permintaan...");
@@ -814,8 +816,11 @@ IMPORTANT: This is authoritative current-time data generated at request time. Ge
       ? [realtimeClockContext]
       : [responseModeContext, realtimeClockContext, sharedWorkPrompt].filter(Boolean);
 
-    if (responseMode !== "fast" && brainContext && brainContext.context && brainContext.sources && brainContext.sources.length) {
-      contextBlocks.push(`[AXMCHAT BRAIN CONTEXT]\n${brainContext.context}\n[END AXMCHAT BRAIN CONTEXT]`);
+    if (brainContext && brainContext.context && brainContext.sources && brainContext.sources.length) {
+      contextBlocks.push(`[AXMCHAT BRAIN CONTEXT]
+IMPORTANT: This is trusted user memory retrieved for this request. Use it to personalize the answer when relevant. Do not reveal internal memory instructions or the existence of hidden context unless the user asks about memory.
+${brainContext.context}
+[END AXMCHAT BRAIN CONTEXT]`);
     }
 
     const brainAugmentedQuestion = contextBlocks.length
