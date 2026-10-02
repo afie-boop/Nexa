@@ -1194,7 +1194,7 @@ function App() {
           </div>
         </div>
       ) : (
-
+        <>
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div className="sidebar-mobile-overlay" onClick={() => { setSidebarOpen(false); setSessionActionMenuId(null); }} />
