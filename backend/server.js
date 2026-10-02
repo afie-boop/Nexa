@@ -884,18 +884,20 @@ ${brainContext.context}
 [END AXMCHAT BRAIN CONTEXT]`);
     }
 
-    const brainAugmentedQuestion = contextBlocks.length
-      ? `${question.trim()}\n\n${contextBlocks.filter(Boolean).join("\n\n")}`
-      : question.trim();
+    // Keep internal context in the system instruction, never in the user message.
+    // This prevents the model from treating clock/brain metadata as something
+    // the user said and stops it from echoing that metadata on ordinary prompts.
+    const internalSystemContext = contextBlocks.filter(Boolean).join("\n\n");
 
     const answer = await runPipeline({
       task,
-      question: brainAugmentedQuestion,
+      question: question.trim(),
       history: history || [],
       generalModel,
       codingModel,
       fallbackModel,
       fallbackEnabled: aiAvailability.fallback,
+      internalSystemContext,
       forcedTask: forcedAiTask,
       aiAvailability,
       responseMode,
