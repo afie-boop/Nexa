@@ -217,6 +217,11 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [authUser, setAuthUser] = useState(null);
   const [authError, setAuthError] = useState("");
+  const [authView, setAuthView] = useState("login");
+  const [authUsername, setAuthUsername] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authConfirmPassword, setAuthConfirmPassword] = useState("");
+  const [authSubmitting, setAuthSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -247,9 +252,52 @@ function App() {
     }
   }
 
-  function continueWithGoogle() {
+  async function submitAuth(event) {
+    event?.preventDefault();
     setAuthError("");
-    window.location.assign("/api/auth/google");
+    const username = authUsername.trim();
+    if (!username || !authPassword) {
+      setAuthError("Username dan password diperlukan.");
+      return;
+    }
+    if (authView === "register" && authPassword !== authConfirmPassword) {
+      setAuthError("Password dan pengesahan password tidak sepadan.");
+      return;
+    }
+    try {
+      setAuthSubmitting(true);
+      const endpoint = authView === "register" ? "/api/auth/register" : "/api/auth/login";
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ username, password: authPassword })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message || "Authentication gagal.");
+      setAuthUser(data.user || null);
+      setAuthPassword("");
+      setAuthConfirmPassword("");
+    } catch (err) {
+      setAuthError(err.message || "Authentication gagal.");
+    } finally {
+      setAuthSubmitting(false);
+    }
+  }
+
+  async function continueAsGuest() {
+    try {
+      setAuthError("");
+      setAuthSubmitting(true);
+      const res = await fetch("/api/auth/guest", { method: "POST", credentials: "same-origin" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Gagal masuk sebagai Guest.");
+      setAuthUser(data.user || { name: "Guest", isGuest: true });
+    } catch (err) {
+      setAuthError(err.message || "Gagal masuk sebagai Guest.");
+    } finally {
+      setAuthSubmitting(false);
+    }
   }
 
   async function logoutAXMchat() {
@@ -1119,34 +1167,29 @@ function App() {
           <div className="auth-card">
             <div className="auth-logo">AXM</div>
             <h1>Welcome to AXMchat</h1>
-            <p>Log masuk untuk menyimpan sesi dan Brain memory anda.</p>
-            <div className="auth-actions">
-              <button className="auth-google-btn" onClick={continueWithGoogle}>
-                <span className="google-g">G</span>
-                Continue with Google
-              </button>
-              <button className="auth-guest-btn" onClick={continueAsGuest}>
-                Continue as Guest
-              </button>
-            </div>
-            {authError && <div className="auth-error">{authError}</div>}
+            <p>Log masuk untuk menggunakan AXMchat.</p>
           </div>
         </div>
       ) : !authUser ? (
         <div className="auth-screen">
           <div className="auth-card">
             <div className="auth-logo">AXM</div>
-            <h1>Welcome to AXMchat</h1>
-            <p>Pilih cara untuk masuk.</p>
-            <div className="auth-actions">
-              <button className="auth-google-btn" onClick={continueWithGoogle}>
-                <span className="google-g">G</span>
-                Continue with Google
+            <h1>{authView === "register" ? "Create your account" : "Welcome to AXMchat"}</h1>
+            <p>{authView === "register" ? "Buat akaun AXMchat menggunakan username dan password." : "Log masuk atau teruskan sebagai Guest."}</p>
+            <form className="auth-actions" onSubmit={submitAuth}>
+              <input className="auth-input" type="text" value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} placeholder="Username" autoComplete="username" maxLength={32} disabled={authSubmitting} />
+              <input className="auth-input" type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" autoComplete={authView === "register" ? "new-password" : "current-password"} disabled={authSubmitting} />
+              {authView === "register" && (
+                <input className="auth-input" type="password" value={authConfirmPassword} onChange={(e) => setAuthConfirmPassword(e.target.value)} placeholder="Confirm password" autoComplete="new-password" disabled={authSubmitting} />
+              )}
+              <button className="auth-google-btn" type="submit" disabled={authSubmitting}>
+                {authSubmitting ? "Memproses..." : authView === "register" ? "Create Account" : "Login"}
               </button>
-              <button className="auth-guest-btn" onClick={continueAsGuest}>
-                Continue as Guest
-              </button>
-            </div>
+            </form>
+            <button className="auth-guest-btn" onClick={continueAsGuest} disabled={authSubmitting}>Continue as Guest</button>
+            <button type="button" className="auth-switch-btn" onClick={() => { setAuthError(""); setAuthView(authView === "login" ? "register" : "login"); setAuthPassword(""); setAuthConfirmPassword(""); }} disabled={authSubmitting}>
+              {authView === "login" ? "Don't have an account? Create account" : "Already have an account? Login"}
+            </button>
             {authError && <div className="auth-error">{authError}</div>}
           </div>
         </div>

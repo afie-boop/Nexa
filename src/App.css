@@ -2017,3 +2017,38 @@ button, input, textarea, select {
   color: #ff7b7b;
   font-size: 13px;
 }
+
+
+.auth-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  background: var(--surface, rgba(255,255,255,0.04));
+  color: var(--primary-text);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  outline: none;
+}
+.auth-input:focus {
+  border-color: var(--primary-text);
+}
+.auth-input::placeholder {
+  color: var(--secondary-text);
+}
+.auth-switch-btn {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--secondary-text);
+  padding: 10px 8px;
+  cursor: pointer;
+  font: inherit;
+}
+.auth-switch-btn:hover {
+  color: var(--primary-text);
+}
+.auth-actions {
+  display: grid;
+  gap: 10px;
+}
