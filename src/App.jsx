@@ -214,6 +214,50 @@ function App() {
   const [githubUsername, setGithubUsername] = useState(null);
   const [githubAuthLoading, setGithubAuthLoading] = useState(true);
   const [githubAuthError, setGithubAuthError] = useState("");
+  const [authChecked, setAuthChecked] = useState(false);
+  const [authUser, setAuthUser] = useState(null);
+  const [authError, setAuthError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth/status", { credentials: "same-origin" })
+      .then(res => res.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.authenticated) setAuthUser(data.user || null);
+      })
+      .catch(() => {
+        if (!cancelled) setAuthError("Gagal menyemak sesi AXMchat.");
+      })
+      .finally(() => {
+        if (!cancelled) setAuthChecked(true);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  async function continueAsGuest() {
+    try {
+      setAuthError("");
+      const res = await fetch("/api/auth/guest", { method: "POST", credentials: "same-origin" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Gagal masuk sebagai Guest.");
+      setAuthUser(data.user || { name: "Guest" });
+    } catch (err) {
+      setAuthError(err.message || "Gagal masuk sebagai Guest.");
+    }
+  }
+
+  function continueWithGoogle() {
+    setAuthError("");
+    window.location.assign("/api/auth/google");
+  }
+
+  async function logoutAXMchat() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
+    setAuthUser(null);
+    setAuthChecked(true);
+  }
+
   const [copiedIdx, setCopiedIdx] = useState(null);
   const chatEndRef = useRef(null);
 
@@ -1070,6 +1114,44 @@ function App() {
 
   return (
     <div className="app-container">
+      {!authChecked ? (
+        <div className="auth-screen">
+          <div className="auth-card">
+            <div className="auth-logo">AXM</div>
+            <h1>Welcome to AXMchat</h1>
+            <p>Log masuk untuk menyimpan sesi dan Brain memory anda.</p>
+            <div className="auth-actions">
+              <button className="auth-google-btn" onClick={continueWithGoogle}>
+                <span className="google-g">G</span>
+                Continue with Google
+              </button>
+              <button className="auth-guest-btn" onClick={continueAsGuest}>
+                Continue as Guest
+              </button>
+            </div>
+            {authError && <div className="auth-error">{authError}</div>}
+          </div>
+        </div>
+      ) : !authUser ? (
+        <div className="auth-screen">
+          <div className="auth-card">
+            <div className="auth-logo">AXM</div>
+            <h1>Welcome to AXMchat</h1>
+            <p>Pilih cara untuk masuk.</p>
+            <div className="auth-actions">
+              <button className="auth-google-btn" onClick={continueWithGoogle}>
+                <span className="google-g">G</span>
+                Continue with Google
+              </button>
+              <button className="auth-guest-btn" onClick={continueAsGuest}>
+                Continue as Guest
+              </button>
+            </div>
+            {authError && <div className="auth-error">{authError}</div>}
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div className="sidebar-mobile-overlay" onClick={() => { setSidebarOpen(false); setSessionActionMenuId(null); }} />
