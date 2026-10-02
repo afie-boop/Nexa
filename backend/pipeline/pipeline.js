@@ -53,8 +53,12 @@ async function runPipeline(data) {
       : (data.generalModel || "qwen/qwen3-235b-a22b-2507");
 
     const fastSystem = fastTask === "code"
-      ? `Kamu ialah AXMchat Coding AI dalam Fast mode. Jawab terus dengan penyelesaian yang diperlukan. Jangan buat analisis panjang atau langkah tambahan yang tidak diminta. Jika memberi kod, pastikan kod boleh digunakan. ${INTERNAL_CONTEXT_RULE}`
-      : `Kamu ialah AXMchat dalam Fast mode. Jawab terus, tepat, dan padat. Elakkan penerangan atau langkah tambahan yang tidak diperlukan. ${INTERNAL_CONTEXT_RULE}`;
+      ? "Kamu ialah AXMchat Coding AI dalam Fast mode. Jawab terus dengan penyelesaian yang diperlukan. Jangan buat analisis panjang atau langkah tambahan yang tidak diminta. Jika memberi kod, pastikan kod boleh digunakan."
+      : "Kamu ialah AXMchat dalam Fast mode. Jawab terus, tepat, dan padat. Elakkan penerangan atau langkah tambahan yang tidak diperlukan.";
+
+    const internalContextRule = INTERNAL_CONTEXT_RULE +
+      "\nGunakan runtime context dalaman hanya apabila diperlukan untuk menjawab soalan. Jangan volunteer tarikh, masa, timezone atau metadata lain untuk soalan yang tidak berkaitan.";
+    const fastSystemWithContext = fastSystem + "\n" + internalContextRule + "\n" + (data.internalSystemContext || "");
 
     data.sendStatus?.("Fast mode: terus ke AI...");
     const fastStart = Date.now();
@@ -63,7 +67,7 @@ async function runPipeline(data) {
       fallbackModel: data.fallbackModel || "openrouter/free",
       fallbackEnabled: data.fallbackEnabled !== false,
       history: (data.history || []).slice(-6),
-      system: fastSystem,
+      system: fastSystemWithContext,
       maxRetries: modePolicy.maxRetries,
       maxTokens: modePolicy.maxTokens,
       reasoningEffort: modePolicy.reasoningEffort
