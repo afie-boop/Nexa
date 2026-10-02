@@ -2042,13 +2042,16 @@ button, input, textarea, select {
   width: 100%;
   border: 0;
   background: transparent;
-  color: var(--secondary-text);
+  color: #bdbdbd;
   padding: 10px 8px;
   cursor: pointer;
   font: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 .auth-switch-btn:hover {
-  color: var(--primary-text);
+  color: #fff;
 }
 .auth-actions {
   display: grid;
