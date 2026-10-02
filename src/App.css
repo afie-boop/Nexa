@@ -173,6 +173,7 @@ body {
   font-weight: 800;
   color: #FFFFFF;
   font-size: 16px;
+  text-indent: 2px;
   box-shadow: 0 4px 14px var(--accent-glow);
   letter-spacing: -0.5px;
 }
@@ -556,6 +557,7 @@ body {
   font-size: 34px;
   font-weight: 800;
   color: #FFFFFF;
+  text-indent: 2px;
   margin-bottom: 24px;
   box-shadow: 0 8px 32px var(--accent-glow);
 }
