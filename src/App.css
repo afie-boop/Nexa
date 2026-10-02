@@ -1937,3 +1937,83 @@ button, input, textarea, select {
 .feedback-generating{display:block;margin-top:6px;color:var(--secondary-text);font-size:11px}
 .feedback-custom-input{width:100%;box-sizing:border-box;margin-top:8px;padding:9px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--primary-text);outline:none;font:inherit;font-size:11px}
 .feedback-custom-input:focus{border-color:#555}
+
+
+/* AXMchat authentication */
+.auth-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #000;
+  color: #fff;
+}
+.auth-card {
+  width: min(420px, 100%);
+  padding: 32px;
+  border: 1px solid #292929;
+  border-radius: 28px;
+  background: #0b0b0b;
+  box-shadow: 0 24px 80px rgba(0,0,0,.45);
+  text-align: center;
+}
+.auth-logo {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: #fff;
+  color: #000;
+  font-weight: 800;
+  letter-spacing: -.04em;
+}
+.auth-card h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: -.03em;
+}
+.auth-card p {
+  margin: 10px 0 24px;
+  color: #a5a5a5;
+  line-height: 1.5;
+}
+.auth-actions { display: grid; gap: 10px; }
+.auth-google-btn,
+.auth-guest-btn {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid #303030;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease;
+}
+.auth-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+.auth-guest-btn {
+  background: #151515;
+  color: #fff;
+}
+.auth-google-btn:hover,
+.auth-guest-btn:hover { transform: translateY(-1px); }
+.google-g {
+  font-weight: 800;
+  font-size: 18px;
+}
+.auth-error {
+  margin-top: 14px;
+  color: #ff7b7b;
+  font-size: 13px;
+}
