@@ -815,7 +815,7 @@ Date: ${realtimeClock.date}
 Day: ${realtimeClock.weekday}
 Time: ${realtimeClock.time}
 ISO: ${realtimeClock.iso}
-Use this clock data only to answer the user's explicit date/time/day question. Do not mention or volunteer the clock data otherwise.
+IMPORTANT: This is authoritative current-time data generated at request time. When the user explicitly asks what day/date/time it is, answer directly from this data. Do not claim to lack real-time access, do not ask the user for their location/timezone when this data is present, and do not mention or volunteer the clock data for unrelated questions.
 [END AXMCHAT REAL-TIME CLOCK]`
       : null;
 
