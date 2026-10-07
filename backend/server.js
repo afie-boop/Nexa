@@ -73,6 +73,15 @@ const { checkRateLimit } = require("./security/rate_limiter");
 
 const app = express();
 
+function signGitHubOAuthState(state, userId) {
+  const secret = process.env.AUTH_SESSION_SECRET || process.env.GITHUB_SESSION_SECRET || process.env.GITHUB_CLIENT_SECRET;
+  if (!secret) throw new Error("OAuth state secret belum dikonfigurasi.");
+  return crypto.createHmac("sha256", secret)
+    .update(`${state}.${String(userId)}`)
+    .digest("hex");
+}
+
+
 app.set("trust proxy", 1);
 
 // Security: restrict browser origins, cap request bodies, and apply baseline
@@ -260,7 +269,8 @@ app.get("/api/auth/github", protectedAuth, (req, res) => {
     });
   }
   const state = crypto.randomBytes(32).toString("hex");
-  res.cookie("nexa_github_oauth_state", state, {
+  const stateBinding = signGitHubOAuthState(state, req.auth.userId);
+  res.cookie("nexa_github_oauth_state", `${state}.${stateBinding}`, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -275,8 +285,26 @@ app.get("/api/auth/github", protectedAuth, (req, res) => {
 // GET /api/auth/github/callback - Handle OAuth callback
 app.get("/api/auth/github/callback", protectedAuth, async (req, res) => {
   const { code, state } = req.query;
-  const expectedState = req.cookies?.nexa_github_oauth_state;
-  if (!code || typeof state !== "string" || typeof expectedState !== "string" || state.length !== expectedState.length || !crypto.timingSafeEqual(Buffer.from(state), Buffer.from(expectedState))) {
+  const expectedStateCookie = req.cookies?.nexa_github_oauth_state;
+  const [expectedState, expectedBinding] = typeof expectedStateCookie === "string"
+    ? expectedStateCookie.split(".")
+    : [];
+  let stateValid = false;
+  try {
+    const expected = expectedState && expectedBinding
+      ? signGitHubOAuthState(expectedState, req.auth.userId)
+      : "";
+    stateValid = typeof state === "string" &&
+      typeof expectedState === "string" &&
+      typeof expectedBinding === "string" &&
+      state.length === expectedState.length &&
+      expectedBinding.length === expected.length &&
+      crypto.timingSafeEqual(Buffer.from(state), Buffer.from(expectedState)) &&
+      crypto.timingSafeEqual(Buffer.from(expectedBinding), Buffer.from(expected));
+  } catch (_) {
+    stateValid = false;
+  }
+  if (!code || !stateValid) {
     return res.status(400).send("Permintaan OAuth GitHub tidak sah atau telah tamat.");
   }
   res.clearCookie("nexa_github_oauth_state", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" });
