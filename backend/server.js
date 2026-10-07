@@ -69,6 +69,7 @@ const { setAuth, getAuth, clearAuth, ensureGuest, getBrainIdentity, registerUser
 const { learnFromChat } = require("./brain/learning");
 const { getWorkContext, saveWorkContext, formatWorkContext } = require("./brain/workContext");
 const { normalizeResponseMode, classifyFastTask } = require("./responseModes");
+const { checkRateLimit } = require("./security/rate_limiter");
 
 const app = express();
 
@@ -116,38 +117,40 @@ const protectedGithub = (req, res, next) => {
   next();
 };
 
-const authBuckets = new Map();
-const authRateLimit = (req, res, next) => {
-  const key = String(req.ip || "unknown");
-  const now = Date.now();
-  let bucket = authBuckets.get(key);
-  if (!bucket || now - bucket.startedAt >= 10 * 60 * 1000) {
-    bucket = { startedAt: now, count: 0 };
-    authBuckets.set(key, bucket);
+const authRateLimit = async (req, res, next) => {
+  try {
+    const result = await checkRateLimit(
+      `auth:ip:${String(req.ip || "unknown")}`,
+      12,
+      10 * 60 * 1000
+    );
+    if (result.limited) {
+      res.setHeader("Retry-After", String(result.retryAfter));
+      return res.status(429).json({ message: "Terlalu banyak percubaan auth. Cuba lagi dalam beberapa minit." });
+    }
+    return next();
+  } catch (error) {
+    console.error("[Auth Rate Limit Error]:", error.message);
+    return res.status(503).json({ message: "Sistem keselamatan auth tidak tersedia. Cuba lagi." });
   }
-  bucket.count += 1;
-  if (bucket.count > 12) {
-    res.setHeader("Retry-After", "600");
-    return res.status(429).json({ message: "Terlalu banyak percubaan auth. Cuba lagi dalam beberapa minit." });
-  }
-  next();
 };
 
-const chatBuckets = new Map();
-const chatRateLimit = (req, res, next) => {
-  const key = String(req.ip || "unknown");
-  const now = Date.now();
-  let bucket = chatBuckets.get(key);
-  if (!bucket || now - bucket.startedAt >= 60 * 1000) {
-    bucket = { startedAt: now, count: 0 };
-    chatBuckets.set(key, bucket);
+const chatRateLimit = async (req, res, next) => {
+  try {
+    const result = await checkRateLimit(
+      `chat:ip:${String(req.ip || "unknown")}`,
+      30,
+      60 * 1000
+    );
+    if (result.limited) {
+      res.setHeader("Retry-After", String(result.retryAfter));
+      return res.status(429).json({ status: "error", message: "Terlalu banyak permintaan chat. Cuba lagi sebentar." });
+    }
+    return next();
+  } catch (error) {
+    console.error("[Chat Rate Limit Error]:", error.message);
+    return res.status(503).json({ status: "error", message: "Sistem keselamatan chat tidak tersedia. Cuba lagi." });
   }
-  bucket.count += 1;
-  if (bucket.count > 30) {
-    res.setHeader("Retry-After", "60");
-    return res.status(429).json({ status: "error", message: "Terlalu banyak permintaan chat. Cuba lagi sebentar." });
-  }
-  next();
 };
 
 const distPath = path.join(__dirname, "..", "dist");
