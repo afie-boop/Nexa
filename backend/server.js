@@ -106,6 +106,39 @@ const protectedAgent = (req, res, next) => {
   next();
 };
 
+const protectedGithub = (req, res, next) => {
+  const auth = getAuth(req);
+  if (!auth) return res.status(401).json({ status: "error", message: "Log masuk AXMchat diperlukan." });
+  const github = getGitHubSession(req);
+  if (!github.connected || !github.accessToken || github.accessToken === "mock_token") {
+    return res.status(401).json({ status: "error", message: "Sambungan GitHub diperlukan." });
+  }
+  req.auth = auth;
+  req.github = github;
+  next();
+};
+
+const agentRateLimit = (() => {
+  const buckets = new Map();
+  const WINDOW_MS = 60 * 1000;
+  const MAX_REQUESTS = 30;
+  return (req, res, next) => {
+    const key = String(req.ip || "unknown");
+    const now = Date.now();
+    let bucket = buckets.get(key);
+    if (!bucket || now - bucket.startedAt >= WINDOW_MS) {
+      bucket = { startedAt: now, count: 0 };
+      buckets.set(key, bucket);
+    }
+    bucket.count += 1;
+    if (bucket.count > MAX_REQUESTS) {
+      res.setHeader("Retry-After", "60");
+      return res.status(429).json({ status: "error", message: "Terlalu banyak permintaan Agent. Cuba lagi sebentar." });
+    }
+    next();
+  };
+})();
+
 const authBuckets = new Map();
 const authRateLimit = (req, res, next) => {
   const key = String(req.ip || "unknown");
@@ -316,7 +349,7 @@ app.get("/api/auth/github/callback", async (req, res) => {
 });
 
 // GET /api/auth/github/status - Safe connection status check (never exposes token)
-app.get("/api/auth/github/status", (req, res) => {
+app.get("/api/auth/github/status", protectedAgent, (req, res) => {
   res.setHeader("Content-Type", "application/json");
   try {
     const session = getGitHubSession(req);
@@ -333,13 +366,13 @@ app.get("/api/auth/github/status", (req, res) => {
 });
 
 // POST /api/auth/github/disconnect - Clear GitHub session
-app.post("/api/auth/github/disconnect", (req, res) => {
+app.post("/api/auth/github/disconnect", protectedAgent, (req, res) => {
   clearGitHubSession(req);
   return res.status(200).json({ connected: false, message: "Akaun GitHub berjaya dilog keluar." });
 });
 
 // GET /api/github/repos - Authenticated read-only repository list
-app.get("/api/github/repos", async (req, res) => {
+app.get("/api/github/repos", protectedGithub, async (req, res) => {
   const session = getGitHubSession(req);
 
   if (!session.connected || !session.accessToken || session.accessToken === "mock_token") {
@@ -380,13 +413,12 @@ app.get("/api/github/repos", async (req, res) => {
     return res.status(502).json({
       connected: true,
       message: "Gagal mendapatkan senarai repositori GitHub.",
-      error: error.message,
       repos: []
     });
   }
 });
 
-app.post("/api/agent/task/:task_id/push", protectedAgent, async (req, res) => {
+app.post("/api/agent/task/:task_id/push", protectedAgent, agentRateLimit, async (req, res) => {
   const { task_id } = req.params;
   const { commit_message } = req.body || {};
 
@@ -442,7 +474,7 @@ app.post("/api/agent/task/:task_id/push", protectedAgent, async (req, res) => {
 });
 
 // GET /api/github/repos/:owner/:repo/branches - Read-only branch list
-app.get("/api/github/repos/:owner/:repo/branches", async (req, res) => {
+app.get("/api/github/repos/:owner/:repo/branches", protectedGithub, async (req, res) => {
   const session = getGitHubSession(req);
   const { owner, repo } = req.params;
 
@@ -499,13 +531,12 @@ app.get("/api/github/repos/:owner/:repo/branches", async (req, res) => {
     return res.status(502).json({
       connected: true,
       message: "Gagal mendapatkan senarai branch GitHub.",
-      error: error.message,
       branches: []
     });
   }
 });
 
-app.get("/api/agent/health", protectedAgent, async (req, res) => {
+app.get("/api/agent/health", protectedAgent, agentRateLimit, async (req, res) => {
   try {
     const response = await axios.get(`${HERMES_SERVICE_URL}/health`, {
       timeout: 5000
@@ -517,12 +548,12 @@ app.get("/api/agent/health", protectedAgent, async (req, res) => {
       status: "error",
       service: "nexa-hermes",
       message: "Hermes agent service is currently unreachable.",
-      details: error.message
+      details: process.env.NODE_ENV === "production" ? undefined : error.message
     });
   }
 });
 
-app.post("/api/agent/run", protectedAgent, async (req, res) => {
+app.post("/api/agent/run", protectedAgent, agentRateLimit, async (req, res) => {
   const { task, session_id, repository, branch } = req.body || {};
 
   if (!task || typeof task !== "string" || !task.trim()) {
@@ -577,12 +608,12 @@ app.post("/api/agent/run", protectedAgent, async (req, res) => {
       status: "error",
       service: "nexa-hermes",
       message: "Hermes agent service is currently unreachable.",
-      details: error.message
+      details: process.env.NODE_ENV === "production" ? undefined : error.message
     });
   }
 });
 
-app.get("/api/agent/task/:task_id", protectedAgent, async (req, res) => {
+app.get("/api/agent/task/:task_id", protectedAgent, agentRateLimit, async (req, res) => {
   const { task_id } = req.params;
 
   try {
@@ -602,12 +633,12 @@ app.get("/api/agent/task/:task_id", protectedAgent, async (req, res) => {
       status: "error",
       service: "nexa-hermes",
       message: "Hermes agent service is currently unreachable.",
-      details: error.message
+      details: process.env.NODE_ENV === "production" ? undefined : error.message
     });
   }
 });
 
-app.get("/api/agent/task/:task_id/diff", protectedAgent, async (req, res) => {
+app.get("/api/agent/task/:task_id/diff", protectedAgent, agentRateLimit, async (req, res) => {
   const { task_id } = req.params;
 
   const validIdRegex = /^[a-zA-Z0-9_-]+$/;
@@ -635,12 +666,12 @@ app.get("/api/agent/task/:task_id/diff", protectedAgent, async (req, res) => {
       status: "error",
       service: "nexa-hermes",
       message: "Hermes agent service is currently unreachable.",
-      details: error.message
+      details: process.env.NODE_ENV === "production" ? undefined : error.message
     });
   }
 });
 
-app.post("/api/agent/task/:task_id/approval", protectedAgent, async (req, res) => {
+app.post("/api/agent/task/:task_id/approval", protectedAgent, agentRateLimit, async (req, res) => {
   const { task_id } = req.params;
   const { action } = req.body || {};
 
@@ -678,7 +709,7 @@ app.post("/api/agent/task/:task_id/approval", protectedAgent, async (req, res) =
       status: "error",
       service: "nexa-hermes",
       message: "Hermes agent service is currently unreachable.",
-      details: error.message
+      details: process.env.NODE_ENV === "production" ? undefined : error.message
     });
   }
 });
@@ -760,9 +791,9 @@ app.delete("/api/brain/memories/:memory_id", brainNoStore, rateLimitBrain("delet
   }
 });
 
-app.post("/api/brain/memories/reset", async (req, res) => {
+app.post("/api/brain/memories/reset", brainNoStore, rateLimitBrain("restore"), requireBrainAuth((req) => getAuth(req)), async (req, res) => {
   try {
-    const scope = getBrainIdentity(req, res);
+    const scope = { type: "user", userId: req.brainUser.userId };
     const result = await brain.deleteAllMemories({
       scope
     });
