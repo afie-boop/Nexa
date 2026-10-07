@@ -107,7 +107,7 @@ const protectedAuth = (req, res, next) => {
 const protectedGithub = (req, res, next) => {
   const auth = getAuth(req);
   if (!auth) return res.status(401).json({ status: "error", message: "Log masuk AXMchat diperlukan." });
-  const github = getGitHubSession(req);
+  const github = getGitHubSession(req, auth.userId);
   if (!github.connected || !github.accessToken || github.accessToken === "mock_token") {
     return res.status(401).json({ status: "error", message: "Sambungan GitHub diperlukan." });
   }
@@ -234,6 +234,7 @@ app.post("/api/auth/guest", (req, res) => {
 });
 
 app.post("/api/auth/logout", (req, res) => {
+  clearGitHubSession(req);
   clearAuth(res);
   return res.json({ authenticated: false });
 });
@@ -242,7 +243,7 @@ app.post("/api/feedback", handlePostFeedback);
 app.post("/api/feedback/reason", handleFeedbackReason);
 
 // GET /api/auth/github - Start OAuth flow
-app.get("/api/auth/github", (req, res) => {
+app.get("/api/auth/github", protectedAuth, (req, res) => {
   const clientId = process.env.GITHUB_CLIENT_ID;
   const callbackUrl = process.env.GITHUB_CALLBACK_URL;
   if (!clientId) {
@@ -256,14 +257,20 @@ app.get("/api/auth/github", (req, res) => {
     });
   }
   const state = crypto.randomBytes(32).toString("hex");
-  res.cookie("nexa_github_oauth_state", state, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 10 * 60 * 1000 });
+  res.cookie("nexa_github_oauth_state", state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 10 * 60 * 1000
+  });
   const redirectUri = encodeURIComponent(callbackUrl);
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo,user&state=${encodeURIComponent(state)}`;
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo&state=${encodeURIComponent(state)}`;
   return res.redirect(githubAuthUrl);
 });
 
 // GET /api/auth/github/callback - Handle OAuth callback
-app.get("/api/auth/github/callback", async (req, res) => {
+app.get("/api/auth/github/callback", protectedAuth, async (req, res) => {
   const { code, state } = req.query;
   const expectedState = req.cookies?.nexa_github_oauth_state;
   if (!code || typeof state !== "string" || typeof expectedState !== "string" || state.length !== expectedState.length || !crypto.timingSafeEqual(Buffer.from(state), Buffer.from(expectedState))) {
@@ -309,6 +316,7 @@ app.get("/api/auth/github/callback", async (req, res) => {
     });
 
     const sessionData = {
+      ownerUserId: req.auth.userId,
       connected: true,
       username: userRes.data.login,
       accessToken: accessToken,
@@ -321,7 +329,7 @@ app.get("/api/auth/github/callback", async (req, res) => {
     return res.redirect("/");
   } catch (err) {
     console.error("[GitHub OAuth Callback Error]:", err.message);
-    return res.status(500).send("Gagal melengkapkan OAuth log masuk GitHub: " + err.message);
+    return res.status(502).send("Gagal melengkapkan sambungan GitHub. Cuba sambung semula.");
   }
 });
 
@@ -329,7 +337,7 @@ app.get("/api/auth/github/callback", async (req, res) => {
 app.get("/api/auth/github/status", protectedAuth, (req, res) => {
   res.setHeader("Content-Type", "application/json");
   try {
-    const session = getGitHubSession(req);
+    const session = getGitHubSession(req, req.auth.userId);
     return res.status(200).json({
       connected: !!(session && session.connected && session.accessToken && session.accessToken !== "mock_token"),
       username: session ? session.username || null : null
@@ -350,7 +358,7 @@ app.post("/api/auth/github/disconnect", protectedAuth, (req, res) => {
 
 // GET /api/github/repos - Authenticated read-only repository list
 app.get("/api/github/repos", protectedGithub, async (req, res) => {
-  const session = getGitHubSession(req);
+  const session = getGitHubSession(req, req.auth.userId);
 
   if (!session.connected || !session.accessToken || session.accessToken === "mock_token") {
     return res.status(401).json({
