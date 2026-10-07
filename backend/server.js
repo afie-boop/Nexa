@@ -98,6 +98,30 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "256kb" }));
 app.use(cookieParser());
 
+const protectedAgent = (req, res, next) => {
+  const session = getAuth(req);
+  if (!session) return res.status(401).json({ status: "error", message: "Log masuk AXMchat diperlukan." });
+  req.auth = session;
+  next();
+};
+
+const chatBuckets = new Map();
+const chatRateLimit = (req, res, next) => {
+  const key = String(req.ip || "unknown");
+  const now = Date.now();
+  let bucket = chatBuckets.get(key);
+  if (!bucket || now - bucket.startedAt >= 60 * 1000) {
+    bucket = { startedAt: now, count: 0 };
+    chatBuckets.set(key, bucket);
+  }
+  bucket.count += 1;
+  if (bucket.count > 30) {
+    res.setHeader("Retry-After", "60");
+    return res.status(429).json({ status: "error", message: "Terlalu banyak permintaan chat. Cuba lagi sebentar." });
+  }
+  next();
+};
+
 const distPath = path.join(__dirname, "..", "dist");
 
 // Ensure frontend dist bundle exists, auto-build if missing
@@ -166,7 +190,7 @@ app.post("/api/auth/register", async (req, res) => {
 
 app.post("/api/auth/login", async (req, res) => {
   try {
-    const result = await authenticateUser(req.body?.username, req.body?.password);
+    const result = await authenticateUser(req.body?.username, req.body?.password, req.ip || "unknown");
     if (!result.ok) return res.status(result.status).json({ message: result.message });
     setAuth(res, { type: "user", userId: result.user.id, username: result.user.username, name: result.user.username });
     return res.json({ authenticated: true, type: "user", user: result.user });
@@ -337,7 +361,7 @@ app.get("/api/github/repos", async (req, res) => {
   }
 });
 
-app.post("/api/agent/task/:task_id/push", async (req, res) => {
+app.post("/api/agent/task/:task_id/push", protectedAgent, async (req, res) => {
   const { task_id } = req.params;
   const { commit_message } = req.body || {};
 
@@ -456,7 +480,7 @@ app.get("/api/github/repos/:owner/:repo/branches", async (req, res) => {
   }
 });
 
-app.get("/api/agent/health", async (req, res) => {
+app.get("/api/agent/health", protectedAgent, async (req, res) => {
   try {
     const response = await axios.get(`${HERMES_SERVICE_URL}/health`, {
       timeout: 5000
@@ -473,7 +497,7 @@ app.get("/api/agent/health", async (req, res) => {
   }
 });
 
-app.post("/api/agent/run", async (req, res) => {
+app.post("/api/agent/run", protectedAgent, async (req, res) => {
   const { task, session_id, repository, branch } = req.body || {};
 
   if (!task || typeof task !== "string" || !task.trim()) {
@@ -533,7 +557,7 @@ app.post("/api/agent/run", async (req, res) => {
   }
 });
 
-app.get("/api/agent/task/:task_id", async (req, res) => {
+app.get("/api/agent/task/:task_id", protectedAgent, async (req, res) => {
   const { task_id } = req.params;
 
   try {
@@ -558,7 +582,7 @@ app.get("/api/agent/task/:task_id", async (req, res) => {
   }
 });
 
-app.get("/api/agent/task/:task_id/diff", async (req, res) => {
+app.get("/api/agent/task/:task_id/diff", protectedAgent, async (req, res) => {
   const { task_id } = req.params;
 
   const validIdRegex = /^[a-zA-Z0-9_-]+$/;
@@ -591,7 +615,7 @@ app.get("/api/agent/task/:task_id/diff", async (req, res) => {
   }
 });
 
-app.post("/api/agent/task/:task_id/approval", async (req, res) => {
+app.post("/api/agent/task/:task_id/approval", protectedAgent, async (req, res) => {
   const { task_id } = req.params;
   const { action } = req.body || {};
 
@@ -728,7 +752,7 @@ app.post("/api/brain/memories/reset", async (req, res) => {
   }
 });
 
-app.post("/chat", async (req, res) => {
+app.post("/chat", chatRateLimit, async (req, res) => {
   const { question, history } = req.body;
 
   // Brain identity is independent from GitHub authentication. The same
