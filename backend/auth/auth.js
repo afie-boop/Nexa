@@ -4,12 +4,12 @@ const fs = require("fs");
 const path = require("path");
 const { promisify } = require("util");
 const scryptAsync = promisify(crypto.scrypt);
+const { checkRateLimit } = require("../security/rate_limiter");
 
 const AUTH_COOKIE = "axmchat_auth";
 const TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const LOGIN_WINDOW_MS = 10 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS = 8;
-const loginAttempts = new Map();
 const USERS_FILE = path.join(__dirname, "..", "data", "users.json");
 let pgPool = null;
 let storeReady = false;
@@ -137,22 +137,15 @@ async function registerUser(username, password) {
   }
   return { ok: true, user: { id, username: clean, name: clean, isGuest: false } };
 }
-function loginRateLimited(key) {
-  const now = Date.now();
-  const bucket = loginAttempts.get(key);
-  if (!bucket || now - bucket.startedAt >= LOGIN_WINDOW_MS) {
-    loginAttempts.set(key, { startedAt: now, count: 1 });
-    return false;
-  }
-  bucket.count += 1;
-  return bucket.count > MAX_LOGIN_ATTEMPTS;
-}
-
 async function authenticateUser(username, password, rateKey = "global") {
-  if (loginRateLimited(String(rateKey))) {
+  const key = normalizeUsername(username);
+  const ipLimit = await checkRateLimit(`login:ip:${String(rateKey)}`, MAX_LOGIN_ATTEMPTS, LOGIN_WINDOW_MS);
+  const userLimit = key
+    ? await checkRateLimit(`login:user:${key}`, MAX_LOGIN_ATTEMPTS, LOGIN_WINDOW_MS)
+    : { limited: false };
+  if (ipLimit.limited || userLimit.limited) {
     return { ok: false, status: 429, message: "Terlalu banyak cubaan log masuk. Cuba lagi dalam beberapa minit." };
   }
-  const key = normalizeUsername(username);
   if (!key || !password) return { ok: false, status: 401, message: "Username atau password tidak sah." };
   await initUserStore();
   let user = null;
