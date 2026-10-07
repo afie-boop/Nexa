@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const SESSION_COOKIE = "nexa_session_id";
-const GITHUB_COOKIE = "nexa_github_session";
+const GITHUB_COOKIE = "nexa_github_session_v2";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const SESSION_ID_RE = /^[a-f0-9]{64}$/;
 
@@ -77,7 +77,15 @@ function setSessionCookie(res, sessionId) {
 }
 
 function setGitHubCookie(res, sessionData) {
-  res.cookie(GITHUB_COOKIE, encryptSession(sessionData), {
+  // Deliberately store only a short-lived connection marker in the browser.
+  // The GitHub access token remains server-side in the session file.
+  const marker = {
+    connected: !!sessionData.connected,
+    ownerUserId: typeof sessionData.ownerUserId === "string" ? sessionData.ownerUserId : null,
+    username: typeof sessionData.username === "string" ? sessionData.username : null,
+    updatedAt: new Date().toISOString()
+  };
+  res.cookie(GITHUB_COOKIE, encryptSession(marker), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -100,6 +108,7 @@ function saveGitHubSession(req, sessionData) {
     if (!sessionId) sessionId = createSessionId();
 
     const safeData = {
+      ownerUserId: typeof sessionData.ownerUserId === "string" ? sessionData.ownerUserId : null,
       connected: !!sessionData.connected,
       username: typeof sessionData.username === "string" ? sessionData.username : null,
       accessToken: typeof sessionData.accessToken === "string" ? sessionData.accessToken : null,
@@ -119,12 +128,16 @@ function saveGitHubSession(req, sessionData) {
   }
 }
 
-function getGitHubSession(req) {
+function getGitHubSession(req, expectedOwnerUserId = null) {
   try {
     const cookieSession = req && req.cookies ? decryptSession(req.cookies[GITHUB_COOKIE]) : null;
-    if (cookieSession && cookieSession.connected && cookieSession.accessToken && cookieSession.accessToken !== "mock_token") {
-      const updatedAt = Date.parse(cookieSession.updatedAt || "");
-      if (updatedAt && Date.now() - updatedAt <= SESSION_TTL_MS) return cookieSession;
+    if (cookieSession && cookieSession.connected) {
+      // Marker cookies never contain the access token. The token must be loaded
+      // from the server-side session file below.
+      const sessionId = getSessionId(req);
+      if (!sessionId) return { connected: false, username: null, accessToken: null };
+      const file = sessionPath(sessionId);
+      if (!fs.existsSync(file)) return { connected: false, username: null, accessToken: null };
     }
     const sessionId = getSessionId(req);
     if (!sessionId) {
@@ -144,6 +157,9 @@ function getGitHubSession(req) {
     }
 
     if (parsed.connected && parsed.accessToken && parsed.accessToken !== "mock_token") {
+      if (expectedOwnerUserId && parsed.ownerUserId !== expectedOwnerUserId) {
+        return { connected: false, username: null, accessToken: null };
+      }
       return parsed;
     }
   } catch (err) {
