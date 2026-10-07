@@ -410,7 +410,10 @@ app.get("/api/brain/health", brainNoStore, rateLimitBrain("read"), requireBrainA
     return res.status(200).json({ status: "ok", scope: req.brainUser, health });
   } catch (error) {
     console.error("[Brain Health Error]:", error.message);
-    return res.status(500).json({ status: "error", message: error.message });
+    return res.status(500).json({
+      status: "error",
+      message: process.env.NODE_ENV === "production" ? "Ralat dalaman Brain." : error.message
+    });
   }
 });
 
@@ -423,7 +426,10 @@ app.get("/api/brain/history", brainNoStore, rateLimitBrain("read"), requireBrain
     return res.status(200).json({ status: "ok", memoryId, history });
   } catch (error) {
     console.error("[Brain History Error]:", error.message);
-    return res.status(400).json({ status: "error", message: error.message });
+    return res.status(400).json({
+      status: "error",
+      message: process.env.NODE_ENV === "production" ? "Permintaan Brain tidak dapat diproses." : error.message
+    });
   }
 });
 
@@ -437,7 +443,10 @@ app.post("/api/brain/history/restore", brainNoStore, rateLimitBrain("restore"), 
     return res.status(200).json({ status: "ok", result });
   } catch (error) {
     console.error("[Brain Restore Error]:", error.message);
-    return res.status(400).json({ status: "error", message: error.message });
+    return res.status(400).json({
+      status: "error",
+      message: process.env.NODE_ENV === "production" ? "Permintaan Brain tidak dapat diproses." : error.message
+    });
   }
 });
 
@@ -454,7 +463,10 @@ app.get("/api/brain/memories", brainNoStore, rateLimitBrain("read"), async (req,
     return res.status(200).json({ status: "ok", scope, memories });
   } catch (error) {
     console.error("[Brain Memory List Error]:", error.message);
-    return res.status(500).json({ status: "error", message: error.message });
+    return res.status(500).json({
+      status: "error",
+      message: process.env.NODE_ENV === "production" ? "Ralat dalaman Brain." : error.message
+    });
   }
 });
 
@@ -493,7 +505,10 @@ app.post("/api/brain/memories/reset", brainNoStore, rateLimitBrain("restore"), r
     });
   } catch (error) {
     console.error("[Brain Memory Reset Error]:", error.message);
-    return res.status(500).json({ status: "error", message: error.message });
+    return res.status(500).json({
+      status: "error",
+      message: process.env.NODE_ENV === "production" ? "Ralat dalaman Brain." : error.message
+    });
   }
 });
 
@@ -773,7 +788,9 @@ ${brainContext.context}
     console.log("=================================\n");
 
     sendError(
-      error.message || "Ada masalah pada server."
+      process.env.NODE_ENV === "production"
+        ? "AXMchat mengalami ralat sementara. Cuba lagi."
+        : (error.message || "Ada masalah pada server.")
     );
   }
 });
