@@ -24,7 +24,7 @@ async function handleFeedbackReason(req, res) {
 
   try {
     const explanation = await askOpenRouter(prompt, {
-      model: model || "openrouter/free",
+      model: process.env.FEEDBACK_MODEL || "openrouter/free",
       fallbackEnabled: false,
       maxRetries: 0,
       maxTokens: 180,
