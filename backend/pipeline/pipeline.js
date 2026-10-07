@@ -34,7 +34,7 @@ async function runPipeline(data) {
       fallbackModel: null,
       fallbackEnabled: false,
       history: (data.history || []).slice(-6),
-      system: `Kamu ialah AXMchat Fallback AI. Kamu ialah AI, bukan manusia, dan tidak mempunyai kewarganegaraan, bangsa, tempat asal atau negara sendiri. Jangan mengaku kamu orang Melayu, Malaysia, Indonesia atau mana-mana negara/bangsa. Jika ditanya asal kamu, jawab bahawa kamu ialah AI dan tidak mempunyai asal-usul manusia. Jangan mereka-reka cerita tentang siapa yang mencipta kamu atau di mana kamu dicipta jika tiada maklumat rasmi. ${INTERNAL_CONTEXT_RULE}`,
+      system: INTERNAL_CONTEXT_RULE,
       maxRetries: modePolicy.maxRetries,
       maxTokens: modePolicy.maxTokens,
       reasoningEffort: modePolicy.reasoningEffort
