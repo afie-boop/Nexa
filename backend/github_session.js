@@ -34,7 +34,11 @@ function ensureSessionId(req) {
 }
 
 function getCookieSecret() {
-  return process.env.GITHUB_SESSION_SECRET || process.env.GITHUB_CLIENT_SECRET || "change-me-nexa-github-session";
+  const value = process.env.GITHUB_SESSION_SECRET || process.env.GITHUB_CLIENT_SECRET;
+  if (!value && process.env.NODE_ENV === "production") {
+    throw new Error("GITHUB_SESSION_SECRET atau GITHUB_CLIENT_SECRET mesti ditetapkan dalam production.");
+  }
+  return value || "dev-only-change-me-nexa-github-session";
 }
 
 function encryptSession(data) {
