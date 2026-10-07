@@ -24,12 +24,10 @@ async function router(data) {
     provider = "openrouter";
     model = generalModel || "qwen/qwen3-235b-a22b-2507";
   }
-  let system;
 
+  let system;
   if (task === "code") {
     system = `
-Kamu ialah AI Coding Nexa.
-
 Peraturan:
 - Berikan code lengkap.
 - Jangan ringkaskan code.
@@ -39,8 +37,6 @@ Peraturan:
 `;
   } else {
     system = `
-Kamu ialah Nexa AI Assistant.
-
 Jawab dengan jelas dan padat.
 Gunakan Bahasa Melayu atau Indonesia mengikut pengguna.
 `;
@@ -50,10 +46,7 @@ Gunakan Bahasa Melayu atau Indonesia mengikut pengguna.
     system += "\n\nAdditional runtime context:\n" + internalSystemContext;
   }
 
-  logger.success(
-    "Router",
-    `${provider} | ${model}`
-  );
+  logger.success("Router", `${provider} | ${model}`);
 
   return {
     ...data,
