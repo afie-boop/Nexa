@@ -105,6 +105,23 @@ const protectedAgent = (req, res, next) => {
   next();
 };
 
+const authBuckets = new Map();
+const authRateLimit = (req, res, next) => {
+  const key = String(req.ip || "unknown");
+  const now = Date.now();
+  let bucket = authBuckets.get(key);
+  if (!bucket || now - bucket.startedAt >= 10 * 60 * 1000) {
+    bucket = { startedAt: now, count: 0 };
+    authBuckets.set(key, bucket);
+  }
+  bucket.count += 1;
+  if (bucket.count > 12) {
+    res.setHeader("Retry-After", "600");
+    return res.status(429).json({ message: "Terlalu banyak percubaan auth. Cuba lagi dalam beberapa minit." });
+  }
+  next();
+};
+
 const chatBuckets = new Map();
 const chatRateLimit = (req, res, next) => {
   const key = String(req.ip || "unknown");
@@ -176,7 +193,7 @@ app.get("/api/auth/status", (req, res) => {
   });
 });
 
-app.post("/api/auth/register", async (req, res) => {
+app.post("/api/auth/register", authRateLimit, async (req, res) => {
   try {
     const result = await registerUser(req.body?.username, req.body?.password);
     if (!result.ok) return res.status(result.status).json({ message: result.message });
@@ -188,7 +205,7 @@ app.post("/api/auth/register", async (req, res) => {
   }
 });
 
-app.post("/api/auth/login", async (req, res) => {
+app.post("/api/auth/login", authRateLimit, async (req, res) => {
   try {
     const result = await authenticateUser(req.body?.username, req.body?.password, req.ip || "unknown");
     if (!result.ok) return res.status(result.status).json({ message: result.message });
