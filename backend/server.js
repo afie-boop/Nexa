@@ -731,6 +731,13 @@ app.post("/chat", chatRateLimit, async (req, res) => {
     // General AI, Coding AI, and Fallback AI. The model must use it when asked
     // about the current day/date/time, but must never volunteer it otherwise.
     const realtimeClock = getRealtimeClock(req.body && req.body.clientTime);
+    // Keep the selected model completely system-prompt-free. When the user
+    // explicitly asks for the current time/date, add authoritative runtime
+    // data to that request only; otherwise the model receives no AXM identity
+    // or runtime instructions.
+    const timeQuestion = /\\b(jam|waktu|pukul|time|hari|tanggal|tarikh|date|today|sekarang)\\b/i.test(question.trim())
+      && /\\b(berapa|apa|sekarang|kini|today|now|hari ini)\\b/i.test(question.trim());
+
     const realtimeClockContext = `[AXMCHAT REAL-TIME CLOCK]
 Timezone: ${realtimeClock.timezone}
 Date: ${realtimeClock.date}
