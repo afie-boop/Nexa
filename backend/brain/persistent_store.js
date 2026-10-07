@@ -174,7 +174,7 @@ async function updateMemory(notePathOrId, updates, scope) {
       title=$2, content=$3, type=$4, category=$5, tags=$6::jsonb, version=$7,
       importance=$8, confidence=$9, durability=$10, quality=$11::jsonb,
       consolidated_from=$12::jsonb, updated_at=NOW()
-     WHERE id=$1 RETURNING *`,
+     WHERE id=$1 AND ${where.sql} RETURNING *`,
     [
       id,
       updates.title || current.title,
