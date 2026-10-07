@@ -78,6 +78,9 @@ async function initUserStore() {
       "password_hash TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())"
     );
   } else {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("DATABASE_URL mesti ditetapkan dalam production supaya akaun AXMchat tidak hilang selepas restart/deploy.");
+    }
     fs.mkdirSync(path.dirname(USERS_FILE), { recursive: true });
     if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "[]", "utf8");
   }
