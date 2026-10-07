@@ -558,7 +558,13 @@ app.post("/api/brain/memories/reset", brainNoStore, rateLimitBrain("restore"), r
 });
 
 app.post("/chat", chatRateLimit, async (req, res) => {
-  const { question, history } = req.body;
+  const rawQuestion = req.body?.question;
+  const question = typeof rawQuestion === "string" ? rawQuestion.trim().slice(0, 12000) : "";
+  const rawHistory = Array.isArray(req.body?.history) ? req.body.history : [];
+  const history = rawHistory
+    .filter(item => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
+    .slice(-20)
+    .map(item => ({ role: item.role, content: item.content.slice(0, 6000) }));
 
   // Brain identity is independent from GitHub authentication. The same
   // httpOnly session cookie is reused across chat requests, so memory can
@@ -670,7 +676,7 @@ app.post("/chat", chatRateLimit, async (req, res) => {
       }
 
       sendStatus("Mengelaskan permintaan...");
-      task = await classifyTask(question, history || []);
+      task = await classifyTask(question, history);
       if (task === "code" && !aiAvailability.coding) task = "general";
       if (task === "general" && !aiAvailability.general) task = "code";
     }
@@ -741,7 +747,7 @@ ${brainContext.context}
     const answer = await runPipeline({
       task,
       question: question.trim(),
-      history: history || [],
+      history,
       generalModel,
       codingModel,
       fallbackModel,
