@@ -1,9 +1,18 @@
+function cleanText(value, maxLength) {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
 const askOpenRouter = require("../openrouter");
 const { sendFeedbackEmail } = require("./feedbackMailer");
 const feedbackStore = require("./feedbackStore");
 
 async function handleFeedbackReason(req, res) {
-  const { type, user_message, ai_response, reason, model } = req.body || {};
+  const body = req.body || {};
+  const type = body.type;
+  const user_message = cleanText(body.user_message, 4000);
+  const ai_response = cleanText(body.ai_response, 8000);
+  const reason = cleanText(body.reason, 1000);
+  const model = cleanText(body.model, 200);
   if (!user_message || !ai_response || !["like", "dislike"].includes(type)) {
     return res.status(400).json({ success: false, message: "type, user_message dan ai_response diperlukan." });
   }
@@ -33,16 +42,15 @@ async function handleFeedbackReason(req, res) {
 
 
 async function handlePostFeedback(req, res) {
-  const {
-    conversation_id,
-    message_id,
-    user_message,
-    ai_response,
-    provider,
-    model,
-    type,
-    reason
-  } = req.body;
+  const body = req.body || {};
+  const conversation_id = cleanText(body.conversation_id, 200);
+  const message_id = cleanText(body.message_id, 200);
+  const user_message = cleanText(body.user_message, 4000);
+  const ai_response = cleanText(body.ai_response, 8000);
+  const provider = cleanText(body.provider, 100);
+  const model = cleanText(body.model, 200);
+  const type = cleanText(body.type, 32);
+  const reason = cleanText(body.reason, 1000);
 
   if (!user_message || !ai_response) {
     return res.status(400).json({
