@@ -97,6 +97,13 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: "256kb" }));
 app.use(cookieParser());
 
+const protectedAuth = (req, res, next) => {
+  const session = getAuth(req);
+  if (!session) return res.status(401).json({ status: "error", message: "Log masuk AXMchat diperlukan." });
+  req.auth = session;
+  next();
+};
+
 const protectedGithub = (req, res, next) => {
   const auth = getAuth(req);
   if (!auth) return res.status(401).json({ status: "error", message: "Log masuk AXMchat diperlukan." });
@@ -319,7 +326,7 @@ app.get("/api/auth/github/callback", async (req, res) => {
 });
 
 // GET /api/auth/github/status - Safe connection status check (never exposes token)
-app.get("/api/auth/github/status", protectedAgent, (req, res) => {
+app.get("/api/auth/github/status", protectedAuth, (req, res) => {
   res.setHeader("Content-Type", "application/json");
   try {
     const session = getGitHubSession(req);
@@ -336,7 +343,7 @@ app.get("/api/auth/github/status", protectedAgent, (req, res) => {
 });
 
 // POST /api/auth/github/disconnect - Clear GitHub session
-app.post("/api/auth/github/disconnect", protectedAgent, (req, res) => {
+app.post("/api/auth/github/disconnect", protectedAuth, (req, res) => {
   clearGitHubSession(req);
   return res.status(200).json({ connected: false, message: "Akaun GitHub berjaya dilog keluar." });
 });
