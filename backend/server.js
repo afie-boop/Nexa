@@ -73,6 +73,29 @@ const { checkRateLimit } = require("./security/rate_limiter");
 
 const app = express();
 
+function getSafeAiErrorMessage(error) {
+  const status = Number(error?.response?.status);
+  const message = String(error?.message || "").toLowerCase();
+
+  if (status === 429 || /rate.?limit|too many requests|quota/.test(message)) {
+    return "Maaf, model sedang rate limit. Cuba lagi sebentar.";
+  }
+
+  if (status === 408 || /timeout|timed out|econnaborted|etimedout/.test(message)) {
+    return "Maaf, model mengambil terlalu lama untuk merespons. Cuba lagi.";
+  }
+
+  if (status >= 500 && status <= 599 || /openrouter|network|socket|econnreset|enotfound|eai_again/.test(message)) {
+    return "Maaf, terdapat ralat pada OpenRouter. Cuba lagi sebentar.";
+  }
+
+  if (status === 400 || status === 401 || status === 403 || /ralat model|model .*gagal|model .*tidak/.test(message)) {
+    return "Maaf, model yang dipilih sedang tidak tersedia atau mengalami ralat. Cuba model lain atau cuba lagi nanti.";
+  }
+
+  return "Maaf, berlaku ralat pada model. Cuba lagi sebentar.";
+}
+
 function signGitHubOAuthState(state, userId) {
   const secret = process.env.AUTH_SESSION_SECRET || process.env.GITHUB_SESSION_SECRET || process.env.GITHUB_CLIENT_SECRET;
   if (!secret) throw new Error("OAuth state secret belum dikonfigurasi.");
@@ -847,7 +870,7 @@ ${brainContext.context}
 
     sendError(
       process.env.NODE_ENV === "production"
-        ? "AXMchat mengalami ralat sementara. Cuba lagi."
+        ? getSafeAiErrorMessage(error)
         : (error.message || "Ada masalah pada server.")
     );
   }
