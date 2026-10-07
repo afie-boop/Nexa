@@ -222,6 +222,7 @@ app.use((req, res, next) => {
 
 // AXMchat account authentication: Username + Password + Guest
 app.get("/api/auth/status", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
   const session = getAuth(req);
   return res.json({
     authenticated: !!session,
