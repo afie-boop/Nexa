@@ -735,8 +735,9 @@ app.post("/chat", chatRateLimit, async (req, res) => {
     // explicitly asks for the current time/date, add authoritative runtime
     // data to that request only; otherwise the model receives no AXM identity
     // or runtime instructions.
-    const timeQuestion = /\\b(jam|waktu|pukul|time|hari|tanggal|tarikh|date|today|sekarang)\\b/i.test(question.trim())
-      && /\\b(berapa|apa|sekarang|kini|today|now|hari ini)\\b/i.test(question.trim());
+    // Detect time/date requests broadly. Keep the model system-prompt-free;
+    // authoritative clock data is added to the actual request only when needed.
+    const timeQuestion = /\b(jam|waktu|pukul|masa|time|hari|tanggal|tarikh|date|today|sekarang|kini|now)\b/i.test(question.trim());
 
     const realtimeClockContext = `[AXMCHAT REAL-TIME CLOCK]
 Timezone: ${realtimeClock.timezone}
@@ -783,7 +784,14 @@ ${brainContext.context}
     const internalSystemContext = contextBlocks.filter(Boolean).join("\n\n");
 
     const modelQuestion = timeQuestion
-      ? question.trim() + "\n\nCurrent date/time data: " + realtimeClock.date + ", " + realtimeClock.weekday + ", " + realtimeClock.time + " (" + realtimeClock.timezone + "). Use this data to answer the time/date question."
+      ? question.trim() +
+        "\n\n[CURRENT DATE/TIME — AUTHORITATIVE REQUEST DATA]\n" +
+        "Date: " + realtimeClock.date + "\n" +
+        "Day: " + realtimeClock.weekday + "\n" +
+        "Time: " + realtimeClock.time + "\n" +
+        "Timezone: " + realtimeClock.timezone + "\n" +
+        "Answer the user's time/date question directly using these values. Do not say that you lack real-time access when these values are present.\n" +
+        "[END CURRENT DATE/TIME]"
       : question.trim();
 
     const answer = await runPipeline({
