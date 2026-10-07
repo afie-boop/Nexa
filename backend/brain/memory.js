@@ -66,7 +66,7 @@ function extractMemoryRules(input, options = {}) {
       continue;
     }
 
-    if (/(saya|i)\s+(suka|gemar|prefer|pilih|favorite|tidak suka|benci)\b/i.test(lower)) {
+    if (/(saya|aku|i)\s+(suka|gemar|prefer|pilih|favorite|tidak suka|tak suka|benci|minat)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
       const memId = generateMemoryId(content, options.scope);
       rawMemories.push({
@@ -81,7 +81,7 @@ function extractMemoryRules(input, options = {}) {
       continue;
     }
 
-    if (/(nama saya|saya seorang|saya orang|aku seorang|aku orang|i am|i'm|my name is|saya bekerja|umur saya)\b/i.test(lower)) {
+    if (/(nama saya|nama aku|saya seorang|saya orang|aku seorang|aku orang|saya dari|aku dari|saya asal|aku asal|i am|i'm|my name is|saya bekerja|aku bekerja|umur saya|umur aku)\b/i.test(lower)) {
       const content = line.replace(/^(user:|assistant:)\s*/i, '').trim();
       const memId = generateMemoryId(content, options.scope);
       rawMemories.push({
