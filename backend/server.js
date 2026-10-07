@@ -684,7 +684,8 @@ app.post("/chat", chatRateLimit, async (req, res) => {
           scope: brainScope,
           topK: 5,
           maxSources: 8,
-          maxContextChars: 5000
+          maxContextChars: 5000,
+          forceRecall: /\\b(ingat|ingat lagi|masih ingat|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|tentang saya|memori|memory|asal saya|orang mana|nama saya|umur saya|suka apa|minat saya)\\b/i.test(question.trim())
         });
       } catch (brainError) {
         console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
