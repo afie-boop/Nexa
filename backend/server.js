@@ -782,9 +782,13 @@ ${brainContext.context}
     // the user said and stops it from echoing that metadata on ordinary prompts.
     const internalSystemContext = contextBlocks.filter(Boolean).join("\n\n");
 
+    const modelQuestion = timeQuestion
+      ? question.trim() + "\n\nCurrent date/time data: " + realtimeClock.date + ", " + realtimeClock.weekday + ", " + realtimeClock.time + " (" + realtimeClock.timezone + "). Use this data to answer the time/date question."
+      : question.trim();
+
     const answer = await runPipeline({
       task,
-      question: question.trim(),
+      question: modelQuestion,
       history,
       generalModel,
       codingModel,
