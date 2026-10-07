@@ -66,7 +66,6 @@ async function executeOpenRouterCall(messages, model, requestOptions = {}) {
 
 async function askOpenRouter(message, options = {}) {
   const {
-    system,
     model,
     fallbackModel,
     history,
@@ -77,7 +76,6 @@ async function askOpenRouter(message, options = {}) {
   } = options;
 
   const messages = [];
-  if (system) messages.push({ role: "system", content: system });
   if (history && history.length) messages.push(...history);
   messages.push({ role: "user", content: message });
 
