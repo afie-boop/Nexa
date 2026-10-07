@@ -6,13 +6,17 @@ const { promisify } = require("util");
 const scryptAsync = promisify(crypto.scrypt);
 
 const AUTH_COOKIE = "axmchat_auth";
-const TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const TTL_MS = 1000 * 60 * 60 * 24 * 30;\nconst LOGIN_WINDOW_MS = 10 * 60 * 1000;\nconst MAX_LOGIN_ATTEMPTS = 8;\nconst loginAttempts = new Map();
 const USERS_FILE = path.join(__dirname, "..", "data", "users.json");
 let pgPool = null;
 let storeReady = false;
 
 function secret() {
-  return process.env.AUTH_SESSION_SECRET || process.env.GITHUB_SESSION_SECRET || "change-me-axmchat-auth";
+  const value = process.env.AUTH_SESSION_SECRET || process.env.GITHUB_SESSION_SECRET;
+  if (!value && process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_SESSION_SECRET mesti ditetapkan dalam production.");
+  }
+  return value || "dev-only-change-me-axmchat-auth";
 }
 function encrypt(data) {
   const key = crypto.createHash("sha256").update(secret()).digest();
@@ -127,7 +131,21 @@ async function registerUser(username, password) {
   }
   return { ok: true, user: { id, username: clean, name: clean, isGuest: false } };
 }
-async function authenticateUser(username, password) {
+function loginRateLimited(key) {
+  const now = Date.now();
+  const bucket = loginAttempts.get(key);
+  if (!bucket || now - bucket.startedAt >= LOGIN_WINDOW_MS) {
+    loginAttempts.set(key, { startedAt: now, count: 1 });
+    return false;
+  }
+  bucket.count += 1;
+  return bucket.count > MAX_LOGIN_ATTEMPTS;
+}
+
+async function authenticateUser(username, password, rateKey = "global") {
+  if (loginRateLimited(String(rateKey))) {
+    return { ok: false, status: 429, message: "Terlalu banyak cubaan log masuk. Cuba lagi dalam beberapa minit." };
+  }
   const key = normalizeUsername(username);
   if (!key || !password) return { ok: false, status: 401, message: "Username atau password tidak sah." };
   await initUserStore();
