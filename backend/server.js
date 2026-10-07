@@ -74,8 +74,28 @@ const { normalizeResponseMode, classifyFastTask } = require("./responseModes");
 const app = express();
 
 app.set("trust proxy", 1);
-app.use(cors());
-app.use(express.json());
+
+// Security: restrict browser origins, cap request bodies, and apply baseline
+// response headers. Set ALLOWED_ORIGINS as a comma-separated env var in prod.
+const allowedOrigins = String(process.env.ALLOWED_ORIGINS || "").split(",").map(v => v.trim()).filter(Boolean);
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.length === 0) return callback(null, allowedOrigins.length === 0 && process.env.NODE_ENV !== "production");
+    return callback(null, allowedOrigins.includes(origin));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+}));
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if (process.env.NODE_ENV === "production") res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  next();
+});
+app.use(express.json({ limit: "256kb" }));
 app.use(cookieParser());
 
 const distPath = path.join(__dirname, "..", "dist");
@@ -367,7 +387,7 @@ app.post("/api/agent/task/:task_id/push", async (req, res) => {
       status: "error",
       service: "nexa-hermes",
       message: "Hermes agent service is currently unreachable.",
-      details: error.message
+      details: process.env.NODE_ENV === "production" ? undefined : error.message
     });
   }
 });
