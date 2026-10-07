@@ -227,14 +227,21 @@ app.get("/api/auth/github", (req, res) => {
       message: "GITHUB_CALLBACK_URL belum dikonfigurasi dalam persekitaran server."
     });
   }
+  const state = crypto.randomBytes(32).toString("hex");
+  res.cookie("nexa_github_oauth_state", state, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 10 * 60 * 1000 });
   const redirectUri = encodeURIComponent(callbackUrl);
-  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo,user`;
+  const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo,user&state=${encodeURIComponent(state)}`;
   return res.redirect(githubAuthUrl);
 });
 
 // GET /api/auth/github/callback - Handle OAuth callback
 app.get("/api/auth/github/callback", async (req, res) => {
-  const { code } = req.query;
+  const { code, state } = req.query;
+  const expectedState = req.cookies?.nexa_github_oauth_state;
+  if (!code || typeof state !== "string" || typeof expectedState !== "string" || state.length !== expectedState.length || !crypto.timingSafeEqual(Buffer.from(state), Buffer.from(expectedState))) {
+    return res.status(400).send("Permintaan OAuth GitHub tidak sah atau telah tamat.");
+  }
+  res.clearCookie("nexa_github_oauth_state", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" });
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
 
