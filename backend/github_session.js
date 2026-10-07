@@ -116,10 +116,10 @@ function saveGitHubSession(req, sessionData) {
       updatedAt: new Date().toISOString()
     };
 
-    fs.writeFileSync(sessionPath(sessionId), JSON.stringify(safeData), "utf8");
+    fs.writeFileSync(sessionPath(sessionId), encryptSession(safeData), "utf8");
     setSessionCookie(req.res, sessionId);
-    // Render Free has an ephemeral filesystem. Keep an encrypted copy in the browser
-    // so a restart/redeploy does not disconnect the user from GitHub.
+    // The browser receives only an encrypted connection marker; the access token stays
+    // encrypted in the server-side session store and is never copied to the client cookie.
     setGitHubCookie(req.res, safeData);
     return sessionId;
   } catch (err) {
@@ -149,7 +149,8 @@ function getGitHubSession(req, expectedOwnerUserId = null) {
       return { connected: false, username: null, accessToken: null };
     }
 
-    const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
+    const parsed = decryptSession(fs.readFileSync(file, "utf8"));
+    if (!parsed) return { connected: false, username: null, accessToken: null };
     const updatedAt = Date.parse(parsed.updatedAt || "");
     if (!updatedAt || Date.now() - updatedAt > SESSION_TTL_MS) {
       try { fs.unlinkSync(file); } catch (_) {}
