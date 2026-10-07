@@ -6,7 +6,10 @@ const { promisify } = require("util");
 const scryptAsync = promisify(crypto.scrypt);
 
 const AUTH_COOKIE = "axmchat_auth";
-const TTL_MS = 1000 * 60 * 60 * 24 * 30;\nconst LOGIN_WINDOW_MS = 10 * 60 * 1000;\nconst MAX_LOGIN_ATTEMPTS = 8;\nconst loginAttempts = new Map();
+const TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const LOGIN_WINDOW_MS = 10 * 60 * 1000;
+const MAX_LOGIN_ATTEMPTS = 8;
+const loginAttempts = new Map();
 const USERS_FILE = path.join(__dirname, "..", "data", "users.json");
 let pgPool = null;
 let storeReady = false;
