@@ -162,6 +162,20 @@ const chatRateLimit = async (req, res, next) => {
   }
 };
 
+const feedbackRateLimit = async (req, res, next) => {
+  try {
+    const result = await checkRateLimit(`feedback:ip:${String(req.ip || "unknown")}`, 10, 10 * 60 * 1000);
+    if (result.limited) {
+      res.setHeader("Retry-After", String(result.retryAfter));
+      return res.status(429).json({ success: false, message: "Terlalu banyak maklum balas. Cuba lagi sebentar." });
+    }
+    return next();
+  } catch (error) {
+    console.error("[Feedback Rate Limit Error]:", error.message);
+    return res.status(503).json({ success: false, message: "Sistem keselamatan maklum balas tidak tersedia. Cuba lagi." });
+  }
+};
+
 const distPath = path.join(__dirname, "..", "dist");
 
 // Ensure frontend dist bundle exists, auto-build if missing
