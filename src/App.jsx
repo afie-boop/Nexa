@@ -727,10 +727,55 @@ function App() {
       return;
     }
 
-    const historyForRequest = (overrideHistory || chat).map((m) => ({
-      role: m.type === "user" ? "user" : "assistant",
-      content: m.text || "",
-    }));
+    // Session Recall: allow AXMchat to bring relevant messages from older
+    // conversations into the current request. This is separate from Brain
+    // memory: it recalls the actual previous conversation, not just saved facts.
+    const currentHistory = overrideHistory || chat;
+    const recallText = textToSend.toLowerCase();
+    const wantsSessionRecall = /\\b(ingat|ingat lagi|masih ingat|sesi lama|sesi sebelum|sesi sebelumnya|chat lama|perbualan lama|percakapan lama|panggil semula|sambung sesi|sambung perbualan|bincang sebelum|kita bincang|tadi kita|semalam kita|sebelum ini)\\b/i.test(recallText);
+
+    let recalledSessionMessages = [];
+    if (wantsSessionRecall) {
+      const queryTokens = recallText
+        .match(/[a-z0-9À-ÿ]{3,}/g)?.filter(token =>
+          !new Set(["yang","dan","atau","dengan","untuk","dari","pada","dalam","itu","ini","apa","aku","saya","kau","kamu","ingat","lagi","sesi","lama","sebelum","sebelumnya","panggil","semula","sambung","perbualan","percakapan"]).has(token)
+        ) || [];
+
+      const candidates = conversations
+        .filter(conv => conv.id !== activeId && Array.isArray(conv.messages) && conv.messages.length)
+        .map(conv => {
+          const searchable = conv.messages.map(m => m.text || "").join(" ").toLowerCase();
+          const score = queryTokens.reduce((total, token) => total + (searchable.includes(token) ? 1 : 0), 0);
+          return { conv, score };
+        })
+        .sort((a, b) => b.score - a.score || b.conv.createdAt - a.conv.createdAt);
+
+      // If the user explicitly asks to recall a session but gives no topic,
+      // prefer the most recent older session.
+      const selected = candidates.filter(item => item.score > 0).slice(0, 2);
+      const fallback = selected.length ? selected : candidates.slice(0, 1);
+
+      for (const { conv } of fallback) {
+        recalledSessionMessages.push({
+          role: "system",
+          content:
+            "[AXMCHAT RECALLED PREVIOUS SESSION]\n" +
+            "Sesi lama yang relevan: " + (conv.title || "Sesi tanpa tajuk") + "\n" +
+            conv.messages.slice(-20).map(m =>
+              (m.type === "user" ? "User: " : "AXMchat: ") + String(m.text || "")
+            ).join("\n") +
+            "\n[END RECALLED PREVIOUS SESSION]"
+        });
+      }
+    }
+
+    const historyForRequest = [
+      ...recalledSessionMessages,
+      ...currentHistory.map((m) => ({
+        role: m.type === "user" ? "user" : "assistant",
+        content: m.text || "",
+      }))
+    ];
 
     if (!overrideMsg) {
       const userMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
