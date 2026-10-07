@@ -156,11 +156,13 @@ function isNoteInScope(noteMetadata = {}, filterScope = null) {
   }
 
   if (normNoteScopeType === 'project') {
-    return normFilter.type === 'project' && noteMetadata.projectId === normFilter.projectId;
+    if (normFilter.type !== 'project' || noteMetadata.projectId !== normFilter.projectId) return false;
+    return !noteMetadata.userId || noteMetadata.userId === normFilter.userId;
   }
 
   if (normNoteScopeType === 'session') {
-    return normFilter.type === 'session' && noteMetadata.sessionId === normFilter.sessionId;
+    if (normFilter.type !== 'session' || noteMetadata.sessionId !== normFilter.sessionId) return false;
+    return !noteMetadata.userId || noteMetadata.userId === normFilter.userId;
   }
 
   return false;
