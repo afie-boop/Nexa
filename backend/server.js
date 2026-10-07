@@ -265,8 +265,8 @@ app.post("/api/auth/logout", (req, res) => {
   return res.json({ authenticated: false });
 });
 
-app.post("/api/feedback", handlePostFeedback);
-app.post("/api/feedback/reason", handleFeedbackReason);
+app.post("/api/feedback", feedbackRateLimit, handlePostFeedback);
+app.post("/api/feedback/reason", feedbackRateLimit, handleFeedbackReason);
 
 // GET /api/auth/github - Start OAuth flow
 app.get("/api/auth/github", protectedAuth, (req, res) => {
