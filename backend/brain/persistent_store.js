@@ -75,23 +75,22 @@ function scopeWhere(scope, startIndex = 1) {
     clauses.push(`user_id = $${i++}`);
     values.push(scope.userId || null);
   } else if (scope.type === "project") {
-    clauses.push(`project_id = ${i++}`);
+    clauses.push(`project_id = $${i++}`);
     values.push(scope.projectId || null);
     if (scope.userId) {
-      clauses.push(`user_id = ${i++}`);
+      clauses.push(`user_id = $${i++}`);
       values.push(scope.userId);
     }
   } else if (scope.type === "session") {
-    clauses.push(`session_id = ${i++}`);
+    clauses.push(`session_id = $${i++}`);
     values.push(scope.sessionId || null);
     if (scope.userId) {
-      clauses.push(`session_id = ${i++}`);
-      values.push(scope.sessionId || null);
+      clauses.push(`user_id = $${i++}`);
+      values.push(scope.userId);
     }
   }
   return { sql: clauses.join(" AND "), values, nextIndex: i };
 }
-
 function rowToMemory(row) {
   return {
     id: row.id,
