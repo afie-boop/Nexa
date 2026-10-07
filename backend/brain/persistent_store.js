@@ -238,15 +238,19 @@ async function listMemories(scope, limit = 100) {
 }
 
 async function retrieveContext(query, scope, options = {}) {
-  const memories = await listMemories(scope, options.maxSources || options.topK || 8);
+  const memories = await listMemories(scope, options.forceRecall ? 500 : (options.maxSources || options.topK || 8));
   const tokens = String(query || "").toLowerCase().split(/[^a-z0-9\u00c0-\u024f]+/).filter(t => t.length >= 2);
   const ranked = memories.map(memory => {
     const haystack = memory.content.toLowerCase();
     let score = 0;
     for (const token of tokens) if (haystack.includes(token)) score += 1;
     if (memory.importance) score += Number(memory.importance) * 0.25;
+    if (options.forceRecall) score += 0.5;
     return { ...memory, score };
-  }).filter(item => item.score > 0).sort((a,b) => b.score - a.score);
+  }).filter(item => options.forceRecall || item.score > 0).sort((a,b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return String(b.updated || b.created || "").localeCompare(String(a.updated || a.created || ""));
+  });
 
   const selected = ranked.slice(0, options.topK || 5);
   const maxChars = options.maxContextChars || 5000;
