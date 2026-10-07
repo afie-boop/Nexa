@@ -113,8 +113,8 @@ async function registerUser(username, password) {
   if (!/^[a-zA-Z0-9_.-]{3,32}$/.test(clean)) {
     return { ok: false, status: 400, message: "Username mesti 3-32 aksara dan hanya boleh mengandungi huruf, nombor, titik, garis bawah atau sengkang." };
   }
-  if (String(password || "").length < 8) {
-    return { ok: false, status: 400, message: "Password mesti sekurang-kurangnya 8 aksara." };
+  if (String(password || "").length < 8 || String(password || "").length > 128) {
+    return { ok: false, status: 400, message: "Password mesti 8-128 aksara." };
   }
   const id = "usr_" + crypto.randomBytes(12).toString("hex");
   const passwordHash = await hashPassword(password);
