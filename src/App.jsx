@@ -732,7 +732,7 @@ function App() {
     // memory: it recalls the actual previous conversation, not just saved facts.
     const currentHistory = overrideHistory || chat;
     const recallText = textToSend.toLowerCase();
-    const wantsSessionRecall = /\\b(ingat|ingat lagi|masih ingat|sesi lama|sesi sebelum|sesi sebelumnya|chat lama|perbualan lama|percakapan lama|panggil semula|sambung sesi|sambung perbualan|bincang sebelum|kita bincang|tadi kita|semalam kita|sebelum ini)\\b/i.test(recallText);
+    const wantsSessionRecall = /\\b(ingat|ingat lagi|masih ingat|nama kau|nama awak|nama kamu|sesi lama|sesi sebelum|sesi sebelumnya|chat lama|perbualan lama|percakapan lama|panggil semula|sambung sesi|sambung perbualan|bincang sebelum|kita bincang|tadi kita|semalam kita|sebelum ini|sebelum ni)\\b/i.test(recallText);
 
     let recalledSessionMessages = [];
     if (wantsSessionRecall) {
@@ -757,7 +757,7 @@ function App() {
 
       for (const { conv } of fallback) {
         recalledSessionMessages.push({
-          role: "system",
+          role: "user",
           content:
             "[AXMCHAT RECALLED PREVIOUS SESSION]\n" +
             "Sesi lama yang relevan: " + (conv.title || "Sesi tanpa tajuk") + "\n" +
