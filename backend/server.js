@@ -737,7 +737,14 @@ app.post("/chat", chatRateLimit, async (req, res) => {
     // or runtime instructions.
     // Detect time/date requests broadly. Keep the model system-prompt-free;
     // authoritative clock data is added to the actual request only when needed.
-    const timeQuestion = /\b(jam|waktu|pukul|masa|time|hari|tanggal|tarikh|date|today|sekarang|kini|now)\b/i.test(question.trim());
+    const normalizedTimeQuestion = question.trim();
+    const hasClockWord = /\b(jam|waktu|pukul|masa|time)\b/i.test(normalizedTimeQuestion);
+    const hasDateWord = /\b(hari|tanggal|tarikh|date|today)\b/i.test(normalizedTimeQuestion);
+    const hasTimeQuestionForm = /\b(berapa|sekarang|kini|now|current)\b/i.test(normalizedTimeQuestion);
+    const hasDateQuestionForm = /\b(apa|berapa|hari ini|today|sekarang|kini|now|current)\b/i.test(normalizedTimeQuestion);
+    const timeQuestion =
+      (hasClockWord && hasTimeQuestionForm) ||
+      (hasDateWord && hasDateQuestionForm);
 
     const realtimeClockContext = `[AXMCHAT REAL-TIME CLOCK]
 Timezone: ${realtimeClock.timezone}
