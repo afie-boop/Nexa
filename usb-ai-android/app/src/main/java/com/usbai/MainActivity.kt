@@ -40,7 +40,7 @@ class MainActivity : Activity() {
         // Serve bundled web files from a secure HTTPS-style origin. Modern Vite
         // builds use ES modules, which can fail to execute from file:/// URLs.
         assetLoader = WebViewAssetLoader.Builder()
-            .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(this, "www"))
+            .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(this))
             .build()
 
         webView = WebView(this).apply {
