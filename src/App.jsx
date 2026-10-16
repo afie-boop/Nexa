@@ -39,6 +39,13 @@ const axmCodeTheme = {
   'important': { color: '#ffcf8a', fontWeight: 700 },
 };
 
+function safeStorageGet(key) {
+  try { return window.localStorage.getItem(key); } catch { return null; }
+}
+function safeStorageSet(key, value) {
+  try { window.localStorage.setItem(key, value); } catch {}
+}
+
 function App() {
   const msgRef = useRef(null);
   const sendButtonRef = useRef(null);
@@ -53,7 +60,7 @@ function App() {
   // Conversations State
   const [conversations, setConversations] = useState(() => {
     try {
-      const saved = localStorage.getItem("nexa_conversations");
+      const saved = safeStorageGet("nexa_conversations");
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -75,10 +82,10 @@ function App() {
   });
 
   const [activeId, setActiveId] = useState(() => {
-    const saved = localStorage.getItem("nexa_active_id");
+    const saved = safeStorageGet("nexa_active_id");
     if (saved) return saved;
     try {
-      const savedConvs = localStorage.getItem("nexa_conversations");
+      const savedConvs = safeStorageGet("nexa_conversations");
       if (savedConvs) {
         const parsed = JSON.parse(savedConvs);
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -124,7 +131,7 @@ function App() {
 
   const [memoryEnabled, setMemoryEnabled] = useState(() => {
     try {
-      const saved = localStorage.getItem("nexa_memory_enabled");
+      const saved = safeStorageGet("nexa_memory_enabled");
       return saved !== null ? JSON.parse(saved) : true;
     } catch {
       return true;
@@ -133,7 +140,7 @@ function App() {
 
   const [generalModel, setGeneralModel] = useState(() => {
     try {
-      const saved = localStorage.getItem("nexa_general_model");
+      const saved = safeStorageGet("nexa_general_model");
       return saved ? saved : "qwen/qwen3-235b-a22b-2507";
     } catch {
       return "qwen/qwen3-235b-a22b-2507";
@@ -142,7 +149,7 @@ function App() {
 
   const [codingModel, setCodingModel] = useState(() => {
     try {
-      const saved = localStorage.getItem("nexa_coding_model");
+      const saved = safeStorageGet("nexa_coding_model");
       return saved ? saved : "openrouter/free";
     } catch {
       return "openrouter/free";
@@ -151,7 +158,7 @@ function App() {
 
   const [fallbackModel, setFallbackModel] = useState(() => {
     try {
-      const saved = localStorage.getItem("nexa_fallback_model");
+      const saved = safeStorageGet("nexa_fallback_model");
       return saved ? saved : "openrouter/free";
     } catch {
       return "openrouter/free";
@@ -165,7 +172,7 @@ function App() {
 
   const [aiAvailability, setAiAvailability] = useState(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem("axmchat_ai_availability") || "null");
+      const saved = JSON.parse(safeStorageGet("axmchat_ai_availability") || "null");
       return {
         general: saved?.general !== false,
         coding: saved?.coding !== false,
@@ -178,7 +185,7 @@ function App() {
 
   const [responseMode, setResponseMode] = useState(() => {
     try {
-      const saved = localStorage.getItem("axmchat_response_mode");
+      const saved = safeStorageGet("axmchat_response_mode");
       return ["fast", "balance", "thinking"].includes(saved) ? saved : "balance";
     } catch {
       return "balance";
@@ -195,7 +202,7 @@ function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("axmchat_response_mode", responseMode);
+      safeStorageSet("axmchat_response_mode", responseMode);
     } catch (err) {
       console.error(err);
     }
@@ -390,7 +397,7 @@ function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("nexa_conversations", JSON.stringify(conversations));
+      safeStorageSet("nexa_conversations", JSON.stringify(conversations));
     } catch (err) {
       console.error(err);
     }
@@ -398,13 +405,13 @@ function App() {
 
   useEffect(() => {
     if (activeId) {
-      localStorage.setItem("nexa_active_id", activeId);
+      safeStorageSet("nexa_active_id", activeId);
     }
   }, [activeId]);
 
   useEffect(() => {
     try {
-      localStorage.setItem("nexa_memory_enabled", JSON.stringify(memoryEnabled));
+      safeStorageSet("nexa_memory_enabled", JSON.stringify(memoryEnabled));
     } catch (err) {
       console.error(err);
     }
@@ -412,7 +419,7 @@ function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("axmchat_ai_availability", JSON.stringify(aiAvailability));
+      safeStorageSet("axmchat_ai_availability", JSON.stringify(aiAvailability));
     } catch (err) {
       console.error(err);
     }
@@ -420,7 +427,7 @@ function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("nexa_general_model", generalModel);
+      safeStorageSet("nexa_general_model", generalModel);
     } catch (err) {
       console.error(err);
     }
@@ -428,7 +435,7 @@ function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("nexa_coding_model", codingModel);
+      safeStorageSet("nexa_coding_model", codingModel);
     } catch (err) {
       console.error(err);
     }
@@ -436,7 +443,7 @@ function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("nexa_fallback_model", fallbackModel);
+      safeStorageSet("nexa_fallback_model", fallbackModel);
     } catch (err) {
       console.error(err);
     }
