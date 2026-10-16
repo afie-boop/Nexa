@@ -30,3 +30,7 @@ android {
         cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" }
     }
 }
+
+dependencies {
+    implementation("androidx.webkit:webkit:1.12.1")
+}
