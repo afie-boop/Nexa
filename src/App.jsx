@@ -1598,19 +1598,6 @@ function App() {
           </div>
 
           <div className="top-bar-actions">
-            {isUsbAi && (
-              <div className="usb-model-controls">
-                <span className={`usb-model-status ${usbModelLoaded ? "ready" : ""}`} title={usbModelStatus}>
-                  {usbModelLoaded ? (usbModelName || "Model aktif") : usbModelStatus}
-                </span>
-                <button className="card-action-btn" onClick={() => window.USB_AI.pickModel()}>
-                  {usbModelLoaded ? "Tukar model USB" : "Pilih model USB"}
-                </button>
-                <button className="card-action-btn" onClick={() => window.USB_AI.stopModel()} disabled={!usbModelLoaded}>
-                  Hentikan
-                </button>
-              </div>
-            )}
             <button
               className="card-action-btn"
               onClick={handleShareChat}
@@ -1964,7 +1951,10 @@ function App() {
         {activeNav === "settings" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <h2 className="panel-title">Settings</h2>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "18px" }}>
+                <h2 className="panel-title" style={{ margin: 0 }}>Settings</h2>
+                <button type="button" className="card-action-btn" onClick={() => setActiveNav("chats")} aria-label="Keluar dari Settings">✕ Tutup</button>
+              </div>
               <p className="panel-subtitle">Tetapan DiskAI.</p>
               {isUsbAi ? (
                 <div className="flat-card">
