@@ -6,6 +6,10 @@ on:
       - usb-ai-android
     paths:
       - 'usb-ai-android/**'
+      - 'src/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'index.html'
       - '.github/workflows/build-usb-ai.yml'
 permissions:
   contents: read
