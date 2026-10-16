@@ -2060,3 +2060,10 @@ button, input, textarea, select {
 
 /* USB AI native bridge controls: AXMchat layout retained, model stays on USB. */
 .usb-model-controls{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}.usb-model-status{font-size:11px;color:var(--secondary-text);max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.usb-model-status.ready{color:#86efac}@media(max-width:700px){.usb-model-controls{gap:5px}.usb-model-status{max-width:110px}.usb-model-controls .card-action-btn{font-size:11px;padding:7px 8px}}
+
+
+/* DiskAI USB Android: keep the sidebar focused on Settings only. */
+.sidebar.usb-only .sidebar-nav > .nav-item:not(:nth-child(5)),
+.sidebar.usb-only .sidebar-sessions,
+.sidebar.usb-only .sidebar-profile,
+.sidebar.usb-only .sidebar-footer { display: none !important; }
