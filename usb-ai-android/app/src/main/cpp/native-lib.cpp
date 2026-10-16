@@ -6,12 +6,23 @@
 #include <cstring>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <sstream>
+#include <android/log.h>
 #include "llama.h"
 
 static llama_model *g_model = nullptr;
 static llama_context *g_ctx = nullptr;
 static llama_sampler *g_sampler = nullptr;
 static std::mutex g_mutex;
+static std::string g_load_log;
+
+static void captureLlamaLog(enum ggml_log_level level, const char *text, void *) {
+    if (!text) return;
+    __android_log_write(level >= GGML_LOG_LEVEL_WARN ? ANDROID_LOG_WARN : ANDROID_LOG_INFO,
+                        "USB_AI_LLAMA", text);
+    g_load_log.append(text);
+    if (g_load_log.size() > 5000) g_load_log.erase(0, g_load_log.size() - 5000);
+}
 
 static std::string toString(JNIEnv *env, jstring value) {
     if (!value) return {};
@@ -28,6 +39,8 @@ Java_com_usbai_MainActivity_nativeLoadModel(JNIEnv *env, jobject, jint fd, jint 
     if (g_ctx) { llama_free(g_ctx); g_ctx = nullptr; }
     if (g_model) { llama_model_free(g_model); g_model = nullptr; }
     llama_backend_init();
+    g_load_log.clear();
+    llama_log_set(captureLlamaLog, nullptr);
     if (fd < 0) return env->NewStringUTF("Ralat: deskriptor fail USB tidak sah.");
     struct stat st {};
     if (fstat(fd, &st) != 0) return env->NewStringUTF("Ralat membaca maklumat fail USB.");
@@ -45,7 +58,15 @@ Java_com_usbai_MainActivity_nativeLoadModel(JNIEnv *env, jobject, jint fd, jint 
     llama_model_params mp = llama_model_default_params();
     mp.n_gpu_layers = 0;
     g_model = llama_model_load_from_file(path.c_str(), mp);
-    if (!g_model) return env->NewStringUTF("Fail USB boleh dibaca, tetapi enjin GGUF gagal membukanya. Punca mungkin format/versi model, akses /proc/self/fd Android, atau RAM. Tiada salinan model dibuat.");
+    if (!g_model) {
+        std::string detail = g_load_log;
+        while (!detail.empty() && (detail.back() == '\\n' || detail.back() == '\\r')) detail.pop_back();
+        const size_t last = detail.find_last_of("\\n");
+        if (last != std::string::npos) detail = detail.substr(last + 1);
+        if (detail.empty()) detail = "Enjin tidak memberikan butiran tambahan.";
+        const std::string message = "GGUF gagal dibuka tanpa menyalin model. Log enjin: " + detail;
+        return env->NewStringUTF(message.c_str());
+    }
     llama_context_params cp = llama_context_default_params();
     cp.n_ctx = static_cast<uint32_t>(contextSize);
     cp.n_batch = 128; cp.n_threads = 4; cp.n_threads_batch = 4;
