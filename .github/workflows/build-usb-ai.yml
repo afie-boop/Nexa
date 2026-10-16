@@ -37,18 +37,19 @@ jobs:
         run: |
           yes | sdkmanager --licenses >/dev/null
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1" "platform-tools"
-      - name: Build copied AXMchat web UI for offline Android
+      - name: Build DiskAI web UI for Android WebView
         run: |
           npm install --no-audit --no-fund
           npm run build -- --base=./
-          mkdir -p usb-ai-android/app/src/main/assets
-          cp -R dist/. usb-ai-android/app/src/main/assets/
+          mkdir -p usb-ai-android/app/src/main/assets/www
+          rm -rf usb-ai-android/app/src/main/assets/www/*
+          cp -R dist/. usb-ai-android/app/src/main/assets/www/
       - name: Build debug APK
         working-directory: usb-ai-android
         run: gradle --no-daemon assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: usb-ai-debug-apk
+          name: diskai-debug-apk
           path: usb-ai-android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
