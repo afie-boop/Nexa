@@ -1287,7 +1287,7 @@ function App() {
       {/* ==========================================================================
          SIDEBAR (LEFT) - Modern Glass Sidebar with Icons
          ========================================================================== */}
-      <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
+      <aside className={`sidebar ${sidebarOpen ? "open" : ""} ${isUsbAi ? "usb-only" : ""}`}>
         <div className="sidebar-header">
           <div className="logo-container">
             <div className="logo-icon">D</div>
