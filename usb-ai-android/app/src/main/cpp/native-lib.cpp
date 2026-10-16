@@ -2,6 +2,10 @@
 #include <string>
 #include <vector>
 #include <mutex>
+#include <cerrno>
+#include <cstring>
+#include <unistd.h>
+#include <sys/stat.h>
 #include "llama.h"
 
 static llama_model *g_model = nullptr;
@@ -24,11 +28,24 @@ Java_com_usbai_MainActivity_nativeLoadModel(JNIEnv *env, jobject, jint fd, jint 
     if (g_ctx) { llama_free(g_ctx); g_ctx = nullptr; }
     if (g_model) { llama_model_free(g_model); g_model = nullptr; }
     llama_backend_init();
+    if (fd < 0) return env->NewStringUTF("Ralat: deskriptor fail USB tidak sah.");
+    struct stat st {};
+    if (fstat(fd, &st) != 0) return env->NewStringUTF("Ralat membaca maklumat fail USB.");
+    errno = 0;
+    const off_t current = lseek(fd, 0, SEEK_CUR);
+    if (current == (off_t)-1) {
+        return env->NewStringUTF("USB dibuka sebagai aliran tanpa akses rawak (seek). Untuk kekalkan model di USB, Android perlu memberikan fail sebenar yang seekable; app tidak menyalin model ke telefon.");
+    }
+    char magic[4] = {};
+    const ssize_t got = pread(fd, magic, sizeof(magic), 0);
+    if (got != 4 || std::string(magic, 4) != "GGUF") {
+        return env->NewStringUTF("Fail yang dipilih tidak mempunyai pengepala GGUF yang sah. Pilih fail .gguf sebenar daripada pendrive.");
+    }
     const std::string path = "/proc/self/fd/" + std::to_string(fd);
     llama_model_params mp = llama_model_default_params();
     mp.n_gpu_layers = 0;
     g_model = llama_model_load_from_file(path.c_str(), mp);
-    if (!g_model) return env->NewStringUTF("Gagal membaca GGUF terus daripada USB. Provider USB mungkin tidak menyokong fail seekable.");
+    if (!g_model) return env->NewStringUTF("Fail USB boleh dibaca, tetapi enjin GGUF gagal membukanya. Punca mungkin format/versi model, akses /proc/self/fd Android, atau RAM. Tiada salinan model dibuat.");
     llama_context_params cp = llama_context_default_params();
     cp.n_ctx = static_cast<uint32_t>(contextSize);
     cp.n_batch = 128; cp.n_threads = 4; cp.n_threads_batch = 4;
