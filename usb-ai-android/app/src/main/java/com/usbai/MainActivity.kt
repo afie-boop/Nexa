@@ -8,8 +8,10 @@ import android.os.ParcelFileDescriptor
 import android.provider.OpenableColumns
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.WebViewAssetLoader
 import org.json.JSONObject
 import java.util.concurrent.Executors
 
@@ -19,6 +21,7 @@ class MainActivity : Activity() {
     private var modelName: String? = null
     @Volatile private var modelLoaded = false
     private lateinit var webView: WebView
+    private lateinit var assetLoader: WebViewAssetLoader
 
     companion object {
         private const val PICK_MODEL = 4102
@@ -33,17 +36,29 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = android.graphics.Color.rgb(9, 13, 22)
         window.navigationBarColor = android.graphics.Color.rgb(9, 13, 22)
+
+        // Serve bundled web files from a secure HTTPS-style origin. Modern Vite
+        // builds use ES modules, which can fail to execute from file:/// URLs.
+        assetLoader = WebViewAssetLoader.Builder()
+            .addPathHandler("/", WebViewAssetLoader.AssetsPathHandler(this, "www"))
+            .build()
+
         webView = WebView(this).apply {
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
-            settings.allowFileAccess = true
+            settings.allowFileAccess = false
             settings.allowContentAccess = true
             webChromeClient = WebChromeClient()
-            webViewClient = WebViewClient()
+            webViewClient = object : WebViewClient() {
+                override fun shouldInterceptRequest(
+                    view: WebView,
+                    request: WebResourceRequest
+                ) = assetLoader.shouldInterceptRequest(request.url)
+            }
             addJavascriptInterface(UsbAiBridge(), "USB_AI")
         }
         setContentView(webView)
-        webView.loadUrl("file:///android_asset/index.html")
+        webView.loadUrl("https://appassets.androidplatform.net/index.html")
     }
 
     inner class UsbAiBridge {
