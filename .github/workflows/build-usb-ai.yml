@@ -33,6 +33,12 @@ jobs:
         run: |
           yes | sdkmanager --licenses >/dev/null
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018" "cmake;3.22.1" "platform-tools"
+      - name: Build copied AXMchat web UI for offline Android
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+          mkdir -p usb-ai-android/app/src/main/assets
+          cp -R dist/. usb-ai-android/app/src/main/assets/
       - name: Build debug APK
         working-directory: usb-ai-android
         run: gradle --no-daemon assembleDebug
