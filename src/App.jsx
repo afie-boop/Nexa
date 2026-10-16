@@ -1965,82 +1965,29 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">Settings</h2>
-              <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran DiskAI AI.</p>
-
-              <div className="flat-card">
-                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>GitHub & Brain</h3>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", padding: "12px 0" }}>
-                  <div style={{ minWidth: 0 }}>
-                    <strong style={{ display: "block", fontSize: "14px" }}>
-                      {githubConnected ? "GitHub Connected" : "Connect GitHub"}
-                    </strong>
-                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>
-                      {githubConnected
-                        ? `Connected sebagai @${githubUsername || "GitHub user"}. Brain boleh mengasingkan memory per-user.`
-                        : "Login dengan GitHub untuk mengaktifkan Brain memory per-user dan endpoint Brain yang dilindungi."}
-                    </span>
-                    {githubAuthError && (
-                      <span style={{ display: "block", marginTop: "6px", fontSize: "12px", color: "#EF4444" }}>{githubAuthError}</span>
-                    )}
-                  </div>
-                  {githubConnected ? (
-                    <button
-                      className="card-action-btn"
-                      onClick={disconnectGitHub}
-                      disabled={githubAuthLoading}
-                    >
-                      {githubAuthLoading ? "Memproses..." : "Disconnect"}
+              <p className="panel-subtitle">Tetapan DiskAI.</p>
+              {isUsbAi ? (
+                <div className="flat-card">
+                  <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Model USB</h3>
+                  <p style={{ fontSize: "13px", color: "var(--secondary-text)", marginBottom: "14px" }}>
+                    {usbModelLoaded ? `Model aktif: ${usbModelName || "GGUF"}` : "Sambungkan USB OTG dan pilih fail model GGUF."}
+                  </p>
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    <button className="card-action-btn" onClick={() => window.USB_AI.pickModel()}>
+                      {usbModelLoaded ? "Tukar Model USB" : "Pilih Model USB"}
                     </button>
-                  ) : (
-                    <button
-                      className="card-action-btn"
-                      onClick={connectGitHub}
-                      disabled={githubAuthLoading}
-                    >
-                      {githubAuthLoading ? "Menyemak..." : "Connect GitHub"}
+                    <button className="card-action-btn" onClick={() => window.USB_AI.stopModel()} disabled={!usbModelLoaded}>
+                      Hentikan Model
                     </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="flat-card">
-                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" }}>
-                  <div>
-                    <strong style={{ display: "block", fontSize: "14px" }}>Memori DiskAI</strong>
-                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>{memoryEnabled ? "ON — AI boleh membaca dan menyimpan memori." : "OFF — AI tidak membaca atau menyimpan memori."}</span>
                   </div>
-                  <button
-                    type="button"
-                    className="card-action-btn"
-                    aria-pressed={memoryEnabled}
-                    onClick={() => setMemoryEnabled(prev => !prev)}
-                  >
-                    {memoryEnabled ? "ON" : "OFF"}
-                  </button>
+                  <p style={{ fontSize: "12px", color: "var(--secondary-text)", marginTop: "12px" }}>{usbModelStatus}</p>
                 </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid var(--border)" }}>
-                  <div>
-                    <strong style={{ display: "block", fontSize: "14px" }}>Hapus Sejarah</strong>
-                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Padam keseluruhan data perbualan semasa dari storan tempatan peranti.</span>
-                  </div>
-                  <button className="card-action-btn" style={{ color: "#EF4444", borderColor: "#EF4444" }} onClick={clearChat}>
-                    Padam Sejarah
-                  </button>
+              ) : (
+                <div className="flat-card">
+                  <h3 style={{ fontSize: "16px", fontWeight: "600" }}>Tetapan USB</h3>
+                  <p style={{ fontSize: "13px", color: "var(--secondary-text)" }}>Pilihan model USB tersedia dalam aplikasi Android DiskAI.</p>
                 </div>
-
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid var(--border)" }}>
-                  <div>
-                    <strong style={{ display: "block", fontSize: "14px" }}>Reset Memori</strong>
-                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Padam semua memori aktif DiskAI untuk peranti ini.</span>
-                  </div>
-                  <button className="card-action-btn" style={{ color: "#EF4444", borderColor: "#EF4444" }} onClick={resetMemory}>
-                    Reset Memori
-                  </button>
-                </div>
-              </div>
-
+              )}
             </div>
           </div>
         )}
