@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./App.css";
 
-// AXMchat syntax theme: real Prism token colours, kept soft for the dark UI.
+// DiskAI syntax theme: real Prism token colours, kept soft for the dark UI.
 const axmCodeTheme = {
   ...oneDark,
   'comment': { color: '#6f7b8a', fontStyle: 'italic' },
@@ -214,7 +214,7 @@ function App() {
     }
   }, [load]);
 
-  const [loadingStatus, setLoadingStatus] = useState("AXMchat sedang berfikir...");
+  const [loadingStatus, setLoadingStatus] = useState("DiskAI sedang berfikir...");
   const [error, setError] = useState(null);
   const [brainMemoryId, setBrainMemoryId] = useState("");
   const [brainHistory, setBrainHistory] = useState([]);
@@ -244,7 +244,7 @@ function App() {
         if (data.authenticated) setAuthUser(data.user || null);
       })
       .catch(() => {
-        if (!cancelled) setAuthError("Gagal menyemak sesi AXMchat.");
+        if (!cancelled) setAuthError("Gagal menyemak sesi DiskAI.");
       })
       .finally(() => {
         if (!cancelled) setAuthChecked(true);
@@ -300,7 +300,7 @@ function App() {
     }
   }
 
-  async function logoutAXMchat() {
+  async function logoutDiskAI() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
     setAuthUser(null);
     setAuthChecked(true);
@@ -689,7 +689,7 @@ function App() {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "AXMchat AI Response",
+          title: "DiskAI AI Response",
           text: content,
         });
       } catch (err) {
@@ -704,11 +704,11 @@ function App() {
 
   const handleShareChat = async () => {
     if (chat.length === 0) return;
-    const conversationText = chat.map(m => `${m.type === "user" ? "User" : "AXMchat AI"}: ${m.text}`).join("\n\n");
+    const conversationText = chat.map(m => `${m.type === "user" ? "User" : "DiskAI AI"}: ${m.text}`).join("\n\n");
     if (navigator.share) {
       try {
         await navigator.share({
-          title: activeConversation.title || "AXMchat AI Chat",
+          title: activeConversation.title || "DiskAI AI Chat",
           text: conversationText,
         });
       } catch (err) {
@@ -742,7 +742,7 @@ function App() {
     if (!textToSend.trim() || load) return;
 
     if (!aiAvailability.general && !aiAvailability.coding && !aiAvailability.fallback) {
-      setError("Semua AI AXMchat dimatikan. Hidupkan sekurang-kurangnya satu AI.");
+      setError("Semua AI DiskAI dimatikan. Hidupkan sekurang-kurangnya satu AI.");
       return;
     }
 
@@ -755,7 +755,7 @@ function App() {
       return;
     }
 
-    // Session Recall: allow AXMchat to bring relevant messages from older
+    // Session Recall: allow DiskAI to bring relevant messages from older
     // conversations into the current request. This is separate from Brain
     // memory: it recalls the actual previous conversation, not just saved facts.
     const currentHistory = overrideHistory || chat;
@@ -787,10 +787,10 @@ function App() {
         recalledSessionMessages.push({
           role: "user",
           content:
-            "[AXMCHAT RECALLED PREVIOUS SESSION]\n" +
+            "[DISKAI RECALLED PREVIOUS SESSION]\n" +
             "Sesi lama yang relevan: " + (conv.title || "Sesi tanpa tajuk") + "\n" +
             conv.messages.slice(-20).map(m =>
-              (m.type === "user" ? "User: " : "AXMchat: ") + String(m.text || "")
+              (m.type === "user" ? "User: " : "DiskAI: ") + String(m.text || "")
             ).join("\n") +
             "\n[END RECALLED PREVIOUS SESSION]"
         });
@@ -813,7 +813,7 @@ function App() {
     }
 
     setLoad(true);
-    setLoadingStatus("AXMchat sedang berfikir...");
+    setLoadingStatus("DiskAI sedang berfikir...");
     setError(null);
 
     try {
@@ -1058,7 +1058,7 @@ function App() {
   }
 
   async function resetMemory() {
-    if (!window.confirm("Reset semua memori AXMchat? Memori aktif yang disimpan tentang anda akan dipadam.")) return;
+    if (!window.confirm("Reset semua memori DiskAI? Memori aktif yang disimpan tentang anda akan dipadam.")) return;
     try {
       const res = await fetch("/api/brain/memories/reset", {
         method: "POST",
@@ -1237,29 +1237,29 @@ function App() {
       {!authChecked ? (
         <div className="auth-screen">
           <div className="auth-card">
-            <div className="auth-logo" aria-label="AXMchat logo">
+            <div className="auth-logo" aria-label="DiskAI logo">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-hidden="true">
                 <rect width="512" height="512" fill="#000000" />
                 <rect width="512" height="512" rx="160" fill="#ffffff" />
                 <text x="50%" y="54%" fontFamily="Arial, Helvetica, sans-serif" fontSize="220" fontWeight="900" fill="#000000" textAnchor="middle" dominantBaseline="middle" letterSpacing="-12">AX</text>
               </svg>
             </div>
-            <h1>Welcome to AXMchat</h1>
-            <p>Log masuk untuk menggunakan AXMchat.</p>
+            <h1>Welcome to DiskAI</h1>
+            <p>Log masuk untuk menggunakan DiskAI.</p>
           </div>
         </div>
       ) : !authUser ? (
         <div className="auth-screen">
           <div className="auth-card">
-            <div className="auth-logo" aria-label="AXMchat logo">
+            <div className="auth-logo" aria-label="DiskAI logo">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-hidden="true">
                 <rect width="512" height="512" fill="#000000" />
                 <rect width="512" height="512" rx="160" fill="#ffffff" />
                 <text x="50%" y="54%" fontFamily="Arial, Helvetica, sans-serif" fontSize="220" fontWeight="900" fill="#000000" textAnchor="middle" dominantBaseline="middle" letterSpacing="-12">AX</text>
               </svg>
             </div>
-            <h1>{authView === "register" ? "Create your account" : "Welcome to AXMchat"}</h1>
-            <p>{authView === "register" ? "Buat akaun AXMchat menggunakan username dan password." : "Log masuk atau teruskan sebagai Guest."}</p>
+            <h1>{authView === "register" ? "Create your account" : "Welcome to DiskAI"}</h1>
+            <p>{authView === "register" ? "Buat akaun DiskAI menggunakan username dan password." : "Log masuk atau teruskan sebagai Guest."}</p>
             <form className="auth-actions" onSubmit={submitAuth}>
               <input className="auth-input" type="text" value={authUsername} onChange={(e) => setAuthUsername(e.target.value)} placeholder="Username" autoComplete="username" maxLength={32} disabled={authSubmitting} />
               <input className="auth-input" type="password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} placeholder="Password" autoComplete={authView === "register" ? "new-password" : "current-password"} disabled={authSubmitting} />
@@ -1290,8 +1290,8 @@ function App() {
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <div className="logo-container">
-            <div className="logo-icon">A</div>
-            <div className="logo-text">AXMchat</div>
+            <div className="logo-icon">D</div>
+            <div className="logo-text">DiskAI</div>
           </div>          <button className="new-chat-btn" onClick={handleNewChat}>
             <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
               <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -1434,14 +1434,14 @@ function App() {
         <div className="sidebar-profile">
           <div className="profile-avatar">AX</div>
           <div className="profile-info">
-            <span className="profile-name">{authUser?.isGuest ? "Guest" : (authUser?.username || authUser?.name || "AXMchat User")}</span>
-            <span className="profile-plan">{authUser?.isGuest ? "Guest Account" : "AXMchat Account"}</span>
+            <span className="profile-name">{authUser?.isGuest ? "Guest" : (authUser?.username || authUser?.name || "DiskAI User")}</span>
+            <span className="profile-plan">{authUser?.isGuest ? "Guest Account" : "DiskAI Account"}</span>
           </div>
           <button
             type="button"
             className="card-action-btn"
-            onClick={logoutAXMchat}
-            aria-label="Log out dari AXMchat"
+            onClick={logoutDiskAI}
+            aria-label="Log out dari DiskAI"
             title="Log out"
             style={{ marginLeft: "auto", flexShrink: 0, padding: "7px 9px" }}
           >
@@ -1589,7 +1589,7 @@ function App() {
             </button>
 
             <div className="ai-status-container">
-              <span className="ai-name">AXMchat</span>
+              <span className="ai-name">DiskAI</span>
               <div className="status-indicator">
                 <span className={`status-dot ${currentStatus === "Thinking" ? "thinking" : ""}`} />
                 <span>{currentStatus}</span>
@@ -1637,8 +1637,8 @@ function App() {
             {/* 2. Hero Section (when empty) */}
             {chat.length === 0 && !load ? (
               <div className="hero-section animate-fade">
-                <div className="hero-logo">A</div>
-                <h2 className="hero-title">Hello, I'm AXMchat.</h2>
+                <div className="hero-logo">D</div>
+                <h2 className="hero-title">Hello, I'm DiskAI.</h2>
                 <p className="hero-tagline">Build. Think. Create.</p>
 
                 <div className="suggestion-prompts-container">
@@ -1709,7 +1709,7 @@ function App() {
                       }
                     }}
                     onKeyDown={handleKeyDown}
-                    placeholder="Tanya AXMchat apa sahaja... (Shift+Enter untuk baris baru)"
+                    placeholder="Tanya DiskAI apa sahaja... (Shift+Enter untuk baris baru)"
                     disabled={load}
                   />
                 </div>
@@ -1781,7 +1781,7 @@ function App() {
         {activeNav === "models" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <h2 className="panel-title">AXMchat AI Models</h2>
+              <h2 className="panel-title">DiskAI AI Models</h2>
               <p className="panel-subtitle">Tetapkan Model ID tersuai untuk General AI, Coding AI, dan Fallback AI.</p>
 
               <div className="flat-card" style={{ marginBottom: "16px" }}>
@@ -1875,7 +1875,7 @@ function App() {
         {activeNav === "brain" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <h2 className="panel-title">AXMchat Brain</h2>
+              <h2 className="panel-title">DiskAI Brain</h2>
               <p className="panel-subtitle">Memory History & Versioning — lihat perubahan memory dan restore versi lama.</p>
 
               <div className="flat-card brain-history-search-card">
@@ -1965,7 +1965,7 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">Settings</h2>
-              <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran AXMchat AI.</p>
+              <p className="panel-subtitle">Konfigurasi tetapan ingatan dan persekitaran DiskAI AI.</p>
 
               <div className="flat-card">
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>GitHub & Brain</h3>
@@ -2007,7 +2007,7 @@ function App() {
                 <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "8px" }}>Konfigurasi Memori & Penyimpanan</h3>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0" }}>
                   <div>
-                    <strong style={{ display: "block", fontSize: "14px" }}>Memori AXMchat</strong>
+                    <strong style={{ display: "block", fontSize: "14px" }}>Memori DiskAI</strong>
                     <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>{memoryEnabled ? "ON — AI boleh membaca dan menyimpan memori." : "OFF — AI tidak membaca atau menyimpan memori."}</span>
                   </div>
                   <button
@@ -2033,7 +2033,7 @@ function App() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid var(--border)" }}>
                   <div>
                     <strong style={{ display: "block", fontSize: "14px" }}>Reset Memori</strong>
-                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Padam semua memori aktif AXMchat untuk peranti ini.</span>
+                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Padam semua memori aktif DiskAI untuk peranti ini.</span>
                   </div>
                   <button className="card-action-btn" style={{ color: "#EF4444", borderColor: "#EF4444" }} onClick={resetMemory}>
                     Reset Memori
@@ -2048,12 +2048,12 @@ function App() {
         {activeNav === "about" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <h2 className="panel-title">About AXMchat AI</h2>
-              <p className="panel-subtitle">AXMchat is a minimalist, clean, and highly productive workspace designed from the ground up for developer efficiency.</p>
+              <h2 className="panel-title">About DiskAI AI</h2>
+              <p className="panel-subtitle">DiskAI is a minimalist, clean, and highly productive workspace designed from the ground up for developer efficiency.</p>
 
               <div className="flat-card">
                 <p style={{ lineHeight: "1.6", color: "var(--primary-text)" }}>
-                  AXMchat is built upon a dual-column flat structural philosophy: an organized sidebar navigation for immediate interaction and a broad central workspace providing a clean layout with zero visual clutter.
+                  DiskAI is built upon a dual-column flat structural philosophy: an organized sidebar navigation for immediate interaction and a broad central workspace providing a clean layout with zero visual clutter.
                 </p>
                 <p style={{ marginTop: "16px", fontWeight: "500", color: "var(--secondary-text)" }}>
                   Made with focus, clarity, and precision for professional builders.
