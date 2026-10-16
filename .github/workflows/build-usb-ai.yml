@@ -40,7 +40,7 @@ jobs:
       - name: Build copied AXMchat web UI for offline Android
         run: |
           npm install --no-audit --no-fund
-          npm run build
+          npm run build -- --base=./
           mkdir -p usb-ai-android/app/src/main/assets
           cp -R dist/. usb-ai-android/app/src/main/assets/
       - name: Build debug APK
