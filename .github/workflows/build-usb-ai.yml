@@ -41,9 +41,9 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           npm run build -- --base=./
-          mkdir -p usb-ai-android/app/src/main/assets/www
-          rm -rf usb-ai-android/app/src/main/assets/www/*
-          cp -R dist/. usb-ai-android/app/src/main/assets/www/
+          mkdir -p usb-ai-android/app/src/main/assets
+          rm -rf usb-ai-android/app/src/main/assets/*
+          cp -R dist/. usb-ai-android/app/src/main/assets/
       - name: Build debug APK
         working-directory: usb-ai-android
         run: gradle --no-daemon assembleDebug
