@@ -1,18 +1,20 @@
 {
-  "name": "fusionai",
-  "version": "1.0.0",
+  "name": "usb-ai-axmchat",
+  "version": "0.2.0",
+  "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build --base=./",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-syntax-highlighter": "^16.1.1"
+    "react-markdown": "^9.0.1",
+    "react-syntax-highlighter": "^16.1.1",
+    "remark-gfm": "^4.0.0",
+    "vite": "^5.4.0"
   },
-  "devDependencies": {
-    "vite": "^5.4.0",
-    "@vitejs/plugin-react": "^4.3.1"
-  }
+  "devDependencies": {}
 }
