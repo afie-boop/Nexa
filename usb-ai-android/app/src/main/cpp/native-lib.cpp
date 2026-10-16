@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sstream>
+#include <cstdio>
 #include <android/log.h>
 #include "llama.h"
 
@@ -54,16 +55,27 @@ Java_com_usbai_MainActivity_nativeLoadModel(JNIEnv *env, jobject, jint fd, jint 
     if (got != 4 || std::string(magic, 4) != "GGUF") {
         return env->NewStringUTF("Fail yang dipilih tidak mempunyai pengepala GGUF yang sah. Pilih fail .gguf sebenar daripada pendrive.");
     }
-    const std::string path = "/proc/self/fd/" + std::to_string(fd);
+    // Load from the already-open SAF descriptor instead of reopening /proc/self/fd/N.
+    const int loadFd = dup(fd);
+    if (loadFd < 0) return env->NewStringUTF("Tidak dapat menggandakan deskriptor USB.");
+    FILE *modelFile = fdopen(loadFd, "rb");
+    if (!modelFile) {
+        close(loadFd);
+        return env->NewStringUTF("Tidak dapat membuka fail USB sebagai FILE*.");
+    }
+    if (fseeko(modelFile, 0, SEEK_SET) != 0) {
+        fclose(modelFile);
+        return env->NewStringUTF("Fail USB tidak menyokong akses rawak yang diperlukan oleh GGUF.");
+    }
     llama_model_params mp = llama_model_default_params();
     mp.n_gpu_layers = 0;
-    g_model = llama_model_load_from_file(path.c_str(), mp);
+    g_model = llama_model_load_from_file_ptr(modelFile, mp);
+    fclose(modelFile);
     if (!g_model) {
         std::string detail = g_load_log;
         while (!detail.empty() && (detail.back() == '\\n' || detail.back() == '\\r')) detail.pop_back();
-        const size_t last = detail.find_last_of("\\n");
-        if (last != std::string::npos) detail = detail.substr(last + 1);
         if (detail.empty()) detail = "Enjin tidak memberikan butiran tambahan.";
+        if (detail.size() > 1800) detail = detail.substr(detail.size() - 1800);
         const std::string message = "GGUF gagal dibuka tanpa menyalin model. Log enjin: " + detail;
         return env->NewStringUTF(message.c_str());
     }
