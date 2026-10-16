@@ -2064,6 +2064,5 @@ button, input, textarea, select {
 
 /* DiskAI USB Android: keep the sidebar focused on Settings only. */
 .sidebar.usb-only .sidebar-nav > .nav-item:not(:nth-child(5)),
-.sidebar.usb-only .sidebar-sessions,
 .sidebar.usb-only .sidebar-profile,
 .sidebar.usb-only .sidebar-footer { display: none !important; }
