@@ -54,10 +54,14 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
     return { saved: [], skipped: "empty_message" };
   }
 
-  // Questions are retrieval requests, not durable facts to learn. Avoid
-  // turning prompts such as "Apa nama projek aku?" into bogus project nodes.
-  if (/[?？]\\s*$/.test(text) || /^(apa|siapa|kenapa|mengapa|bagaimana|bila|di mana|kat mana|berapa|what|who|why|how|when|where)\\b/i.test(text)) {
-    return { saved: [], skipped: "question_not_memory" };
+  // Retrieval/meta questions must never become memories. In particular,
+  // "kau ingat tak?" asks Brain to recall; it is not a fact to save.
+  const isQuestion = /[?？]\\s*$/.test(text) ||
+    /^(apa|siapa|kenapa|mengapa|bagaimana|bila|di mana|kat mana|berapa|what|who|why|how|when|where|adakah|does|did|is|are|can|could|do)\\b/i.test(text) ||
+    /^(kau|awak|kamu|anda)\\s+(ingat|tahu)\\s+(tak|ke|kah)\\b/i.test(text) ||
+    /^(ingat tak|masih ingat|kau ingat|awak ingat|kamu ingat|do you remember|remember when)\\b/i.test(text);
+  if (isQuestion) {
+    return { saved: [], skipped: "question_or_recall_not_memory" };
   }
 
   const extracted = await brain.extractMemory(text, {
