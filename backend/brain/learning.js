@@ -49,7 +49,14 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
   if (scope.type !== "user" || !scope.userId) {
     return { saved: [], skipped: "missing_user" };
   }
-  const text = typeof userMessage === "string" ? userMessage.trim() : "";
+  // Learn from recent USER turns together so a later answer can complete
+  // an earlier partial fact. Assistant messages are deliberately excluded.
+  const userMessages = (Array.isArray(userMessage) ? userMessage : [{ role: "user", content: userMessage }])
+    .filter(item => item && (item.role === "user" || !item.role) && typeof item.content === "string")
+    .map(item => ({ role: "user", content: item.content.trim() }))
+    .filter(item => item.content)
+    .slice(-8);
+  const text = userMessages.length ? userMessages[userMessages.length - 1].content : "";
   if (!text) {
     return { saved: [], skipped: "empty_message" };
   }
@@ -65,7 +72,7 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
   }
 
 
-  const extracted = await brain.extractMemory(text, {
+  const extracted = await brain.extractMemory(userMessages, {
     mode: options.mode || "auto",
     confidenceThreshold: typeof options.confidenceThreshold === "number" ? options.confidenceThreshold : 0.75,
     scope
