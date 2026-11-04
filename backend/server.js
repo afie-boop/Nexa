@@ -832,7 +832,7 @@ ${brainContext.context}
         console.warn("[Fast WorkContext Save Warning]:", workContextError.message);
       });
 
-      if (memoryEnabled) void learnFromChat(brain, question, brainScope, {
+      if (memoryEnabled) void learnFromChat(brain, [...history, { role: "user", content: question }], brainScope, {
         mode: process.env.BRAIN_MEMORY_MODE || "auto",
         confidenceThreshold: 0.75,
         maxMemories: 3
@@ -859,7 +859,7 @@ ${brainContext.context}
     // own message, scoped to the stable Brain user identity. GitHub is not
     // required for personal memory. The assistant response is never persisted.
     if (memoryEnabled) try {
-      const learning = await learnFromChat(brain, question, brainScope, {
+      const learning = await learnFromChat(brain, [...history, { role: "user", content: question }], brainScope, {
         mode: process.env.BRAIN_MEMORY_MODE || "auto",
         confidenceThreshold: 0.75,
         maxMemories: 3
