@@ -36,7 +36,7 @@ function buildNodes(memories) {
   return { nodes, edges };
 }
 
-export default function BrainGraph() {
+export default function BrainGraph({ onBack }) {
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -85,61 +85,49 @@ export default function BrainGraph() {
   const resetView = () => { setZoom(1); setOffset({ x: 0, y: 0 }); setSelected(null); };
 
   return (
-    <section className="second-brain">
-      <div className="second-brain-heading">
-        <div>
-          <div className="second-brain-eyebrow">AXMCHAT / MEMORY GRAPH</div>
-          <h2>Second Brain</h2>
-          <p>Setiap titik ialah memori sebenar yang disimpan oleh AXMchat.</p>
-        </div>
-        <div className="second-brain-actions">
-          <span className="brain-memory-count">{memories.length} memori</span>
-          <button type="button" className="card-action-btn" onClick={loadMemories} disabled={loading}>{loading ? "Memuat..." : "↻ Segarkan"}</button>
-        </div>
-      </div>
+    <section className="second-brain" aria-label="Second Brain graph">
+      <header className="brain-fullscreen-header">
+        <button type="button" className="brain-back-button" onClick={onBack} aria-label="Kembali ke AXMchat">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+        </button>
+        <span className="brain-small-title">Second Brain</span>
+      </header>
 
-      <div className="brain-graph-shell">
-        <div className="brain-graph-toolbar">
-          <span><i className="brain-live-dot" /> {loading ? "Menyegerakkan memori" : "Memori disegerakkan"}</span>
-          <div>
-            <button type="button" onClick={() => setZoom(value => Math.min(3.2, value * 1.2))} aria-label="Zoom in">＋</button>
-            <button type="button" onClick={() => setZoom(value => Math.max(0.55, value / 1.2))} aria-label="Zoom out">−</button>
-            <button type="button" onClick={resetView}>Reset</button>
-          </div>
-        </div>
+      <svg className={`brain-graph-canvas ${dragging ? "is-dragging" : ""}`} viewBox="0 0 1000 780" preserveAspectRatio="xMidYMid meet"
+        onWheel={handleWheel} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}>
+        <g transform={`translate(${offset.x} ${offset.y}) translate(500 390) scale(${zoom}) translate(-500 -390)`}>
+          {graph.edges.map((edge, index) => {
+            const from = nodeById.get(edge.from);
+            const to = nodeById.get(edge.to);
+            if (!from || !to) return null;
+            return <line key={`${edge.from}-${edge.to}-${index}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y}
+              className="brain-graph-edge" style={{ opacity: Math.min(.5, .12 + edge.strength * .07) }} />;
+          })}
+          {graph.nodes.map((node, index) => (
+            <g key={node.id || index} className={`brain-graph-node ${selected?.id === node.id ? "selected" : ""}`}
+              role="button" tabIndex={0} aria-label={node.title || "Memori tanpa tajuk"}
+              onClick={event => { event.stopPropagation(); setSelected(node); }}
+              onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); setSelected(node); } }}>
+              <circle cx={node.x} cy={node.y} r={selected?.id === node.id ? 9 : 5.2} className="brain-node-halo" />
+              <circle cx={node.x} cy={node.y} r={selected?.id === node.id ? 4.8 : 2.8} className="brain-node-core" />
+              {visibleLabels && <text x={node.x + 11} y={node.y - 10} className="brain-node-label">{node.title || "Memori tanpa tajuk"}</text>}
+            </g>
+          ))}
+        </g>
+      </svg>
 
-        <svg className={`brain-graph-canvas ${dragging ? "is-dragging" : ""}`} viewBox="0 0 1000 780"
-          onWheel={handleWheel} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}>
-          <g transform={`translate(${offset.x} ${offset.y}) translate(500 390) scale(${zoom}) translate(-500 -390)`}>
-            {graph.edges.map((edge, index) => {
-              const from = nodeById.get(edge.from);
-              const to = nodeById.get(edge.to);
-              if (!from || !to) return null;
-              return <line key={`${edge.from}-${edge.to}-${index}`} x1={from.x} y1={from.y} x2={to.x} y2={to.y}
-                className="brain-graph-edge" style={{ opacity: Math.min(.5, .12 + edge.strength * .07) }} />;
-            })}
-            {graph.nodes.map((node, index) => (
-              <g key={node.id || index} className={`brain-graph-node ${selected?.id === node.id ? "selected" : ""}`}
-                onClick={event => { event.stopPropagation(); setSelected(node); }}>
-                <circle cx={node.x} cy={node.y} r={selected?.id === node.id ? 9 : 5.2} className="brain-node-halo" />
-                <circle cx={node.x} cy={node.y} r={selected?.id === node.id ? 4.8 : 2.8} className="brain-node-core" />
-                {visibleLabels && <text x={node.x + 11} y={node.y - 10} className="brain-node-label">{node.title || "Memori tanpa tajuk"}</text>}
-              </g>
-            ))}
-          </g>
-        </svg>
-
-        {!loading && memories.length === 0 && <div className="brain-graph-empty"><span>◌</span><strong>Belum ada memori</strong><p>Suruh AXMchat ingat sesuatu. Memori yang berjaya disimpan akan muncul di sini.</p></div>}
-        {error && <div className="brain-graph-error">{error}</div>}
-        <div className="brain-graph-hint">Zum untuk lihat tajuk · Seret untuk gerakkan graf · Tekan titik untuk buka memori</div>
-      </div>
+      {loading && <div className="brain-graph-state" role="status">Memuat memori…</div>}
+      {!loading && memories.length === 0 && !error && (
+        <div className="brain-graph-state"><strong>Belum ada memori</strong><span>Memori yang disimpan akan muncul di sini.</span></div>
+      )}
+      {error && <div className="brain-graph-error" role="alert">{error}</div>}
 
       {selected && (
-        <div className="brain-memory-detail">
+        <aside className="brain-memory-detail" aria-label="Butiran memori">
           <div className="brain-memory-detail-top">
             <div><span>MEMORY NODE</span><h3>{selected.title || "Memori tanpa tajuk"}</h3></div>
-            <button type="button" onClick={() => setSelected(null)} aria-label="Tutup">×</button>
+            <button type="button" onClick={() => setSelected(null)} aria-label="Tutup butiran">×</button>
           </div>
           <p>{selected.content}</p>
           <div className="brain-memory-detail-meta">
@@ -147,7 +135,7 @@ export default function BrainGraph() {
             <span>{selected.updated ? new Date(selected.updated).toLocaleString() : "Tarikh tidak tersedia"}</span>
             {selected.tags?.length > 0 && <span>{selected.tags.join(" · ")}</span>}
           </div>
-        </div>
+        </aside>
       )}
     </section>
   );
