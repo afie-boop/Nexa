@@ -685,7 +685,7 @@ app.post("/chat", chatRateLimit, async (req, res) => {
           topK: 5,
           maxSources: 8,
           maxContextChars: 5000,
-          forceRecall: /\\b(ingat|ingat lagi|masih ingat|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|tentang saya|memori|memory|asal saya|orang mana|nama saya|umur saya|suka apa|minat saya)\\b/i.test(question.trim())
+          forceRecall: /\b(ingat|ingat lagi|masih ingat|kau ingat aku|kamu ingat saya|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|siapa aku|aku ni siapa|tentang saya|tentang aku|memori|memory|asal saya|asal aku|orang mana|nama saya|nama aku|siapa nama aku|umur saya|umur aku|suka apa|minat saya|minat aku)\b/i.test(question.trim())
         });
       } catch (brainError) {
         console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
@@ -769,7 +769,7 @@ IMPORTANT: This is authoritative current-time data generated at request time. Ge
       const smallTalk = /^(hi|hello|hey|hai|helo|yo|yoo|e(y|i)o|oi|woy|bro|wak|cuy|kawan|terima kasih|thanks|thank you|thx|ok|okay|oke|baik|selamat pagi|selamat petang|selamat malam|good morning|good afternoon|good evening)[!,.\\s]*$/i;
       if (smallTalk.test(text)) return false;
       // Explicit self/memory questions should always be allowed to use Brain.
-      if (/(aku|saya|kamu|anda|diri saya|tentang saya|ingat|memori|memory|siapa saya|orang mana|asal saya|tinggal di|suka apa|minat saya|umur saya|nama saya)/i.test(text)) return true;
+      if (/(aku|saya|kamu|anda|diri saya|tentang saya|tentang aku|ingat|memori|memory|siapa saya|siapa aku|nama saya|nama aku|umur saya|umur aku|asal saya|asal aku|orang mana|tinggal di|suka apa|minat saya|minat aku|gaya saya|gaya aku|pernah cerita|session sebelum|perbualan sebelum)/i.test(text)) return true;
       // For ordinary questions, require lexical overlap with retrieved memory.
       const memoryText = String(brainContext?.context || "").toLowerCase();
       if (!memoryText) return false;
@@ -817,28 +817,36 @@ ${brainContext.context}
       sendProcessStep
     });
 
-    // Fast mode returns immediately after the model response. Persistence and
-    // learning continue in the background so they cannot hold up the user-visible latency.
+    // Save the exchange before ending the response so a user who immediately
+    // opens a new session does not race the background memory-learning task.
     if (responseMode === "fast") {
-      sendAnswer(answer);
-
-      void saveWorkContext(brainUserId, {
-        lastTaskType: task,
-        lastQuestion: question,
-        lastAnswer: answer,
-        currentTask: question
-      }).catch((workContextError) => {
+      try {
+        await saveWorkContext(brainUserId, {
+          lastTaskType: task,
+          lastQuestion: question,
+          lastAnswer: answer,
+          currentTask: question
+        });
+      } catch (workContextError) {
         console.warn("[Fast WorkContext Save Warning]:", workContextError.message);
-      });
+      }
 
-      if (memoryEnabled) void learnFromChat(brain, question, brainScope, {
-        mode: process.env.BRAIN_MEMORY_MODE || "auto",
-        confidenceThreshold: 0.75,
-        maxMemories: 3
-      }).catch((learningError) => {
-        console.warn("[Fast Brain Learning Warning]:", learningError.message);
-      });
+      if (memoryEnabled) {
+        try {
+          const learning = await learnFromChat(brain, question, brainScope, {
+            mode: process.env.BRAIN_MEMORY_MODE || "auto",
+            confidenceThreshold: 0.75,
+            maxMemories: 3
+          });
+          if (learning?.updated || learning?.saved?.some(item => item.created)) {
+            sendStatus("Brain berjaya menyimpan atau mengemas kini memori.");
+          }
+        } catch (learningError) {
+          console.warn("[Fast Brain Learning Warning]:", learningError.message);
+        }
+      }
 
+      sendAnswer(answer);
       return;
     }
 
