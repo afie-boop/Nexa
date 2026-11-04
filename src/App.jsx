@@ -4,6 +4,7 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./App.css";
+import BrainGraph from "./BrainGraph";
 
 // AXMchat syntax theme: real Prism token colours, kept soft for the dark UI.
 const axmCodeTheme = {
@@ -1823,23 +1824,19 @@ function App() {
         {activeNav === "brain" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <h2 className="panel-title">AXMchat Brain</h2>
-              <p className="panel-subtitle">Memory History & Versioning — lihat perubahan memory dan restore versi lama.</p>
-
+              <BrainGraph />
               <div className="flat-card brain-history-search-card">
-                <label className="flat-card-title" htmlFor="brain-memory-id">Memory ID</label>
+                <div className="flat-card-title">Memory History & Versioning</div>
+                <p className="flat-card-desc">Untuk melihat perubahan dan memulihkan versi memori, masukkan ID memori yang dipilih daripada graf.</p>
                 <div className="brain-history-input-row">
                   <input id="brain-memory-id" value={brainMemoryId} onChange={(e) => setBrainMemoryId(e.target.value)} placeholder="Contoh: mem_a1b2c3d4e5f6" />
                   <button className="card-action-btn brain-primary-btn" onClick={loadBrainHistory} disabled={brainHistoryLoading}>
                     {brainHistoryLoading ? "Memuat..." : "Lihat History"}
                   </button>
                 </div>
-                <span className="flat-card-desc">Buat masa ini UI menggunakan knowledge scope. User/project/session scope akan disambungkan selepas layer permissions siap.</span>
               </div>
-
               {brainHistoryError && <div className="error-banner brain-history-error">{brainHistoryError}</div>}
-
-              {brainHistory.length > 0 ? (
+              {brainHistory.length > 0 && (
                 <div className="brain-history-list">
                   {[...brainHistory].reverse().map((item) => (
                     <div className="flat-card brain-history-item" key={item.version}>
@@ -1860,13 +1857,10 @@ function App() {
                     </div>
                   ))}
                 </div>
-              ) : (
-                !brainHistoryLoading && <div className="flat-card brain-empty-state">Tiada history ditemui untuk Memory ID ini.</div>
               )}
             </div>
           </div>
         )}
-
         {activeNav === "history" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
