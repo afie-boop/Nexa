@@ -1,22 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1932 1932" width="500" height="500">
-  <rect width="1932" height="1932" fill="#fafafa"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Latar penuh (tanpa sudut), nanti dipotong otomatis oleh launcher -->
+  <rect width="1024" height="1024" fill="#fafafa"/>
 
-  <!-- Ikon diamond dengan lubang & ekor chat -->
-  <path fill="#000" fill-rule="evenodd"
-        d="M940 368 Q965 345 992 368
-           L1308 752 Q1335 785 1308 818
-           L995 1210 Q965 1240 935 1210
-           L620 818 Q595 785 620 752 Z
+  <!-- Diamond besar di tengah -->
+  <g transform="translate(-241.5 -105) scale(0.78)">
+    <path fill="#000" fill-rule="evenodd"
+          d="M940 368 Q965 345 992 368
+             L1308 752 Q1335 785 1308 818
+             L995 1210 Q965 1240 935 1210
+             L620 818 Q595 785 620 752 Z
 
-           M900 535 Q915 520 932 537
-           L1120 758 Q1148 790 1125 815
-           L985 985 Q970 1000 970 1015
-           L970 1100 Q968 1112 960 1105
-           L745 815 Q725 790 745 758 Z"/>
-
-  <!-- Teks -->
-  <text x="965" y="1558" text-anchor="middle"
-        font-family="Poppins, Montserrat, Arial, sans-serif"
-        font-size="280" font-weight="700" fill="#000"
-        textLength="1335" lengthAdjust="spacingAndGlyphs">AXMchat</text>
+             M900 535 Q915 520 932 537
+             L1120 758 Q1148 790 1125 815
+             L985 985 Q970 1000 970 1015
+             L970 1100 Q968 1112 960 1105
+             L745 815 Q725 790 745 758 Z"/>
+  </g>
 </svg>
