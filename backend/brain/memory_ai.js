@@ -73,7 +73,11 @@ async function extractMemoryWithAI(input, options = {}) {
 
     const system = [
       'You are AXMchat Brain Memory, an AI memory selector.',
-      'Decide what durable information from the USER message should be remembered across future chats.',
+      'The input contains only USER messages from recent turns in one conversation. Decide what durable information should be remembered across future chats.',
+      'Read the user messages together. A later short reply may complete an earlier unfinished fact (for example, an earlier message says the user has a personal project and a later reply supplies its name). Combine them into one complete, accurate memory only when the missing detail is explicitly supplied.',
+      'If the latest user message is only a partial statement and the needed detail has not yet been supplied, do not save an incomplete memory. Wait for a later user turn.',
+      'Use earlier user messages only to resolve or complete the latest user message. Do not extract unrelated facts from older turns again.',
+      'Never use assistant messages, assistant questions, or your own assumptions as evidence. The input contains user messages only.',
       'Do NOT store greetings, casual conversation, temporary states, one-off requests, questions, jokes, or information invented by you.',
       'Prefer explicit user facts, identity (name, occupation, city, main language), communication preferences, interests, habits, ongoing projects and decisions, and important relationships as context only.',
       'The AI must decide whether each detail is genuinely useful and durable; do not save merely because the user says remember/ingat/save/simpan.',
@@ -85,7 +89,7 @@ async function extractMemoryWithAI(input, options = {}) {
       'Each memory must contain content, type, category, importance, confidence, tags, and source.',
       'type must be one of fact, preference, goal, project, instruction, relationship, knowledge.',
       'importance and confidence must be numbers from 0 to 1.',
-      'source must be an EXACT short quote copied verbatim from the user message.',
+      'source must be an EXACT short quote copied verbatim from one or more USER messages in the input. It must directly support the memory; never quote role labels or invent a source.',
       'If nothing deserves to be remembered, return {"memories":[]}.',
       'Never include assistant text or assumptions.'
     ].join('\\n');
