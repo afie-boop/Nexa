@@ -206,11 +206,6 @@ function App() {
 
   const [loadingStatus, setLoadingStatus] = useState("AXMchat sedang berfikir...");
   const [error, setError] = useState(null);
-  const [brainMemoryId, setBrainMemoryId] = useState("");
-  const [brainHistory, setBrainHistory] = useState([]);
-  const [brainHistoryLoading, setBrainHistoryLoading] = useState(false);
-  const [brainHistoryError, setBrainHistoryError] = useState("");
-  const [brainRestoringVersion, setBrainRestoringVersion] = useState(null);
   const [githubConnected, setGithubConnected] = useState(false);
   const [githubUsername, setGithubUsername] = useState(null);
   const [githubAuthLoading, setGithubAuthLoading] = useState(true);
@@ -977,48 +972,6 @@ function App() {
     },
   };
 
-  async function loadBrainHistory() {
-    const memoryId = brainMemoryId.trim();
-    if (!memoryId) {
-      setBrainHistoryError("Masukkan Memory ID terlebih dahulu.");
-      return;
-    }
-    setBrainHistoryLoading(true);
-    setBrainHistoryError("");
-    try {
-      const res = await fetch(`/api/brain/history?memory_id=${encodeURIComponent(memoryId)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Gagal mendapatkan memory history.");
-      setBrainHistory(data.history || []);
-    } catch (err) {
-      setBrainHistory([]);
-      setBrainHistoryError(err.message || "Gagal mendapatkan memory history.");
-    } finally {
-      setBrainHistoryLoading(false);
-    }
-  }
-
-  async function restoreBrainVersion(version) {
-    if (!brainMemoryId.trim()) return;
-    if (!window.confirm(`Restore memory ke versi v${version}?`)) return;
-    setBrainRestoringVersion(version);
-    setBrainHistoryError("");
-    try {
-      const res = await fetch("/api/brain/history/restore", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memory_id: brainMemoryId.trim(), version })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Restore gagal.");
-      await loadBrainHistory();
-    } catch (err) {
-      setBrainHistoryError(err.message || "Restore gagal.");
-    } finally {
-      setBrainRestoringVersion(null);
-    }
-  }
-
   async function resetMemory() {
     if (!window.confirm("Reset semua memori AXMchat? Memori aktif yang disimpan tentang anda akan dipadam.")) return;
     try {
@@ -1028,9 +981,6 @@ function App() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Reset memori gagal.");
-      setBrainHistory([]);
-      setBrainMemoryId("");
-      setBrainHistoryError("");
       window.alert(`Memori berjaya direset. ${Number(data.deleted) || 0} memori dipadam.`);
     } catch (err) {
       setError(err.message || "Reset memori gagal.");
@@ -1825,39 +1775,7 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <BrainGraph />
-              <div className="flat-card brain-history-search-card">
-                <div className="flat-card-title">Memory History & Versioning</div>
-                <p className="flat-card-desc">Untuk melihat perubahan dan memulihkan versi memori, masukkan ID memori yang dipilih daripada graf.</p>
-                <div className="brain-history-input-row">
-                  <input id="brain-memory-id" value={brainMemoryId} onChange={(e) => setBrainMemoryId(e.target.value)} placeholder="Contoh: mem_a1b2c3d4e5f6" />
-                  <button className="card-action-btn brain-primary-btn" onClick={loadBrainHistory} disabled={brainHistoryLoading}>
-                    {brainHistoryLoading ? "Memuat..." : "Lihat History"}
-                  </button>
-                </div>
-              </div>
-              {brainHistoryError && <div className="error-banner brain-history-error">{brainHistoryError}</div>}
-              {brainHistory.length > 0 && (
-                <div className="brain-history-list">
-                  {[...brainHistory].reverse().map((item) => (
-                    <div className="flat-card brain-history-item" key={item.version}>
-                      <div className="brain-history-item-top">
-                        <div>
-                          <div className="flat-card-title">v{item.version} <span className="brain-operation">{item.operation}</span></div>
-                          <div className="flat-card-desc">{item.snapshotCreatedAt ? new Date(item.snapshotCreatedAt).toLocaleString() : "Tarikh tidak tersedia"}</div>
-                        </div>
-                        <button className="card-action-btn" onClick={() => restoreBrainVersion(item.version)} disabled={brainRestoringVersion !== null}>
-                          {brainRestoringVersion === item.version ? "Restoring..." : "Restore"}
-                        </button>
-                      </div>
-                      <div className="brain-history-meta">
-                        {item.previousVersion ? `Previous: v${item.previousVersion}` : "Initial snapshot"}
-                        {item.restoredFromVersion ? ` · Restored from: v${item.restoredFromVersion}` : ""}
-                        {item.contentHash ? ` · Hash: ${item.contentHash.slice(0, 10)}…` : ""}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+
             </div>
           </div>
         )}
