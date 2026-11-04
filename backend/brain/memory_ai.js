@@ -69,7 +69,7 @@ async function extractMemoryWithAI(input, options = {}) {
     const model = extractorOptions.model ||
       process.env.BRAIN_MEMORY_MODEL ||
       process.env.OPENROUTER_MEMORY_MODEL ||
-      'openai/gpt-oss-20b:free';
+      'openrouter/free';
 
     const system = [
       'You are AXMchat Brain Memory, an AI memory selector.',
