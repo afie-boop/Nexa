@@ -54,6 +54,12 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
     return { saved: [], skipped: "empty_message" };
   }
 
+  // Questions are retrieval requests, not durable facts to learn. Avoid
+  // turning prompts such as "Apa nama projek aku?" into bogus project nodes.
+  if (/[?？]\\s*$/.test(text) || /^(apa|siapa|kenapa|mengapa|bagaimana|bila|di mana|kat mana|berapa|what|who|why|how|when|where)\\b/i.test(text)) {
+    return { saved: [], skipped: "question_not_memory" };
+  }
+
   const extracted = await brain.extractMemory(text, {
     mode: options.mode || "auto",
     confidenceThreshold: typeof options.confidenceThreshold === "number" ? options.confidenceThreshold : 0.75,
