@@ -64,12 +64,6 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
     return { saved: [], skipped: "question_or_recall_not_memory" };
   }
 
-  // Sensitive information is never eligible for persistent memory.
-  // Keep processing the rest of a message so a harmless fact (e.g. a name)
-  // is not lost merely because the same message also contains a secret.
-  const sensitiveText = /\\b(?:password|passcode|kata laluan|otp|one[- ]time password|pin code|cvv|cvc|kad bank|bank card|credit card|debit card|nombor ic|no\\.? ic|mykad|passport number|social security)\\b/i.test(text) ||
-    /\\b\\d{6}[- ]?\\d{2}[- ]?\\d{4}\\b/.test(text) ||
-    /\\b(?:\\d[ -]?){13,19}\\b/.test(text);
 
   const extracted = await brain.extractMemory(text, {
     mode: options.mode || "auto",
