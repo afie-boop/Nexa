@@ -801,6 +801,7 @@ function App() {
     try {
       const res = await fetch("/chat", {
         method: "POST",
+        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           question: textToSend,
