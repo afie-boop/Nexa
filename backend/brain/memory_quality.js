@@ -1,6 +1,6 @@
 const TEMPORARY_PATTERNS = [
-  /^(hi|hello|hey|ok|okay|thanks|thank you|lol|haha|test)\\b/i,
-  /\\b(right now|just now|for now|sementara|buat masa ini)\\b/i
+  /^(hi|hello|hey|ok|okay|thanks|thank you|lol|haha|test)\b/i,
+  /\b(right now|just now|for now|sementara|buat masa ini)\b/i
 ];
 
 const DURABLE_TYPES = new Set(["preference", "fact", "goal", "project", "knowledge", "instruction"]);
@@ -16,7 +16,7 @@ function assessMemoryQuality(memory, options = {}) {
     return { accepted: false, reason: "invalid_memory", confidence: 0, importance: 0, durability: 0 };
   }
 
-  const content = String(memory.content || "").trim().replace(/\\s+/g, " ");
+  const content = String(memory.content || "").trim().replace(/\s+/g, " ");
   if (!content) {
     return { accepted: false, reason: "empty_content", confidence: 0, importance: 0, durability: 0 };
   }
