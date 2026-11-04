@@ -241,8 +241,8 @@ async function retrieveContext(query, scope, options = {}) {
   const memories = await listMemories(scope, options.forceRecall ? 500 : (options.maxSources || options.topK || 8));
   const normalizedQuery = String(query || "").toLowerCase();
   const tokens = normalizedQuery.split(/[^a-z0-9\u00c0-\u024f]+/).filter(t => t.length >= 2);
-  const asksIdentity = /\\b(nama|name|siapa aku|siapa saya|who am i|identiti|identity)\\b/i.test(normalizedQuery);
-  const asksContinuity = /\\b(session sebelum|perbualan sebelum|chat sebelum|pernah cerita|ingat lagi|masih ingat|memory|memori)\\b/i.test(normalizedQuery);
+  const asksIdentity = /\b(nama|name|siapa aku|siapa saya|who am i|identiti|identity)\b/i.test(normalizedQuery);
+  const asksContinuity = /\b(session sebelum|perbualan sebelum|chat sebelum|pernah cerita|ingat lagi|masih ingat|memory|memori)\b/i.test(normalizedQuery);
   const ranked = memories.map(memory => {
     const haystack = String(memory.content || "").toLowerCase();
     const tags = Array.isArray(memory.tags) ? memory.tags.join(" ").toLowerCase() : "";
@@ -252,7 +252,7 @@ async function retrieveContext(query, scope, options = {}) {
     if (options.forceRecall) score += 0.5;
     // A direct identity question should retrieve the profile fact first,
     // even when the wording differs from the original introduction.
-    if (asksIdentity && /\\b(nama|name|identity|identiti)\\b/i.test(haystack + " " + tags)) score += 12;
+    if (asksIdentity && /\b(nama|name|identity|identiti)\b/i.test(haystack + " " + tags)) score += 12;
     // Continuity questions should prefer durable user/project/session context.
     if (asksContinuity && ["fact", "preference", "project", "goal", "instruction"].includes(String(memory.type || "").toLowerCase())) score += 2;
     return { ...memory, score };
