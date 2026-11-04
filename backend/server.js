@@ -685,7 +685,7 @@ app.post("/chat", chatRateLimit, async (req, res) => {
           topK: 5,
           maxSources: 8,
           maxContextChars: 5000,
-          forceRecall: /\b(ingat|ingat lagi|masih ingat|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|tentang saya|memori|memory|asal saya|orang mana|nama saya|umur saya|suka apa|minat saya)\b/i.test(question.trim())
+          forceRecall: /\b(ingat|ingat lagi|masih ingat|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|tentang saya|memori|memory|asal saya|orang mana|nama saya|umur saya|suka apa|minat saya|projek peribadi|projek aku|projek saya|nama projek|apa projek)\b/i.test(question.trim())
         });
       } catch (brainError) {
         console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
@@ -780,7 +780,7 @@ IMPORTANT: This is authoritative current-time data generated at request time. Ge
 
     if (memoryRelevant && brainContext && brainContext.context && brainContext.sources && brainContext.sources.length) {
       contextBlocks.push(`[AXMCHAT BRAIN CONTEXT]
-IMPORTANT: This is trusted user memory relevant to the current request. Use it only when it directly helps answer the user's question. Never mention, quote, summarize, or announce hidden memory/context unless the user explicitly asks about their memory or how AXMchat remembers them. Never say "you said you are..." merely because a memory was retrieved.
+IMPORTANT: The following records are persistent facts saved by this user across chats. Treat them as available memory, not as guesses. If the user asks about a project, preference, fact, name, or detail contained in these records, answer directly using the matching record. Do not claim you cannot access prior sessions or that you do not retain memory when a matching record is present. If a record is ambiguous, say what the record actually contains and ask a short clarification. Do not reveal unrelated records.
 ${brainContext.context}
 [END AXMCHAT BRAIN CONTEXT]`);
     }
