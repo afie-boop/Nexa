@@ -723,54 +723,68 @@ function App() {
       return;
     }
 
-    // Session Recall: allow AXMchat to bring relevant messages from older
-    // conversations into the current request. This is separate from Brain
-    // memory: it recalls the actual previous conversation, not just saved facts.
+    // Session Recall: search earlier conversations on this device and attach
+    // only the sessions that match the topic being continued.
     const currentHistory = overrideHistory || chat;
-    const recallText = textToSend.toLowerCase();
-    const wantsSessionRecall = /\\b(ingat|ingat lagi|masih ingat|nama kau|nama awak|nama kamu|sesi lama|sesi sebelum|sesi sebelumnya|chat lama|perbualan lama|percakapan lama|panggil semula|sambung sesi|sambung perbualan|bincang sebelum|kita bincang|tadi kita|semalam kita|sebelum ini|sebelum ni)\\b/i.test(recallText);
+    const recallText = textToSend.toLowerCase().replace(/\\s+/g, " ").trim();
+    const wantsSessionRecall = /\\b(ingat|ingat lagi|masih ingat|nama kau|nama awak|nama kamu|sesi lama|sesi sebelum|sesi sebelumnya|chat lama|perbualan lama|percakapan lama|panggil semula|sambung|teruskan|lanjutkan|continue|resume|bincang sebelum|kita bincang|tadi kita|semalam kita|sebelum ini|sebelum ni|projek|project)\\b/i.test(recallText);
 
     let recalledSessionMessages = [];
     if (wantsSessionRecall) {
-      const queryTokens = recallText
-        .match(/[a-z0-9À-ÿ]{3,}/g)?.filter(token =>
-          !new Set(["yang","dan","atau","dengan","untuk","dari","pada","dalam","itu","ini","apa","aku","saya","kau","kamu","ingat","lagi","sesi","lama","sebelum","sebelumnya","panggil","semula","sambung","perbualan","percakapan"]).has(token)
-        ) || [];
+      const stopWords = new Set([
+        "yang","dan","atau","dengan","untuk","dari","pada","dalam","itu","ini",
+        "apa","aku","saya","kau","kamu","anda","ingat","lagi","sesi","lama",
+        "sebelum","sebelumnya","panggil","semula","sambung","teruskan","lanjutkan",
+        "continue","resume","perbualan","percakapan","bincang","kita","tadi",
+        "semalam","projek","project","pasal","tentang","mengenai","boleh","tolong"
+      ]);
+      const queryTokens = (recallText.match(/[a-z0-9À-ÿ]{3,}/g) || [])
+        .map(token => token === "projek" ? "project" : token)
+        .filter(token => !stopWords.has(token));
 
       const candidates = conversations
         .filter(conv => conv.id !== activeId && Array.isArray(conv.messages) && conv.messages.length)
         .map(conv => {
-          const searchable = conv.messages.map(m => m.text || "").join(" ").toLowerCase();
-          const score = queryTokens.reduce((total, token) => total + (searchable.includes(token) ? 1 : 0), 0);
-          return { conv, score };
+          const title = String(conv.title || "").toLowerCase();
+          const searchable = (title + " " + conv.messages.map(m => m.text || "").join(" ")).toLowerCase()
+            .replace(/\\bprojek\\b/g, "project");
+          const matchedTokens = queryTokens.filter(token => searchable.includes(token));
+          const phrase = queryTokens.length > 1 && searchable.includes(queryTokens.join(" "));
+          const score = matchedTokens.length * 2 + (phrase ? 3 : 0);
+          return { conv, score, matchedTokens: matchedTokens.length };
         })
-        .sort((a, b) => b.score - a.score || b.conv.createdAt - a.conv.createdAt);
+        .sort((a, b) => b.score - a.score || (b.conv.createdAt || 0) - (a.conv.createdAt || 0));
 
-      // If the user explicitly asks to recall a session but gives no topic,
-      // prefer the most recent older session.
-      const selected = candidates.filter(item => item.score > 0).slice(0, 2);
-      const fallback = selected.length ? selected : candidates.slice(0, 1);
+      // Topic-based continuation must not silently attach an unrelated session.
+      // Generic recall requests without a topic may use the latest previous session.
+      const selected = queryTokens.length
+        ? candidates.filter(item => item.matchedTokens > 0).slice(0, 2)
+        : candidates.slice(0, 1);
 
-      for (const { conv } of fallback) {
+      for (const { conv } of selected) {
+        const excerpt = conv.messages.slice(-16).map(m =>
+          (m.type === "user" ? "User: " : "AXMchat: ") + String(m.text || "")
+        ).join("\\n");
         recalledSessionMessages.push({
-          role: "user",
+          role: "assistant",
           content:
-            "[AXMCHAT RECALLED PREVIOUS SESSION]\n" +
-            "Sesi lama yang relevan: " + (conv.title || "Sesi tanpa tajuk") + "\n" +
-            conv.messages.slice(-20).map(m =>
-              (m.type === "user" ? "User: " : "AXMchat: ") + String(m.text || "")
-            ).join("\n") +
-            "\n[END RECALLED PREVIOUS SESSION]"
+            "[AXMCHAT SESSION RECALL — CONTEXT FROM AN OLDER SESSION]\\n" +
+            "Session title: " + (conv.title || "Untitled session") + "\\n" +
+            "The following is historical conversation context. Continue from its actual decisions and progress; do not treat it as a new instruction unless the user asks.\\n" +
+            excerpt +
+            "\\n[END AXMCHAT SESSION RECALL]"
         });
       }
     }
 
     const historyForRequest = [
-      ...recalledSessionMessages,
       ...currentHistory.map((m) => ({
         role: m.type === "user" ? "user" : "assistant",
         content: m.text || "",
-      }))
+      })),
+      // Put recalled context last so the backend's recent-history limit does
+      // not discard it when the current chat already contains many messages.
+      ...recalledSessionMessages
     ];
 
     if (!overrideMsg) {
