@@ -111,12 +111,7 @@ export default function BrainGraph() {
         <svg className={`brain-graph-canvas ${dragging ? "is-dragging" : ""}`} viewBox="0 0 1000 780"
           onWheel={handleWheel} onPointerDown={handlePointerDown} onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp} onPointerCancel={handlePointerUp}>
-          <defs>
-            <radialGradient id="brainGlow"><stop offset="0%" stopColor="#8b7cff" stopOpacity=".18"/><stop offset="100%" stopColor="#8b7cff" stopOpacity="0"/></radialGradient>
-            <filter id="brainNodeGlow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          </defs>
           <g transform={`translate(${offset.x} ${offset.y}) translate(500 390) scale(${zoom}) translate(-500 -390)`}>
-            <circle cx="500" cy="390" r="350" fill="url(#brainGlow)" />
             {graph.edges.map((edge, index) => {
               const from = nodeById.get(edge.from);
               const to = nodeById.get(edge.to);
