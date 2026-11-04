@@ -770,7 +770,7 @@ IMPORTANT: This is authoritative current-time data generated at request time. Ge
       if (smallTalk.test(text)) return false;
       // Only explicit recall questions bypass lexical matching. Ordinary use
       // of pronouns or the word "ingat" must not inject every saved memory.
-      if (/\b(ingat tak|kau ingat|awak ingat|kamu ingat|masih ingat|ingat lagi|apa yang kau ingat|do you remember|memori saya|memory saya|siapa saya|asal saya|nama saya|umur saya|minat saya|suka apa)\b/i.test(text)) return true;
+      if (/\b(ingat tak|kau ingat|awak ingat|kamu ingat|masih ingat|ingat lagi|apa yang kau ingat|do you remember|memori saya|memory saya|siapa saya|asal saya|nama saya|umur saya|minat saya|suka apa|projek peribadi|projek aku|projek saya|nama projek|apa projek|project peribadi|project aku|project saya|project name|personal project|my project)\b/i.test(text)) return true;
       // For ordinary questions, require lexical overlap with retrieved memory.
       const memoryText = String(brainContext?.context || "").toLowerCase();
       if (!memoryText) return false;
