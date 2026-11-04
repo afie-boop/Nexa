@@ -56,10 +56,10 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
 
   // Retrieval/meta questions must never become memories. In particular,
   // "kau ingat tak?" asks Brain to recall; it is not a fact to save.
-  const isQuestion = /[?？]\\s*$/.test(text) ||
-    /^(apa|siapa|kenapa|mengapa|bagaimana|bila|di mana|kat mana|berapa|what|who|why|how|when|where|adakah|does|did|is|are|can|could|do)\\b/i.test(text) ||
-    /^(kau|awak|kamu|anda)\\s+(ingat|tahu)\\s+(tak|ke|kah)\\b/i.test(text) ||
-    /^(ingat tak|masih ingat|kau ingat|awak ingat|kamu ingat|do you remember|remember when)\\b/i.test(text);
+  const isQuestion = /[?？]\s*$/.test(text) ||
+    /^(apa|siapa|kenapa|mengapa|bagaimana|bila|di mana|kat mana|berapa|what|who|why|how|when|where|adakah|does|did|is|are|can|could|do)\b/i.test(text) ||
+    /^(kau|awak|kamu|anda)\s+(ingat|tahu)\s+(tak|ke|kah)\b/i.test(text) ||
+    /^(ingat tak|masih ingat|kau ingat|awak ingat|kamu ingat|do you remember|remember when)\b/i.test(text);
   if (isQuestion) {
     return { saved: [], skipped: "question_or_recall_not_memory" };
   }
