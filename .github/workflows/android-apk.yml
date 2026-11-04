@@ -27,6 +27,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
+      - name: Render launcher icon from supplied SVG
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y librsvg2-bin
+          rsvg-convert -w 1024 -h 1024 android/app/src/main/assets/ic_axmchat.svg -o android/app/src/main/res/drawable-nodpi/ic_axmchat_raster.png
       - name: Build debug APK
         working-directory: android
         run: gradle assembleDebug
