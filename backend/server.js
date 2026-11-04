@@ -685,7 +685,7 @@ app.post("/chat", chatRateLimit, async (req, res) => {
           topK: 5,
           maxSources: 8,
           maxContextChars: 5000,
-          forceRecall: /\b(ingat|ingat lagi|masih ingat|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|tentang saya|memori|memory|asal saya|orang mana|nama saya|umur saya|suka apa|minat saya|projek peribadi|projek aku|projek saya|nama projek|apa projek)\b/i.test(question.trim())
+          forceRecall: /\b(ingat tak|kau ingat|awak ingat|kamu ingat|masih ingat|ingat lagi|apa yang kau ingat|apa yang kamu ingat|apa yang anda ingat|do you remember|remember when|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|tentang saya|memori saya|memory saya|asal saya|orang mana|nama saya|umur saya|suka apa|minat saya|projek peribadi|projek aku|projek saya|nama projek|apa projek)\b/i.test(question.trim())
         });
       } catch (brainError) {
         console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
@@ -768,8 +768,9 @@ IMPORTANT: This is authoritative current-time data generated at request time. Ge
       if (!text) return false;
       const smallTalk = /^(hi|hello|hey|hai|helo|yo|yoo|e(y|i)o|oi|woy|bro|wak|cuy|kawan|terima kasih|thanks|thank you|thx|ok|okay|oke|baik|selamat pagi|selamat petang|selamat malam|good morning|good afternoon|good evening)[!,.\\s]*$/i;
       if (smallTalk.test(text)) return false;
-      // Explicit self/memory questions should always be allowed to use Brain.
-      if (/(aku|saya|kamu|anda|diri saya|tentang saya|ingat|memori|memory|siapa saya|orang mana|asal saya|tinggal di|suka apa|minat saya|umur saya|nama saya)/i.test(text)) return true;
+      // Only explicit recall questions bypass lexical matching. Ordinary use
+      // of pronouns or the word "ingat" must not inject every saved memory.
+      if (/\b(ingat tak|kau ingat|awak ingat|kamu ingat|masih ingat|ingat lagi|apa yang kau ingat|do you remember|memori saya|memory saya|siapa saya|asal saya|nama saya|umur saya|minat saya|suka apa)\b/i.test(text)) return true;
       // For ordinary questions, require lexical overlap with retrieved memory.
       const memoryText = String(brainContext?.context || "").toLowerCase();
       if (!memoryText) return false;
