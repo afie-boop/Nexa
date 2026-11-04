@@ -15,7 +15,6 @@ import android.widget.Toast;
 import android.content.Intent;
 import android.net.Uri;
 
-import androidx.activity.OnBackPressedCallback;
 
 public class MainActivity extends Activity {
     private static final String APP_URL = "https://nexa-y10p.onrender.com";
@@ -56,7 +55,7 @@ public class MainActivity extends Activity {
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-        settings.setSafeBrowsingEnabled(true);
+        if (android.os.Build.VERSION.SDK_INT >= 26) settings.setSafeBrowsingEnabled(true);
 
         webView.setBackgroundColor(Color.rgb(10, 10, 12));
         webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
@@ -99,13 +98,13 @@ public class MainActivity extends Activity {
             webView.restoreState(savedInstanceState);
         }
 
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                if (webView.canGoBack()) webView.goBack();
-                else finish();
-            }
-        });
+
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (webView != null && webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
     }
 
     private int dp(int value) {
