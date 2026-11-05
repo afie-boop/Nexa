@@ -1,16 +1,11 @@
-const { Pool } = require("pg");
+const { createDatabasePool } = require("../db_connection");
 
 const DATABASE_URL = process.env.DATABASE_URL || "";
 let pool = null;
 let schemaReady = null;
 
 if (DATABASE_URL) {
-  pool = new Pool({
-    connectionString: DATABASE_URL,
-    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
-    max: 5,
-    idleTimeoutMillis: 30000
-  });
+  pool = createDatabasePool({ max: 5, idleTimeoutMillis: 30000, connectionTimeoutMillis: 10000 });
 }
 
 const memoryFallback = new Map();
