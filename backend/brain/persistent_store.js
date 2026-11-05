@@ -258,7 +258,13 @@ async function retrieveContext(query, scope, options = {}) {
     return String(b.updated || b.created || "").localeCompare(String(a.updated || a.created || ""));
   });
 
-  const selected = ranked.slice(0, options.topK || 5);
+  // Recall requests should be allowed to inspect the wider personal memory set.
+  // Normal retrieval remains small; forceRecall may use maxSources as its expanded cap.
+  const normalTopK = options.topK || 5;
+  const recallTopK = options.forceRecall
+    ? Math.max(normalTopK, options.maxSources || normalTopK)
+    : normalTopK;
+  const selected = ranked.slice(0, recallTopK);
   const maxChars = options.maxContextChars || 5000;
   let used = 0;
   const chunks = [];
