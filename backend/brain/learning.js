@@ -62,8 +62,8 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
   if (!text) {
     return { saved: [], skipped: "empty_message" };
   }
-  const recallLead = /^(?:kau|awak|kamu|anda)\\s+(?:boleh\\s+)?(?:ingat|tahu)\\s+(?:tak|ke|kah)\\s*[,;:—-]?\\s*/i;
-  const withoutRecallLead = text.replace(recallLead, "").replace(/[?？]+\\s*$/, "").trim();
+  const recallLead = /^(?:kau|awak|kamu|anda)\s+(?:boleh\s+)?(?:ingat|tahu)\s+(?:tak|ke|kah)\s*[,;:—-]?\s*/i;
+  const withoutRecallLead = text.replace(recallLead, "").replace(/[?？]+\s*$/, "").trim();
   if (withoutRecallLead && withoutRecallLead !== text) {
     text = withoutRecallLead;
     userMessages[userMessages.length - 1] = { role: "user", content: text };
