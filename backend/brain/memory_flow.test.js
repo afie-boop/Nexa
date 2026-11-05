@@ -49,12 +49,17 @@ const U = c => ({ role: 'user', content: c }), A = c => ({ role: 'assistant', co
   await learnFromChat(b, [U('aku ada projek peribadi'), A('Apa nama projek itu?'), U('cuaca panas hari ni')], scope, opt);
   assert.strictEqual(b.rows.length, 0); console.log('6 ok no stale re-extraction');
 
-  // 7. Contradiction on identity replaces old value
+  // 7. Recall phrasing without punctuation is never stored as a fact
+  b = makeBrain();
+  await learnFromChat(b, [U('Kau boleh ingat tak nama project peribadi aku namanya AXMchat')], scope, opt);
+  assert.strictEqual(b.rows.length, 0); console.log('7 ok recall question ignored');
+
+  // 8. Contradiction on identity replaces old value
   b = makeBrain([{ id: 'm1', content: 'Nama saya Ali', type: 'fact', category: 'user', path: 'db://memory/m1', version: 1 }]);
   await learnFromChat(b, [U('Nama saya Abu')], scope, opt);
   assert.strictEqual(b.rows.length, 1); assert.match(b.rows[0].content, /Abu/); console.log('7 ok contradiction updated ->', b.rows[0].content);
 
-  // 8. Sensitive info rejected by quality filter (was broken by regex escaping)
+  // 9. Sensitive info rejected by quality filter (was broken by regex escaping)
   for (const t of ['Kata laluan aku ialah abc123', 'No IC aku 900101-14-5566', 'Kad kredit aku 4111 1111 1111 1111', 'My password is hunter2']) {
     const q = assessMemoryQuality({ content: t, type: 'fact', confidence: 0.95, importance: 0.9 });
     assert.strictEqual(q.accepted, false, t); assert.strictEqual(q.reason, 'sensitive_information');
