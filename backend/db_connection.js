@@ -1,11 +1,12 @@
 const { Pool } = require("pg");
 
+const DATABASE_URL = process.env.AXMCHAT_DATABASE_URL || process.env.DATABASE_URL || "";
+
 /**
- * Render is IPv4-only. Supabase direct database hosts are IPv6-only unless
- * the IPv4 add-on is enabled, so route direct Supabase URLs through the
- * IPv4 Supavisor session pooler for persistent Node.js services.
+ * Prefer AXMCHAT_DATABASE_URL. DATABASE_URL remains as a backwards-compatible
+ * fallback so existing Render deployments keep working during the rename.
  */
-function resolveDatabaseUrl(raw = process.env.DATABASE_URL) {
+function resolveDatabaseUrl(raw = DATABASE_URL) {
   if (!raw) return raw;
   const url = new URL(raw);
   const direct = url.hostname.match(/^db\.([a-z0-9]+)\.supabase\.co$/i);
