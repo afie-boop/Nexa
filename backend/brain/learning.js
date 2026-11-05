@@ -63,7 +63,7 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
 
   // Deterministic guard: do not persist a bare project-existence statement.
   // Keep it pending until a later user turn supplies the actual project name.
-  const incompleteProjectLead = /^(?:aku|saya|sy|kita|i|we)\\s+(?:ada|mempunyai|have|has)\\s+(?:(?:satu|a|one)\\s+)?(?:projek|project)(?:\\s+(?:peribadi|sendiri|personal))?[.!?\\s]*$/i;
+  const incompleteProjectLead = /^(?:aku|saya|sy|kita|i|we)\s+(?:ada|mempunyai|have|has)\s+(?:(?:satu|a|one)\s+)?(?:projek|project)(?:\s+(?:peribadi|sendiri|personal))?[.!?\s]*$/i;
   if (incompleteProjectLead.test(text)) {
     return { saved: [], skipped: "incomplete_project_waiting_for_detail" };
   }
