@@ -61,6 +61,13 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
     return { saved: [], skipped: "empty_message" };
   }
 
+  // Deterministic guard: do not persist a bare project-existence statement.
+  // Keep it pending until a later user turn supplies the actual project name.
+  const incompleteProjectLead = /^(?:aku|saya|sy|kita|i|we)\\s+(?:ada|mempunyai|have|has)\\s+(?:(?:satu|a|one)\\s+)?(?:projek|project)(?:\\s+(?:peribadi|sendiri|personal))?[.!?\\s]*$/i;
+  if (incompleteProjectLead.test(text)) {
+    return { saved: [], skipped: "incomplete_project_waiting_for_detail" };
+  }
+
   // Retrieval/meta questions must never become memories. In particular,
   // "kau ingat tak?" asks Brain to recall; it is not a fact to save.
   const isQuestion = /[?？]\s*$/.test(text) ||
