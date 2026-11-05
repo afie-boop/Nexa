@@ -1,4 +1,4 @@
-const { Pool } = require("pg");
+const { createDatabasePool } = require("../db_connection");
 
 let pool = null;
 let schemaPromise = null;
@@ -10,13 +10,7 @@ function enabled() {
 function getPool() {
   if (!enabled()) return null;
   if (!pool) {
-    pool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
-      max: Number(process.env.DATABASE_POOL_MAX || 5),
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000
-    });
+    pool = createDatabasePool({ max: 5, idleTimeoutMillis: 30000, connectionTimeoutMillis: 10000 });
   }
   return pool;
 }
