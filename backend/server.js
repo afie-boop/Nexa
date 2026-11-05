@@ -685,7 +685,7 @@ app.post("/chat", chatRateLimit, async (req, res) => {
           topK: 5,
           maxSources: 8,
           maxContextChars: 5000,
-          forceRecall: /\b(ingat tak|kau ingat|awak ingat|kamu ingat|masih ingat|ingat lagi|apa yang kau ingat|apa yang kamu ingat|apa yang anda ingat|do you remember|remember when|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|tentang saya|memori saya|memory saya|asal saya|orang mana|nama saya|umur saya|suka apa|minat saya|projek peribadi|projek aku|projek saya|nama projek|apa projek|project peribadi|project aku|project saya|nama project|apa project|personal project|my project)\b/i.test(question.trim())
+          forceRecall: /\b(ingat|ingat lagi|masih ingat|kau ingat aku|kamu ingat saya|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|siapa aku|aku ni siapa|tentang saya|tentang aku|memori|memory|asal saya|asal aku|orang mana|nama saya|nama aku|siapa nama aku|umur saya|umur aku|suka apa|minat saya|minat aku|projek|project|pernah cerita|session sebelum|perbualan sebelum|chat sebelum)\b/i.test(question.trim())
         });
       } catch (brainError) {
         console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
@@ -768,10 +768,7 @@ IMPORTANT: This is authoritative current-time data generated at request time. Ge
       if (!text) return false;
       const smallTalk = /^(hi|hello|hey|hai|helo|yo|yoo|e(y|i)o|oi|woy|bro|wak|cuy|kawan|terima kasih|thanks|thank you|thx|ok|okay|oke|baik|selamat pagi|selamat petang|selamat malam|good morning|good afternoon|good evening)[!,.\\s]*$/i;
       if (smallTalk.test(text)) return false;
-      // Only explicit recall questions bypass lexical matching. Ordinary use
-      // of pronouns or the word "ingat" must not inject every saved memory.
-      if (/\b(ingat tak|kau ingat|awak ingat|kamu ingat|masih ingat|ingat lagi|apa yang kau ingat|do you remember|memori saya|memory saya|siapa saya|asal saya|nama saya|umur saya|minat saya|suka apa|projek peribadi|projek aku|projek saya|nama projek|apa projek|project peribadi|project aku|project saya|project name|personal project|my project)\b/i.test(text)) return true;
-      // For ordinary questions, require lexical overlap with retrieved memory.
+      if (/(aku|saya|kamu|anda|diri saya|tentang saya|tentang aku|ingat|memori|memory|siapa saya|siapa aku|nama saya|nama aku|umur saya|umur aku|asal saya|asal aku|orang mana|suka apa|minat saya|minat aku|gaya saya|gaya aku|pernah cerita|session sebelum|perbualan sebelum|chat sebelum)/i.test(text)) return true;
       const memoryText = String(brainContext?.context || "").toLowerCase();
       if (!memoryText) return false;
       const tokens = text.match(/[a-z0-9À-ÿ]{3,}/g) || [];
@@ -818,28 +815,35 @@ ${brainContext.context}
       sendProcessStep
     });
 
-    // Fast mode returns immediately after the model response. Persistence and
-    // learning continue in the background so they cannot hold up the user-visible latency.
+    // Persist before closing the stream so a new chat cannot race memory writes.
     if (responseMode === "fast") {
-      sendAnswer(answer);
-
-      void saveWorkContext(brainUserId, {
-        lastTaskType: task,
-        lastQuestion: question,
-        lastAnswer: answer,
-        currentTask: question
-      }).catch((workContextError) => {
+      try {
+        await saveWorkContext(brainUserId, {
+          lastTaskType: task,
+          lastQuestion: question,
+          lastAnswer: answer,
+          currentTask: question
+        });
+      } catch (workContextError) {
         console.warn("[Fast WorkContext Save Warning]:", workContextError.message);
-      });
+      }
 
-      if (memoryEnabled) void learnFromChat(brain, [...history, { role: "user", content: question }], brainScope, {
-        mode: process.env.BRAIN_MEMORY_MODE || "auto",
-        confidenceThreshold: 0.75,
-        maxMemories: 3
-      }).catch((learningError) => {
-        console.warn("[Fast Brain Learning Warning]:", learningError.message);
-      });
+      if (memoryEnabled) {
+        try {
+          const learning = await learnFromChat(brain, question, brainScope, {
+            mode: process.env.BRAIN_MEMORY_MODE || "auto",
+            confidenceThreshold: 0.75,
+            maxMemories: 3
+          });
+          if (learning?.updated || learning?.saved?.some(item => item.created)) {
+            sendStatus("Brain berjaya menyimpan atau mengemas kini memori.");
+          }
+        } catch (learningError) {
+          console.warn("[Fast Brain Learning Warning]:", learningError.message);
+        }
+      }
 
+      sendAnswer(answer);
       return;
     }
 
@@ -859,7 +863,7 @@ ${brainContext.context}
     // own message, scoped to the stable Brain user identity. GitHub is not
     // required for personal memory. The assistant response is never persisted.
     if (memoryEnabled) try {
-      const learning = await learnFromChat(brain, [...history, { role: "user", content: question }], brainScope, {
+      const learning = await learnFromChat(brain, question, brainScope, {
         mode: process.env.BRAIN_MEMORY_MODE || "auto",
         confidenceThreshold: 0.75,
         maxMemories: 3
