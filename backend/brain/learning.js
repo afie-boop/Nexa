@@ -87,11 +87,30 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
   }
 
 
-  const extracted = await brain.extractMemory(userMessages, {
-    mode: options.mode || "auto",
-    confidenceThreshold: typeof options.confidenceThreshold === "number" ? options.confidenceThreshold : 0.75,
-    scope
-  });
+  // Deterministically preserve explicit project-name facts even when the
+  // external memory-extraction model returns malformed JSON or misses Malay phrasing.
+  const namedProject = text.match(/^(?:nama\\s+)?(?:projek|project)(?:\\s+peribadi)?\\s+(?:aku|saya|sy|kita)\\s+(?:ialah|adalah|namanya)\\s+(.+?)\\s*[.!?]*$/i);
+  let extracted;
+  if (namedProject && namedProject[1]) {
+    const projectName = namedProject[1].trim().replace(/^["'“”]|["'“”]$/g, "");
+    extracted = {
+      memories: [{
+        content: `Nama projek peribadi pengguna ialah ${projectName}.`,
+        type: "project",
+        category: "project",
+        importance: 0.95,
+        confidence: 0.99,
+        durability: 0.95,
+        tags: ["projek", "peribadi", projectName.toLowerCase()]
+      }]
+    };
+  } else {
+    extracted = await brain.extractMemory(userMessages, {
+      mode: options.mode || "auto",
+      confidenceThreshold: typeof options.confidenceThreshold === "number" ? options.confidenceThreshold : 0.75,
+      scope
+    });
+  }
 
   const memories = Array.isArray(extracted?.memories) ? extracted.memories : [];
   const saved = [];
