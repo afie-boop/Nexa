@@ -1,6 +1,61 @@
 const { normalizeScope } = require("./memory_scope");
 const { findContradiction } = require("./contradiction");
 const { applyMemoryQuality } = require("./memory_quality");
+const { reconcileMemory, isIncompleteLead } = require("./memory_reconcile");
+
+const NON_ANSWERS = /^(ya|yes|yup|tak|tidak|no|nope|ok|okay|oke|entah|nanti|tak tahu|tak pasti|belum ada|rahsia|secret|haha|lol|hmm+|test|tak nak cakap)$/i;
+
+function trimQuotes(text) {
+  return String(text || "").trim().replace(/^["'\u201c\u201d\u2018\u2019`\s]+|["'\u201c\u201d\u2018\u2019`.!?,\s]+$/g, "");
+}
+
+function cleanName(text) {
+  const raw = String(text || "").trim();
+  let value = trimQuotes(raw);
+  const quoted = /^["'\u201c\u2018`]/.test(raw);
+  const before = value;
+  value = value.replace(/^(?:namanya|nama(?:\s+(?:dia|projek|project))?(?:\s+(?:itu|tu))?(?:\s+(?:ialah|adalah))?|it'?s(?:\s+called|\s+named)?|called|named|the name is|dia|projek\s+(?:itu|tu)|ialah)\s+/i, "");
+  return { name: trimQuotes(value), explicit: quoted || value !== before };
+}
+
+// A bare multi-word reply is only treated as a project name when it looks like
+// one (digits / capitals after the first word) or the user marked it explicitly
+// ("namanya Nexa Chat", quotes). Plain sentences are left to the AI extractor.
+function looksLikeName(name, explicit) {
+  const words = name.split(/\s+/).filter(Boolean);
+  if (!words.length || words.length > 4 || name.length > 40) return false;
+  if (explicit || words.length === 1) return true;
+  return words.some((word, index) => /\d/.test(word) || (index > 0 && /^[A-Z]/.test(word)) || /[a-z][A-Z]/.test(word));
+}
+
+/**
+ * When the previous USER turn was an incomplete lead ("aku ada projek peribadi")
+ * and the latest turn is a short answer ("AXMchat"), combine them into one
+ * complete memory. Returns null when the latest turn is not a clear answer.
+ */
+function completeProjectFromAnswer(userMessages) {
+  if (!Array.isArray(userMessages) || userMessages.length < 2) return null;
+  const previous = userMessages[userMessages.length - 2].content;
+  const latest = userMessages[userMessages.length - 1].content;
+  if (!isIncompleteLead(previous)) return null;
+  if (/[?\uff1f]\s*$/.test(latest)) return null;
+
+  const { name, explicit } = cleanName(latest);
+  if (!name || NON_ANSWERS.test(name) || !looksLikeName(name, explicit)) return null;
+
+  const noun = /aplikasi|\bapp\b/i.test(previous) ? "aplikasi" : /sistem/i.test(previous) ? "sistem" : "projek";
+  const qualifier = /peribadi|personal/i.test(previous) ? " peribadi" : /sendiri/i.test(previous) ? " sendiri" : "";
+
+  return {
+    content: `Pengguna mempunyai ${noun}${qualifier} bernama ${name}.`,
+    type: "project",
+    category: "project",
+    importance: 0.85,
+    confidence: 0.95,
+    tags: ["project", name.toLowerCase()],
+    source: latest
+  };
+}
 
 const MEMORY_TYPES = new Set(["preference", "fact", "goal", "project", "knowledge", "instruction"]);
 
@@ -61,10 +116,9 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
     return { saved: [], skipped: "empty_message" };
   }
 
-  // Deterministic guard: do not persist a bare project-existence statement.
-  // Keep it pending until a later user turn supplies the actual project name.
-  const incompleteProjectLead = /^(?:aku|saya|sy|kita|i|we)\s+(?:ada|mempunyai|have|has)\s+(?:(?:satu|a|one)\s+)?(?:projek|project)(?:\s+(?:peribadi|sendiri|personal))?[.!?\s]*$/i;
-  if (incompleteProjectLead.test(text)) {
+  // Deterministic guard: a bare lead such as "aku ada projek peribadi" is an
+  // incomplete fact. Keep it pending until a later user turn supplies the detail.
+  if (isIncompleteLead(text)) {
     return { saved: [], skipped: "incomplete_project_waiting_for_detail" };
   }
 
@@ -79,13 +133,30 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
   }
 
 
-  const extracted = await brain.extractMemory(userMessages, {
-    mode: options.mode || "auto",
-    confidenceThreshold: typeof options.confidenceThreshold === "number" ? options.confidenceThreshold : 0.75,
-    scope
-  });
+  // A short answer that completes the previous incomplete statement is
+  // combined deterministically; otherwise the normal extractor runs.
+  const completed = completeProjectFromAnswer(userMessages);
+  let memories;
+  if (completed) {
+    memories = [completed];
+  } else {
+    const extracted = await brain.extractMemory(userMessages, {
+      mode: options.mode || "auto",
+      confidenceThreshold: typeof options.confidenceThreshold === "number" ? options.confidenceThreshold : 0.75,
+      scope
+    });
+    memories = Array.isArray(extracted?.memories) ? extracted.memories : [];
+  }
 
-  const memories = Array.isArray(extracted?.memories) ? extracted.memories : [];
+  // Existing memories of this user, used to avoid duplicates, complete older
+  // facts and replace contradicted ones. Works for Postgres and file storage.
+  let existingMemories = [];
+  try {
+    const listed = await brain.listMemories({ scope, limit: 500 });
+    if (Array.isArray(listed)) existingMemories = listed;
+  } catch (error) {
+    console.warn("[Brain Learning Warning] could not list existing memories:", error.message);
+  }
   const saved = [];
   let duplicates = 0;
   let updated = 0;
@@ -104,7 +175,31 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
     const qualityMemory = quality.memory;
 
     try {
-      const contradiction = findContradiction(brain, qualityMemory, scope);
+      const decision = reconcileMemory(qualityMemory, existingMemories);
+
+      if (decision.action === "duplicate") {
+        duplicates += 1;
+        saved.push({
+          id: decision.target?.id || null,
+          path: decision.target?.path || null,
+          type: qualityMemory.type,
+          category: qualityMemory.category,
+          created: false,
+          duplicate: true
+        });
+        continue;
+      }
+
+      let contradiction = null;
+      if (decision.action === "update" && decision.target?.path && typeof brain.updateMemory === "function") {
+        contradiction = {
+          path: decision.target.path,
+          frontmatter: { id: decision.target.id, importance: decision.target.importance, version: decision.target.version }
+        };
+      } else {
+        // File-vault fallback (no database configured).
+        contradiction = findContradiction(brain, qualityMemory, scope);
+      }
 
       if (contradiction && contradiction.frontmatter?.id && typeof brain.updateMemory === "function") {
         const result = await brain.updateMemory(
@@ -126,6 +221,9 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
         );
 
         updated += 1;
+        existingMemories = existingMemories.map(item => item.path === contradiction.path
+          ? { ...item, content: qualityMemory.content, type: qualityMemory.type }
+          : item);
         saved.push({
           id: contradiction.frontmatter.id,
           path: result.path || contradiction.path,
@@ -142,6 +240,7 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
       const result = await brain.saveMemory(qualityMemory, { scope });
 
       if (result?.duplicate) duplicates += 1;
+      if (result?.created) existingMemories.push({ ...qualityMemory, id: result.memory?.id, path: result.path });
 
       if (result?.created || result?.duplicate) {
         saved.push({

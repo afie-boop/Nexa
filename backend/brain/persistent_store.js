@@ -238,8 +238,11 @@ async function listMemories(scope, limit = 100) {
 }
 
 async function retrieveContext(query, scope, options = {}) {
-  const memories = await listMemories(scope, options.forceRecall ? 500 : (options.maxSources || options.topK || 8));
-  const tokens = String(query || "").toLowerCase().split(/[^a-z0-9\u00c0-\u024f]+/).filter(t => t.length >= 2);
+  // Always rank over the user's whole memory set. Limiting the SQL fetch to the
+  // newest few rows meant older memories could never be retrieved.
+  const memories = await listMemories(scope, 500);
+  const STOP = new Set(["yang", "dan", "atau", "dengan", "untuk", "dari", "pada", "dalam", "itu", "ini", "apa", "ada", "tak", "tidak", "aku", "saya", "kau", "kamu", "awak", "anda", "ke", "di", "the", "and", "you", "are", "what", "who", "my", "me"]);
+  const tokens = String(query || "").toLowerCase().split(/[^a-z0-9\u00c0-\u024f]+/).filter(t => t.length >= 2 && !STOP.has(t));
   const ranked = memories.map(memory => {
     const haystack = `${memory.title || ""} ${memory.content}`.toLowerCase();
     let score = 0;

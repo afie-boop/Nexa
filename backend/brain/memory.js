@@ -7,6 +7,20 @@ const { semanticSearch } = require('./semantic');
 const { extractMemoryWithAI } = require('./memory_ai');
 const { normalizeScope, getScopeDirectory, isNoteInScope } = require('./memory_scope');
 const { saveHistorySnapshot } = require('./memory_history');
+const { isIncompleteLead } = require('./memory_reconcile');
+
+// Older turns are context for the LLM only. The deterministic rules must look at
+// the newest user message, otherwise a statement from an earlier turn is
+// re-extracted (possibly while still incomplete) every time the user replies.
+function lastUserInput(input) {
+  if (!Array.isArray(input)) return input;
+  for (let i = input.length - 1; i >= 0; i--) {
+    const item = input[i];
+    if (typeof item === 'string') return item;
+    if (item && (item.role === 'user' || !item.role)) return item;
+  }
+  return '';
+}
 
 function generateMemoryId(content, scope) {
   if (content && typeof content === 'string') {
@@ -63,6 +77,12 @@ function extractMemoryRules(input, options = {}) {
     const lower = line.toLowerCase();
 
     if (/^(hi|hello|hey|siapa|apa khabar|ok|thanks|terima kasih|bye|good morning|good night)\b/i.test(lower)) {
+      continue;
+    }
+
+    // A statement that announces something without saying what it is
+    // ("aku ada projek peribadi") is incomplete: never save it as a fact.
+    if (isIncompleteLead(line.replace(/^(user:|assistant:)\s*/i, ''))) {
       continue;
     }
 
@@ -169,7 +189,7 @@ async function extractMemory(input, options = {}) {
     // Always run the deterministic extractor first for explicit self-statements.
     // This prevents an LLM extractor from accidentally dropping clear facts such
     // as "aku orang ..." when it returns an unrelated/empty memory set.
-    const ruleResult = extractMemoryRules(input, options);
+    const ruleResult = extractMemoryRules(lastUserInput(input), options);
     const ruleMemories = Array.isArray(ruleResult?.memories) ? ruleResult.memories : [];
     let aiMemories = [];
 
