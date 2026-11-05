@@ -264,7 +264,7 @@ async function retrieveContext(query, scope, options = {}) {
   const chunks = [];
   const sources = [];
   for (const memory of selected) {
-    const chunk = \`[\${memory.type || "memory"}] \${memory.content}\`;
+    const chunk = `[${memory.type || "memory"}] ${memory.content}`;
     if (used + chunk.length > maxChars) break;
     chunks.push(chunk);
     sources.push({ path: memory.path, title: memory.title, score: memory.score });
