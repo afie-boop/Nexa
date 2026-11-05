@@ -91,7 +91,7 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
   // external memory-extraction model returns malformed JSON or misses Malay phrasing.
   // Deterministic pet-name extraction survives malformed Memory AI JSON.
   const namedPet = text.match(/^(?:(?:tolong\s+)?ingat(?:kan)?\s+nama\s+kucing\s+(?:aku|saya|ku)\s+(.+?)|(?:nama\s+)?kucing\s+(?:aku|saya|ku)\s+(?:ialah|adalah|namanya|nama dia|bernama|is)\s+(.+?)|nama\s+kucing\s+(?:aku|saya|ku)\s+(.+?))[.!?]*$/i);
-  const petName = (namedPet?.[1] || namedPet?.[2] || namedPet?.[3] || "").trim().replace(/^[\\"'“”]|[\\"'“”]$/g, "");
+  const petName = (namedPet?.[1] || namedPet?.[2] || namedPet?.[3] || "").trim().replace(/^(?:ialah|adalah|namanya|nama dia|bernama|is)\s+/i, "").replace(/^["“”]|["“”]$/g, "");
   const namedProject = text.match(/^(?:nama\s+)?(?:projek|project)(?:\s+peribadi)?\s+(?:aku|saya|sy|kita)\s+(?:ialah|adalah|namanya)\s+(.+?)\s*[.!?]*$/i);
   let extracted;
   if (petName) {
