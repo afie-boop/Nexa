@@ -1,6 +1,6 @@
 const { createDatabasePool } = require("../db_connection");
 
-const DATABASE_URL = process.env.DATABASE_URL || "";
+const DATABASE_URL = process.env.AXMCHAT_DATABASE_URL || process.env.DATABASE_URL || "";
 let pool = null;
 let schemaReady = null;
 
