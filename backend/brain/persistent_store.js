@@ -239,13 +239,19 @@ async function listMemories(scope, limit = 100) {
 
 async function retrieveContext(query, scope, options = {}) {
   const memories = await listMemories(scope, options.forceRecall ? 500 : (options.maxSources || options.topK || 8));
-  const tokens = String(query || "").toLowerCase().split(/[^a-z0-9\u00c0-\u024f]+/).filter(t => t.length >= 2);
+  const normalizedQuery = String(query || "").toLowerCase();
+  const tokens = normalizedQuery.split(/[^a-z0-9\u00c0-\u024f]+/).filter(t => t.length >= 2);
+  const asksIdentity = /\b(nama|name|siapa aku|siapa saya|who am i|identiti|identity)\b/i.test(normalizedQuery);
+  const asksContinuity = /\b(session sebelum|perbualan sebelum|chat sebelum|pernah cerita|ingat lagi|masih ingat|memory|memori)\b/i.test(normalizedQuery);
   const ranked = memories.map(memory => {
-    const haystack = `${memory.title || ""} ${memory.content}`.toLowerCase();
+    const haystack = String(memory.content || "").toLowerCase();
+    const tags = Array.isArray(memory.tags) ? memory.tags.join(" ").toLowerCase() : "";
     let score = 0;
     for (const token of tokens) if (haystack.includes(token)) score += 1;
     if (memory.importance) score += Number(memory.importance) * 0.25;
     if (options.forceRecall) score += 0.5;
+    if (asksIdentity && /\b(nama|name|identity|identiti)\b/i.test(haystack + " " + tags)) score += 12;
+    if (asksContinuity && ["fact", "preference", "project", "goal", "instruction"].includes(String(memory.type || "").toLowerCase())) score += 2;
     return { ...memory, score };
   }).filter(item => options.forceRecall || item.score > 0).sort((a,b) => {
     if (b.score !== a.score) return b.score - a.score;
@@ -258,7 +264,7 @@ async function retrieveContext(query, scope, options = {}) {
   const chunks = [];
   const sources = [];
   for (const memory of selected) {
-    const chunk = `[${memory.type || "memory"}] ${memory.content}`;
+    const chunk = \`[\${memory.type || "memory"}] \${memory.content}\`;
     if (used + chunk.length > maxChars) break;
     chunks.push(chunk);
     sources.push({ path: memory.path, title: memory.title, score: memory.score });
