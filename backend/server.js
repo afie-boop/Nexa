@@ -768,7 +768,7 @@ IMPORTANT: This is authoritative current-time data generated at request time. Ge
       if (!text) return false;
       const smallTalk = /^(hi|hello|hey|hai|helo|yo|yoo|e(y|i)o|oi|woy|bro|wak|cuy|kawan|terima kasih|thanks|thank you|thx|ok|okay|oke|baik|selamat pagi|selamat petang|selamat malam|good morning|good afternoon|good evening)[!,.\\s]*$/i;
       if (smallTalk.test(text)) return false;
-      if (/(aku|saya|kamu|anda|diri saya|tentang saya|tentang aku|ingat|memori|memory|siapa saya|siapa aku|nama saya|nama aku|umur saya|umur aku|asal saya|asal aku|orang mana|suka apa|minat saya|minat aku|gaya saya|gaya aku|pernah cerita|session sebelum|perbualan sebelum|chat sebelum)/i.test(text)) return true;
+      if (/(aku|saya|kamu|anda|diri saya|tentang saya|tentang aku|ingat|memori|memory|siapa saya|siapa aku|nama saya|nama aku|umur saya|umur aku|asal saya|asal aku|orang mana|suka apa|minat saya|minat aku|gaya saya|gaya aku|kucing|nama kucing|haiwan peliharaan|pernah cerita|session sebelum|perbualan sebelum|chat sebelum)/i.test(text)) return true;
       const memoryText = String(brainContext?.context || "").toLowerCase();
       if (!memoryText) return false;
       const tokens = text.match(/[a-z0-9À-ÿ]{3,}/g) || [];
