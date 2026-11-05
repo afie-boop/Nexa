@@ -103,12 +103,11 @@ async function extractMemoryWithAI(input, options = {}) {
     });
 
     let jsonText = String(raw || '').trim();
-    if (jsonText.startsWith('\\`\\`\\`')) {
-      jsonText = jsonText
-        .replace(/^\\`\\`\\`(?:json)?\\s*/i, '')
-        .replace(/\\s*\\`\\`\\`$/i, '')
-        .trim();
-    }
+    // Strip real Markdown code fences before parsing the model's JSON.
+    jsonText = jsonText
+      .replace(/^```(?:json)?\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
 
     try {
       return JSON.parse(jsonText);
