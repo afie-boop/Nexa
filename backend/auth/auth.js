@@ -5,6 +5,7 @@ const path = require("path");
 const { promisify } = require("util");
 const scryptAsync = promisify(crypto.scrypt);
 const { checkRateLimit } = require("../security/rate_limiter");
+const { createDatabasePool } = require("../db_connection");
 
 const AUTH_COOKIE = "axmchat_auth";
 const TTL_MS = 1000 * 60 * 60 * 24 * 30;
@@ -67,11 +68,7 @@ function normalizeUsername(username) {
 async function initUserStore() {
   if (storeReady) return;
   if (process.env.DATABASE_URL) {
-    const { Pool } = require("pg");
-    pgPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_SSL === "false" ? false : { rejectUnauthorized: false }
-    });
+    pgPool = createDatabasePool({ max: 5, connectionTimeoutMillis: 10000 });
     await pgPool.query(
       "CREATE TABLE IF NOT EXISTS axmchat_users (" +
       "id TEXT PRIMARY KEY, username TEXT NOT NULL, username_key TEXT NOT NULL UNIQUE, " +
