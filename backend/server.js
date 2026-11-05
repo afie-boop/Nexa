@@ -685,7 +685,7 @@ app.post("/chat", chatRateLimit, async (req, res) => {
           topK: 5,
           maxSources: 8,
           maxContextChars: 5000,
-          forceRecall: /\b(ingat|ingat lagi|masih ingat|kau ingat aku|kamu ingat saya|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|siapa aku|aku ni siapa|tentang saya|tentang aku|memori|memory|asal saya|asal aku|orang mana|nama saya|nama aku|siapa nama aku|umur saya|umur aku|suka apa|minat saya|minat aku|projek|project|pernah cerita|session sebelum|perbualan sebelum|chat sebelum)\b/i.test(question.trim())
+          forceRecall: /\b(ingat|ingat lagi|masih ingat|kau ingat aku|kamu ingat saya|apa yang kau tahu tentang aku|apa yang kamu tahu tentang aku|apa yang anda tahu tentang saya|siapa saya|siapa aku|aku ni siapa|tentang saya|tentang aku|memori|memory|asal saya|asal aku|orang mana|nama saya|nama aku|siapa nama aku|umur saya|umur aku|suka apa|minat saya|minat aku|projek|project|kucing|nama kucing|haiwan peliharaan|pernah cerita|session sebelum|perbualan sebelum|chat sebelum)\b/i.test(question.trim())
         });
       } catch (brainError) {
         console.warn("[Brain Chat Retrieval Warning]:", brainError.message);
