@@ -479,6 +479,12 @@ app.get("/api/github/repos", protectedGithub, async (req, res) => {
 });
 
 // Brain Memory Intelligence API (authenticated user scope)
+// Deployment check: shows which commit Render is actually running. No secrets.
+app.get("/api/version", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ commit: process.env.RENDER_GIT_COMMIT || null, branch: process.env.RENDER_GIT_BRANCH || null, memoryStore: process.env.DATABASE_URL ? "postgres" : "file" });
+});
+
 app.get("/api/brain/health", brainNoStore, rateLimitBrain("read"), requireBrainAuth((req) => getAuth(req)), async (req, res) => {
   try {
     const health = brain.inspectMemoryHealth({ scope: req.brainUser, staleDays: 180 });

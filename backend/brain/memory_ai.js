@@ -92,7 +92,7 @@ async function extractMemoryWithAI(input, options = {}) {
       'source must be an EXACT short quote copied verbatim from one or more USER messages in the input. It must directly support the memory; never quote role labels or invent a source.',
       'If nothing deserves to be remembered, return {"memories":[]}.',
       'Never include assistant text or assumptions.'
-    ].join('\\n');
+    ].join('\n');
 
     const raw = await askOpenRouter(text, {
       model,
@@ -103,10 +103,10 @@ async function extractMemoryWithAI(input, options = {}) {
     });
 
     let jsonText = String(raw || '').trim();
-    if (jsonText.startsWith('\\`\\`\\`')) {
+    if (jsonText.startsWith('```')) {
       jsonText = jsonText
-        .replace(/^\\`\\`\\`(?:json)?\\s*/i, '')
-        .replace(/\\s*\\`\\`\\`$/i, '')
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/i, '')
         .trim();
     }
 
