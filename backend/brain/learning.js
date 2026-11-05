@@ -89,7 +89,7 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
 
   // Deterministically preserve explicit project-name facts even when the
   // external memory-extraction model returns malformed JSON or misses Malay phrasing.
-  const namedProject = text.match(/^(?:nama\\s+)?(?:projek|project)(?:\\s+peribadi)?\\s+(?:aku|saya|sy|kita)\\s+(?:ialah|adalah|namanya)\\s+(.+?)\\s*[.!?]*$/i);
+  const namedProject = text.match(/^(?:nama\s+)?(?:projek|project)(?:\s+peribadi)?\s+(?:aku|saya|sy|kita)\s+(?:ialah|adalah|namanya)\s+(.+?)\s*[.!?]*$/i);
   let extracted;
   if (namedProject && namedProject[1]) {
     const projectName = namedProject[1].trim().replace(/^["'“”]|["'“”]$/g, "");
