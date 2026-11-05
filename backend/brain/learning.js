@@ -56,9 +56,17 @@ async function learnFromChat(brain, userMessage, scopeInput, options = {}) {
     .map(item => ({ role: "user", content: item.content.trim() }))
     .filter(item => item.content)
     .slice(-8);
-  const text = userMessages.length ? userMessages[userMessages.length - 1].content : "";
+  // A recall-style opener can contain a real fact ("Kau ingat tak nama projek aku namanya AXMchat").
+  // Remove only that opener, then learn the declarative detail instead of discarding the whole turn.
+  let text = userMessages.length ? userMessages[userMessages.length - 1].content : "";
   if (!text) {
     return { saved: [], skipped: "empty_message" };
+  }
+  const recallLead = /^(?:kau|awak|kamu|anda)\\s+(?:boleh\\s+)?(?:ingat|tahu)\\s+(?:tak|ke|kah)\\s*[,;:—-]?\\s*/i;
+  const withoutRecallLead = text.replace(recallLead, "").replace(/[?？]+\\s*$/, "").trim();
+  if (withoutRecallLead && withoutRecallLead !== text) {
+    text = withoutRecallLead;
+    userMessages[userMessages.length - 1] = { role: "user", content: text };
   }
 
   // Deterministic guard: do not persist a bare project-existence statement.
