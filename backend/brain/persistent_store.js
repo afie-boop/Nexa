@@ -4,7 +4,7 @@ let pool = null;
 let schemaPromise = null;
 
 function enabled() {
-  return !!process.env.DATABASE_URL;
+  return !!(process.env.AXMCHAT_DATABASE_URL || process.env.DATABASE_URL);
 }
 
 function getPool() {
