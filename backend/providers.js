@@ -64,7 +64,7 @@ async function listProviderModels(providerId) {
     });
     return (response.data?.models || [])
       .filter(item => (item.supportedGenerationMethods || []).includes("generateContent"))
-      .map(item => ({ id: String(item.name || "").replace(/^models\\//, ""), name: item.displayName || item.name,
+      .map(item => ({ id: String(item.name || "").replace(/^models\//, ""), name: item.displayName || item.name,
         contextLength: item.inputTokenLimit || null, description: item.description || "" }))
       .filter(item => item.id);
   }
