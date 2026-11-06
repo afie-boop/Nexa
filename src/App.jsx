@@ -1416,7 +1416,7 @@ function App() {
               onClick={(e) => e.stopPropagation()}
             >
               <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", marginBottom: "8px", padding: "14px 16px", fontSize: "15px" }} onClick={(e) => { handlePinConversation(session.id, e); setSessionActionMenuId(null); }}>
-                {session.pinned ? "Unpin" : "Pinned"}
+                {session.pinned ? "Unpin" : "Pin"}
               </button>
               <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", marginBottom: "8px", padding: "14px 16px", fontSize: "15px" }} onClick={(e) => { handleArchiveConversation(session.id, e); setSessionActionMenuId(null); }}>
                 {session.archived ? "Nyaharkib" : "Arkib"}
@@ -1557,7 +1557,7 @@ function App() {
                 <div className="session-menu-popover" role="menu">
                   <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handlePinConversation(activeConversation.id); }}>
                     <span aria-hidden="true">⌖</span>
-                    <span>{activeConversation.pinned ? "Unpin" : "Pinned"}</span>
+                    <span>{activeConversation.pinned ? "Unpin" : "Pin"}</span>
                   </button>
                   <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handleArchiveConversation(activeConversation.id); }}>
                     <span aria-hidden="true">▣</span>
