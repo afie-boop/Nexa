@@ -60,16 +60,29 @@ async function runPipeline(data) {
 
     data.sendStatus?.("Fast mode: terus ke AI...");
     const fastStart = Date.now();
-    const response = await askProvider(fastProvider, data.question, {
-      model: fastModel,
-      usedFallback: false,
-      history: (data.history || []).slice(-6),
-      system: fastSystemWithContext,
-      maxRetries: modePolicy.maxRetries,
-      maxTokens: modePolicy.maxTokens,
-      reasoningEffort: modePolicy.reasoningEffort,
-      onUsage: data.onUsage
-    });
+    let response;
+    try {
+      response = await askProvider(fastProvider, data.question, {
+        model: fastModel,
+        history: (data.history || []).slice(-6),
+        system: fastSystemWithContext,
+        maxRetries: modePolicy.maxRetries,
+        maxTokens: modePolicy.maxTokens,
+        reasoningEffort: modePolicy.reasoningEffort,
+        onUsage: data.onUsage
+      });
+    } catch (primaryError) {
+      if (data.fallbackEnabled === false) throw primaryError;
+      data.sendStatus?.("Fallback AI: " + (data.fallbackProvider || "gemini") + " mengambil alih...");
+      response = await askProvider(data.fallbackProvider || "gemini", data.question, {
+        model: data.fallbackModel || "gemini-3.8-flash",
+        history: (data.history || []).slice(-6),
+        system: fastSystemWithContext,
+        maxTokens: modePolicy.maxTokens,
+        reasoningEffort: modePolicy.reasoningEffort,
+        onUsage: entry => data.onUsage?.({ ...entry, usedFallback: true })
+      });
+    }
 
     if (!response || !response.trim()) throw new Error("AI tidak memberikan jawapan.");
     logger.success("Fast", "Jawapan diterima dalam " + (Date.now() - fastStart) + "ms.");
