@@ -1527,7 +1527,6 @@ function App() {
 
           <div className="top-bar-actions">
             <button type="button" className="token-usage-trigger" onClick={() => setTokenDetailsOpen(true)} title="Lihat penggunaan token dan maklumat sesi" aria-label="Maklumat penggunaan token">
-              <span className="token-usage-dot" />
               <strong>{(() => { const total = chat.reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
             </button>
             <button
