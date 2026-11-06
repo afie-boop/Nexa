@@ -37,7 +37,8 @@ async function runPipeline(data) {
       system: INTERNAL_CONTEXT_RULE,
       maxRetries: modePolicy.maxRetries,
       maxTokens: modePolicy.maxTokens,
-      reasoningEffort: modePolicy.reasoningEffort
+      reasoningEffort: modePolicy.reasoningEffort,
+      onUsage: data.onUsage
     });
     if (!response || !response.trim()) throw new Error("Fallback AI tidak memberikan jawapan.");
     data.sendProcessStep?.({ id: "completed", label: "Completed", status: "completed" });
@@ -137,7 +138,7 @@ async function runPipeline(data) {
     logger.moduleStart("Coder");
     emitStep({ id: "generate_response", label: "Generating response", status: "active" });
 
-    data = await coder(data);
+    data = await coder({ ...data, onUsage: data.onUsage });
 
     logger.moduleSuccess(
       "Coder",
