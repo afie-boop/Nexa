@@ -1785,21 +1785,10 @@ function App() {
               <h2 className="panel-title">AXMchat AI Models</h2>
               <p className="panel-subtitle">Urus model AI yang digunakan oleh setiap fungsi AXMchat.</p>
 
-              <div className="flat-card" style={{ marginBottom: "18px", padding: "14px 16px" }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "10px" }}>
-                  <strong style={{ fontSize: "14px" }}>Cara tukar model AI</strong>
-                  <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary-text)", fontSize: "12px", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>
-                    Cari model ↗
-                  </a>
-                </div>
-                <p style={{ margin: "0 0 8px", color: "var(--secondary-text)", fontSize: "12px", lineHeight: 1.5 }}>
-                  Pilih model di OpenRouter, kemudian salin Model ID.
-                </p>
-                <ol style={{ margin: 0, paddingLeft: "18px", display: "grid", gap: "6px", color: "var(--secondary-text)", fontSize: "12px", lineHeight: 1.5 }}>
-                  <li>Buka senarai model melalui pautan <strong style={{ color: "var(--primary-text)" }}>Cari model</strong>.</li>
-                  <li>Pilih model dan salin ID-nya, contohnya <code>openai/gpt-4o-mini</code>.</li>
-                  <li>Tampal ID itu pada ruangan model General AI, Coding AI atau Fallback AI di bawah.</li>
-                </ol>
+              <div style={{ marginBottom: "10px", textAlign: "left" }}>
+                <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary-text)", fontSize: "13px", fontWeight: 600, textDecoration: "none" }}>
+                  Cari model ↗
+                </a>
               </div>
 
               <div className="grid-container">
