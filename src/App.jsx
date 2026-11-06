@@ -1598,7 +1598,7 @@ function App() {
 
           <div className="top-bar-actions">
             <button type="button" className="token-usage-trigger" onClick={() => setTokenDetailsOpen(true)} title="Token usage" aria-label="Token usage">
-              <span>Tokens</span><strong>{(() => { const total = chat.filter(item => item.type === "ai").reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
+              <span>Token</span><strong>{(() => { const total = chat.filter(item => item.type === "ai").reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
             </button>
             <div className="session-menu-wrap">
               <button
