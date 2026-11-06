@@ -60,6 +60,12 @@ function App() {
   };
   const [homeGreeting, setHomeGreeting] = useState(getHomeGreeting);
 
+  const [homeClock, setHomeClock] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setHomeClock(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
 
 
   // Online / Offline state tracking
@@ -1708,7 +1714,10 @@ function App() {
             {chat.length === 0 && !load ? (
               <div className="hero-section animate-fade">
                 <h2 className="hero-title">{homeGreeting}</h2>
-
+                <div className="home-clock" aria-label="Waktu semasa">
+                  <span className="home-clock-time">{homeClock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}</span>
+                  <span className="home-clock-date">{homeClock.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+                </div>
               </div>
             ) : (
               /* 3. Conversation Area */
