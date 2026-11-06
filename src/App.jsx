@@ -154,43 +154,38 @@ function App() {
   const [fallbackModel, setFallbackModel] = useState(() => {
     try {
       const saved = localStorage.getItem("nexa_fallback_model");
-      return saved && saved !== "openrouter/free" ? saved : "gemini-3.8-flash";
+      return saved && !saved.startsWith("gemini") ? saved : "openrouter/free";
     } catch {
-      return "gemini-3.8-flash";
+      return "openrouter/free";
     }
   });
 
-  const [generalProvider, setGeneralProvider] = useState(() => localStorage.getItem("axm_general_provider") || "openrouter");
-  const [codingProvider, setCodingProvider] = useState(() => localStorage.getItem("axm_coding_provider") || "openrouter");
-  const [fallbackProvider, setFallbackProvider] = useState(() => localStorage.getItem("axm_fallback_provider") || "gemini");
+  // AXMchat currently uses OpenRouter as its only provider.
+  const generalProvider = "openrouter";
+  const codingProvider = "openrouter";
+  const fallbackProvider = "openrouter";
   const [generalModels, setGeneralModels] = useState([]);
   const [codingModels, setCodingModels] = useState([]);
   const [fallbackModels, setFallbackModels] = useState([]);
   const [generalModelSearch, setGeneralModelSearch] = useState("");
   const [codingModelSearch, setCodingModelSearch] = useState("");
   const [fallbackModelSearch, setFallbackModelSearch] = useState("");
-  const [modelCatalogLoading, setModelCatalogLoading] = useState("");
+  const [modelCatalogLoading, setModelCatalogLoading] = useState(false);
   const [modelCatalogError, setModelCatalogError] = useState("");
 
-  const providerOptions = [
-    ["openrouter", "OpenRouter"], ["groq", "Groq"], ["gemini", "Google Gemini"],
-    ["cerebras", "Cerebras"], ["mistral", "Mistral"], ["deepseek", "DeepSeek"],
-    ["together", "Together AI"], ["fireworks", "Fireworks AI"]
-  ];
-
-  async function loadProviderModels(provider, setModels) {
-    setModelCatalogLoading(provider);
+  async function loadProviderModels(setModels) {
+    setModelCatalogLoading(true);
     setModelCatalogError("");
     try {
-      const response = await fetch("/api/models?provider=" + encodeURIComponent(provider), { credentials: "same-origin" });
+      const response = await fetch("/api/models?provider=openrouter", { credentials: "same-origin" });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Gagal memuatkan katalog model.");
+      if (!response.ok) throw new Error(data.error || "Gagal memuatkan katalog model OpenRouter.");
       setModels(Array.isArray(data.models) ? data.models : []);
     } catch (error) {
-      setModelCatalogError(error.message || "Gagal memuatkan katalog model.");
+      setModelCatalogError(error.message || "Gagal memuatkan katalog model OpenRouter.");
       setModels([]);
     } finally {
-      setModelCatalogLoading("");
+      setModelCatalogLoading(false);
     }
   }
 
@@ -435,9 +430,6 @@ function App() {
     }
   }, [fallbackModel]);
 
-  useEffect(() => { localStorage.setItem("axm_general_provider", generalProvider); }, [generalProvider]);
-  useEffect(() => { localStorage.setItem("axm_coding_provider", codingProvider); }, [codingProvider]);
-  useEffect(() => { localStorage.setItem("axm_fallback_provider", fallbackProvider); }, [fallbackProvider]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -835,9 +827,6 @@ function App() {
           generalModel: generalModel.trim(),
           codingModel: codingModel.trim(),
           fallbackModel: fallbackModel.trim(),
-          generalProvider,
-          codingProvider,
-          fallbackProvider,
           responseMode,
           memoryEnabled,
           aiAvailability,
@@ -1819,23 +1808,20 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">AXMchat AI Models</h2>
-              <p className="panel-subtitle">Pilih provider dan cari model terus daripada katalog provider. Setiap peranan disimpan secara berasingan.</p>
+              <p className="panel-subtitle">Provider tunggal: OpenRouter. Pilih model berasingan untuk General AI, Coding AI dan Fallback AI.</p>
               {modelCatalogError && <p style={{ color: "#ff8585", fontSize: "13px" }}>{modelCatalogError}</p>}
               <div className="grid-container">
                 {[
-                  { key: "general", title: "General AI", desc: "Model utama untuk sembang dan tugasan am.", provider: generalProvider, setProvider: setGeneralProvider, model: generalModel, setModel: setGeneralModel, models: generalModels, setModels: setGeneralModels, search: generalModelSearch, setSearch: setGeneralModelSearch },
-                  { key: "coding", title: "Coding AI", desc: "Model utama untuk pengaturcaraan.", provider: codingProvider, setProvider: setCodingProvider, model: codingModel, setModel: setCodingModel, models: codingModels, setModels: setCodingModels, search: codingModelSearch, setSearch: setCodingModelSearch },
-                  { key: "fallback", title: "Fallback AI", desc: "Provider bebas yang mengambil alih apabila AI utama gagal atau terkena had.", provider: fallbackProvider, setProvider: setFallbackProvider, model: fallbackModel, setModel: setFallbackModel, models: fallbackModels, setModels: setFallbackModels, search: fallbackModelSearch, setSearch: setFallbackModelSearch }
+                  { key: "general", title: "General AI", desc: "Model utama untuk sembang dan tugasan am.", model: generalModel, setModel: setGeneralModel, models: generalModels, setModels: setGeneralModels, search: generalModelSearch, setSearch: setGeneralModelSearch },
+                  { key: "coding", title: "Coding AI", desc: "Model utama untuk pengaturcaraan.", model: codingModel, setModel: setCodingModel, models: codingModels, setModels: setCodingModels, search: codingModelSearch, setSearch: setCodingModelSearch },
+                  { key: "fallback", title: "Fallback AI", desc: "Provider bebas yang mengambil alih apabila AI utama gagal atau terkena had.", model: fallbackModel, setModel: setFallbackModel, models: fallbackModels, setModels: setFallbackModels, search: fallbackModelSearch, setSearch: setFallbackModelSearch }
                 ].map(role => (
                   <div className="flat-card" key={role.key} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     <span className="flat-card-title">{role.title}</span>
                     <p className="flat-card-desc">{role.desc}</p>
-                    <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Provider</label>
-                    <select value={role.provider} onChange={e => { role.setProvider(e.target.value); role.setModels([]); }} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "#242424", color: "inherit" }}>
-                      {providerOptions.map(([id, label]) => <option value={id} key={id}>{label}</option>)}
-                    </select>
-                    <button type="button" onClick={() => loadProviderModels(role.provider, role.setModels)} disabled={modelCatalogLoading === role.provider} style={{ padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(255,255,255,0.08)", color: "inherit" }}>
-                      {modelCatalogLoading === role.provider ? "Memuatkan model..." : "Telusuri model"}
+                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Provider: OpenRouter</span>
+                    <button type="button" onClick={() => loadProviderModels(role.setModels)} disabled={modelCatalogLoading} style={{ padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(255,255,255,0.08)", color: "inherit" }}>
+                      {modelCatalogLoading ? "Memuatkan model..." : "Telusuri model OpenRouter"}
                     </button>
                     {role.models.length > 0 && <>
                       <input type="search" value={role.search} onChange={e => role.setSearch(e.target.value)} placeholder="Cari nama atau ID model..." style={{ width: "100%", padding: "9px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(255,255,255,0.05)", color: "inherit" }} />
