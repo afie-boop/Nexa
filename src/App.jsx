@@ -654,13 +654,15 @@ function App() {
     }
   };
 
-  const handleShareChat = async () => {
-    if (chat.length === 0) return;
-    const conversationText = chat.map(m => `${m.type === "user" ? "User" : "AXMchat AI"}: ${m.text}`).join("\n\n");
+  const handleShareConversation = async (conversationId = activeId) => {
+    const conversation = conversations.find(item => item.id === conversationId);
+    const messages = conversation?.messages || [];
+    if (messages.length === 0) return;
+    const conversationText = messages.map(m => `${m.type === "user" ? "User" : "AXMchat AI"}: ${m.text}`).join("\n\n");
     if (navigator.share) {
       try {
         await navigator.share({
-          title: activeConversation.title || "AXMchat AI Chat",
+          title: conversation.title || "AXMchat AI Chat",
           text: conversationText,
         });
       } catch (err) {
@@ -672,6 +674,8 @@ function App() {
       copyCode(conversationText, "top-bar-share");
     }
   };
+
+  const handleShareChat = () => handleShareConversation(activeId);
 
   const handleRegenerate = async (msgId) => {
     const msgIdx = chat.findIndex(m => m.id === msgId);
@@ -1417,6 +1421,9 @@ function App() {
               <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", marginBottom: "8px", padding: "14px 16px", fontSize: "15px" }} onClick={(e) => { handleArchiveConversation(session.id, e); setSessionActionMenuId(null); }}>
                 {session.archived ? "Nyaharkib" : "Arkib"}
               </button>
+              <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", marginBottom: "8px", padding: "14px 16px", fontSize: "15px" }} onClick={() => { setSessionActionMenuId(null); handleShareConversation(session.id); }} disabled={!session.messages?.length}>
+                Kongsi sesi
+              </button>
               <button type="button" className="card-action-btn" style={{ width: "100%", justifyContent: "flex-start", color: "#EF4444", padding: "14px 16px", fontSize: "15px" }} onClick={(e) => { handleDeleteConversation(session.id, e); setSessionActionMenuId(null); }}>
                 Delete
               </button>
@@ -1548,16 +1555,15 @@ function App() {
               </button>
               {sessionMenuOpen && (
                 <div className="session-menu-popover" role="menu">
-                  <button
-                    type="button"
-                    role="menuitem"
-                    className="session-menu-item"
-                    onClick={() => {
-                      setSessionMenuOpen(false);
-                      handleShareChat();
-                    }}
-                    disabled={chat.length === 0}
-                  >
+                  <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handlePinConversation(activeConversation.id); }}>
+                    <span aria-hidden="true">⌖</span>
+                    <span>{activeConversation.pinned ? "Unpin" : "Pinned"}</span>
+                  </button>
+                  <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handleArchiveConversation(activeConversation.id); }}>
+                    <span aria-hidden="true">▣</span>
+                    <span>{activeConversation.archived ? "Nyaharkib" : "Arkib"}</span>
+                  </button>
+                  <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handleShareConversation(activeConversation.id); }} disabled={chat.length === 0}>
                     <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                       <circle cx="18" cy="5" r="3"></circle>
                       <circle cx="6" cy="12" r="3"></circle>
@@ -1566,6 +1572,10 @@ function App() {
                       <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
                     </svg>
                     <span>{copiedIdx === "top-bar-share" ? "Disalin ✓" : "Kongsi sesi"}</span>
+                  </button>
+                  <button type="button" role="menuitem" className="session-menu-item session-menu-item-danger" onClick={() => { setSessionMenuOpen(false); handleDeleteConversation(activeConversation.id); }}>
+                    <span aria-hidden="true">×</span>
+                    <span>Delete</span>
                   </button>
                 </div>
               )}
