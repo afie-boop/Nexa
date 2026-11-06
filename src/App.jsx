@@ -1682,41 +1682,29 @@ function App() {
                 <div className="token-details-header"><div><strong>Token usage</strong><span>Gabungan penggunaan General AI dan Coding AI untuk sesi semasa</span></div><button type="button" onClick={() => setTokenDetailsOpen(false)} aria-label="Tutup">×</button></div>
                 <div className="token-details-grid">
                   <div><span>Jumlah messages</span><strong>{assistantMessages.length}</strong></div>
+                  <div><span>Model sebenar digunakan</span><strong className="token-detail-mono">{latestUsage.models?.length ? [...new Set(latestUsage.models.map(item => item.model).filter(Boolean))].join(", ") : latestUsage.model || "Belum tersedia"}</strong></div>
                   <div><span>Total tokens</span><strong>{formatNumber(totalTokens)}</strong></div>
                   <div><span>Input tokens</span><strong>{formatNumber(sumUsage("inputTokens"))}</strong></div>
-                  <div><span>Output tokens</span><strong>{formatNumber(sumUsage("outputTokens"))}</strong></div>
                   <div><span>Reasoning tokens</span><strong>{formatNumber(sumUsage("reasoningTokens"))}</strong></div>
+                  <div><span>Assistant messages</span><strong>{assistantMessages.length}</strong></div>
+                  <div><span>Session</span><strong className="token-detail-mono">{activeConversation.id || "—"}</strong></div>
+                  <div><span>Provider</span><strong>{latestUsage.provider || "OpenRouter"}</strong></div>
+                  <div><span>Context limit</span><strong>{latestUsage.contextLimit ? formatNumber(latestUsage.contextLimit) : "Tidak dibekalkan provider"}</strong></div>
+                  <div><span>Usage</span><strong>{formatNumber(totalTokens)} tokens</strong></div>
+                  <div><span>Output tokens</span><strong>{formatNumber(sumUsage("outputTokens"))}</strong></div>
                   <div><span>Cache tokens (read)</span><strong>{formatNumber(sumUsage("cacheReadTokens"))}</strong></div>
                   <div><span>Cache tokens (write)</span><strong>{formatNumber(sumUsage("cacheWriteTokens"))}</strong></div>
-                  <div><span>Provider terakhir</span><strong>{latestUsage.provider || "OpenRouter"}</strong></div>
-                  <div><span>Context limit</span><strong>{latestUsage.contextLimit ? formatNumber(latestUsage.contextLimit) : modelContextLimits[latestUsage.model || generalModel] ? formatNumber(modelContextLimits[latestUsage.model || generalModel]) : "Lihat per model di bawah"}</strong></div>
-                  <div><span>Session</span><strong className="token-detail-mono">{activeConversation.id || "—"}</strong></div>
                   <div><span>Session created</span><strong>{activeConversation.createdAt ? new Date(activeConversation.createdAt).toLocaleString() : "Tidak diketahui"}</strong></div>
                 </div>
-                <div className="token-raw-heading">AI models</div>
-                <div className="token-model-calls">
-                  {(aggregatedModelCalls.length ? aggregatedModelCalls : configuredModels.map(item => ({ ...item, provider: "openrouter", inputTokens: 0, outputTokens: 0, totalTokens: 0, calls: 0, usedFallback: item.label === "Fallback" }))).map((item, index) => {
-                    const modelId = item.model || "Model tidak diketahui";
-                    const contextLimit = modelContextLimits[modelId];
-                    return <div className="token-model-call" key={`${modelId}-${item.provider || "openrouter"}-${index}`}>
-                      <strong>{modelId}</strong>
-                      <span>Context limit</span>
-                      <small>{contextLimit ? `${formatNumber(item.inputTokens)} / ${formatNumber(contextLimit)}` : "Tidak tersedia"}</small>
-                      <span>Provider</span>
-                      <small>OpenRouter / {item.provider || "openrouter"}</small>
-                      <span>Input tokens</span>
-                      <small>{formatNumber(item.inputTokens)}</small>
-                      <span>Output tokens</span>
-                      <small>{formatNumber(item.outputTokens)}</small>
-                      <span>Total tokens</span>
-                      <small>{formatNumber(item.totalTokens)}</small>
-                      <span>Calls</span>
-                      <small>{formatNumber(item.calls)}</small>
-                      <span>Route</span>
-                      <small>{item.usedFallback ? "Fallback" : "Primary"}</small>
-                    </div>;
-                  })}
-                </div>
+                {latestUsage.models?.length > 0 && <div className="token-model-calls">
+                  <div className="token-raw-heading">Model calls ({latestUsage.models.length})</div>
+                  {latestUsage.models.map((item, index) => <div className="token-model-call" key={index}>
+                    <strong>{item.model || "Model tidak diketahui"}</strong>
+                    <span>{item.usedFallback ? "Fallback" : "Primary"} · {item.provider}</span>
+                    <small>Input {formatNumber(item.inputTokens)} · Output {formatNumber(item.outputTokens)} · Total {formatNumber(item.totalTokens)}</small>
+                    {item.requestedModel && item.requestedModel !== item.model && <small>Diminta: {item.requestedModel}</small>}
+                  </div>)}
+                </div>}
                 <div className="token-raw-heading">Raw messages ({rawMessages.length})</div>
                 <div className="token-raw-list">{rawMessages.length ? rawMessages.map(item => <article key={item.index}><div><strong>#{item.index} {item.role}</strong><span>{item.text.length.toLocaleString()} chars</span></div><pre>{item.text}</pre></article>) : <p>Belum ada mesej dalam sesi ini.</p>}</div>
               </section>
