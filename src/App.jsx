@@ -120,6 +120,7 @@ function App() {
   const [tokenDetailsOpen, setTokenDetailsOpen] = useState(false);
   const [selectedModelContextLimit, setSelectedModelContextLimit] = useState(null);
   const [contextLimitLoading, setContextLimitLoading] = useState(false);
+  const [modelContextLimits, setModelContextLimits] = useState({});
   const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
   const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
   const [sessionActionMenuId, setSessionActionMenuId] = useState(null);
@@ -429,39 +430,37 @@ function App() {
   }, [fallbackModel]);
 
   useEffect(() => {
-    const modelId = generalModel.trim();
-    if (!tokenDetailsOpen || !modelId || modelId === "openrouter/free") {
-      setSelectedModelContextLimit(null);
-      setContextLimitLoading(false);
+    if (!tokenDetailsOpen) return;
+    const modelIds = [...new Set([
+      ...chat.flatMap(message => Array.isArray(message.usage?.models) ? message.usage.models.map(item => item.model) : []),
+      generalModel, codingModel, fallbackModel
+    ].map(model => String(model || "").trim()).filter(model => model && model !== "openrouter/free"))];
+    if (!modelIds.length) {
+      setModelContextLimits({});
       return;
     }
 
     const controller = new AbortController();
-    setSelectedModelContextLimit(null);
-    setContextLimitLoading(true);
-    fetch(`/api/models/context-limit?model=${encodeURIComponent(modelId)}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      signal: controller.signal
-    })
-      .then(response => {
-        if (!response.ok) throw new Error("Metadata model tidak tersedia");
-        return response.json();
-      })
-      .then(data => {
-        if (!controller.signal.aborted) {
-          setSelectedModelContextLimit(Number(data.contextLimit) > 0 ? Number(data.contextLimit) : null);
-        }
-      })
-      .catch(error => {
-        if (error.name !== "AbortError") setSelectedModelContextLimit(null);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setContextLimitLoading(false);
-      });
-
+    setModelContextLimits({});
+    Promise.all(modelIds.map(async model => {
+      try {
+        const response = await fetch(`/api/models/context-limit?model=${encodeURIComponent(model)}`, {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          signal: controller.signal
+        });
+        if (!response.ok) return [model, null];
+        const data = await response.json();
+        return [model, Number(data.contextLimit) > 0 ? Number(data.contextLimit) : null];
+      } catch (error) {
+        if (error.name !== "AbortError") return [model, null];
+        return [model, null];
+      }
+    })).then(entries => {
+      if (!controller.signal.aborted) setModelContextLimits(Object.fromEntries(entries));
+    });
     return () => controller.abort();
-  }, [tokenDetailsOpen, generalModel]);
+  }, [tokenDetailsOpen, chat, generalModel, codingModel, fallbackModel]);
 
 
   useEffect(() => {
@@ -1696,21 +1695,16 @@ function App() {
                 </div>
                 <div className="token-raw-heading">AI models</div>
                 <div className="token-model-calls">
-                  {configuredModels.map(item => <div className="token-model-call" key={item.label}>
-                    <strong>{item.label}</strong>
-                    <span>{item.model}</span>
-                  </div>)}
+                  {(aggregatedModelCalls.length ? aggregatedModelCalls : configuredModels.map(item => ({ ...item, inputTokens: 0, outputTokens: 0, totalTokens: 0, calls: 0 }))).map((item, index) => {
+                    const modelId = item.model || "Model tidak diketahui";
+                    const contextLimit = modelContextLimits[modelId];
+                    return <div className="token-model-call" key={`${modelId}-${index}`}>
+                      <strong>{modelId}</strong>
+                      <span>Context limit</span>
+                      <small>{contextLimit ? `${formatNumber(item.inputTokens)} / ${formatNumber(contextLimit)}` : "Tidak tersedia"}</small>
+                    </div>;
+                  })}
                 </div>
-                {aggregatedModelCalls.length > 0 && <>
-                  <div className="token-raw-heading">Models used in this session ({aggregatedModelCalls.length})</div>
-                  <div className="token-model-calls">
-                    {aggregatedModelCalls.map((item, index) => <div className="token-model-call" key={index}>
-                      <strong>{item.model || "Model tidak diketahui"}</strong>
-                      <span>{item.usedFallback ? "Fallback" : "Primary"} · {item.provider || "Provider tidak diketahui"} · {item.calls} calls</span>
-                      <small>Input {formatNumber(item.inputTokens)} · Output {formatNumber(item.outputTokens)} · Total {formatNumber(item.totalTokens)}</small>
-                    </div>)}
-                  </div>
-                </>}
                 <div className="token-raw-heading">Raw messages ({rawMessages.length})</div>
                 <div className="token-raw-list">{rawMessages.length ? rawMessages.map(item => <article key={item.index}><div><strong>#{item.index} {item.role}</strong><span>{item.text.length.toLocaleString()} chars</span></div><pre>{item.text}</pre></article>) : <p>Belum ada mesej dalam sesi ini.</p>}</div>
               </section>
