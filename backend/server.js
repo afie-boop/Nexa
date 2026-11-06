@@ -262,7 +262,7 @@ app.post("/api/auth/register", authRateLimit, async (req, res) => {
     return res.status(201).json({ authenticated: true, type: "user", user: result.user });
   } catch (err) {
     console.error("[Auth Register Error]:", err.message);
-    if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
+    if (process.env.NODE_ENV === "production" && !(process.env.AXMCHAT_DATABASE_URL || process.env.DATABASE_URL)) {
       return res.status(503).json({ message: "Penyimpanan akaun production belum dikonfigurasi." });
     }
     return res.status(500).json({ message: "Gagal membuat akaun." });
@@ -277,7 +277,7 @@ app.post("/api/auth/login", authRateLimit, async (req, res) => {
     return res.json({ authenticated: true, type: "user", user: result.user });
   } catch (err) {
     console.error("[Auth Login Error]:", err.message);
-    if (process.env.NODE_ENV === "production" && !process.env.DATABASE_URL) {
+    if (process.env.NODE_ENV === "production" && !(process.env.AXMCHAT_DATABASE_URL || process.env.DATABASE_URL)) {
       return res.status(503).json({ message: "Penyimpanan akaun production belum dikonfigurasi." });
     }
     return res.status(500).json({ message: "Gagal log masuk." });
