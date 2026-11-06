@@ -160,6 +160,40 @@ function App() {
     }
   });
 
+  const [generalProvider, setGeneralProvider] = useState(() => localStorage.getItem("axm_general_provider") || "openrouter");
+  const [codingProvider, setCodingProvider] = useState(() => localStorage.getItem("axm_coding_provider") || "openrouter");
+  const [fallbackProvider, setFallbackProvider] = useState(() => localStorage.getItem("axm_fallback_provider") || "gemini");
+  const [generalModels, setGeneralModels] = useState([]);
+  const [codingModels, setCodingModels] = useState([]);
+  const [fallbackModels, setFallbackModels] = useState([]);
+  const [generalModelSearch, setGeneralModelSearch] = useState("");
+  const [codingModelSearch, setCodingModelSearch] = useState("");
+  const [fallbackModelSearch, setFallbackModelSearch] = useState("");
+  const [modelCatalogLoading, setModelCatalogLoading] = useState("");
+  const [modelCatalogError, setModelCatalogError] = useState("");
+
+  const providerOptions = [
+    ["openrouter", "OpenRouter"], ["groq", "Groq"], ["gemini", "Google Gemini"],
+    ["cerebras", "Cerebras"], ["mistral", "Mistral"], ["deepseek", "DeepSeek"],
+    ["together", "Together AI"], ["fireworks", "Fireworks AI"]
+  ];
+
+  async function loadProviderModels(provider, setModels) {
+    setModelCatalogLoading(provider);
+    setModelCatalogError("");
+    try {
+      const response = await fetch("/api/models?provider=" + encodeURIComponent(provider), { credentials: "same-origin" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Gagal memuatkan katalog model.");
+      setModels(Array.isArray(data.models) ? data.models : []);
+    } catch (error) {
+      setModelCatalogError(error.message || "Gagal memuatkan katalog model.");
+      setModels([]);
+    } finally {
+      setModelCatalogLoading("");
+    }
+  }
+
   const [load, setLoad] = useState(false);
 
   // AI Control UI is removed; all configured AI roles remain enabled.
@@ -797,6 +831,9 @@ function App() {
           generalModel: generalModel.trim(),
           codingModel: codingModel.trim(),
           fallbackModel: fallbackModel.trim(),
+          generalProvider,
+          codingProvider,
+          fallbackProvider,
           responseMode,
           memoryEnabled,
           aiAvailability,
@@ -1778,71 +1815,39 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">AXMchat AI Models</h2>
-              <p className="panel-subtitle">Tetapkan Model ID tersuai untuk General AI, Coding AI, dan Fallback AI.</p>
-
+              <p className="panel-subtitle">Pilih provider dan cari model terus daripada katalog provider. Setiap peranan disimpan secara berasingan.</p>
+              {modelCatalogError && <p style={{ color: "#ff8585", fontSize: "13px" }}>{modelCatalogError}</p>}
               <div className="grid-container">
-                <div className="flat-card">                  <span className="flat-card-title">General AI</span>
-                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model utama untuk tugasan am / sembang biasa.</p>
-                  <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>General AI Model ID</label>
-                  <input
-                    type="text"
-                    value={generalModel}
-                    onChange={(e) => setGeneralModel(e.target.value)}
-                    placeholder="Contoh: qwen/qwen3-235b-a22b-2507"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--border)",
-                      backgroundColor: "rgba(255,255,255,0.05)",
-                      color: "inherit",
-                      fontSize: "14px",
-                      outline: "none"
-                    }}
-                  />
-                </div>
-                <div className="flat-card">
-                  <span className="flat-card-title">Coding AI</span>
-                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model utama untuk tugasan pengkodan.</p>
-                  <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Code AI Model ID</label>
-                  <input
-                    type="text"
-                    value={codingModel}
-                    onChange={(e) => setCodingModel(e.target.value)}
-                    placeholder="Contoh: openrouter/free"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--border)",
-                      backgroundColor: "rgba(255,255,255,0.05)",
-                      color: "inherit",
-                      fontSize: "14px",
-                      outline: "none"
-                    }}
-                  />
-                </div>
-                <div className="flat-card">
-                  <span className="flat-card-title">Fallback AI</span>
-                  <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Model cadangan automatik jika model utama mengalami ralat sementara (429 rate limit/server error).</p>
-                  <label style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginBottom: "6px" }}>Fallback Model ID</label>
-                  <input
-                    type="text"
-                    value={fallbackModel}
-                    onChange={(e) => setFallbackModel(e.target.value)}
-                    placeholder="Contoh: openrouter/free"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "8px",
-                      border: "1px solid var(--border)",
-                      backgroundColor: "rgba(255,255,255,0.05)",
-                      color: "inherit",
-                      fontSize: "14px",
-                      outline: "none"
-                    }}
-                  />
-                </div>
+                {[
+                  { key: "general", title: "General AI", desc: "Model utama untuk sembang dan tugasan am.", provider: generalProvider, setProvider: setGeneralProvider, model: generalModel, setModel: setGeneralModel, models: generalModels, setModels: setGeneralModels, search: generalModelSearch, setSearch: setGeneralModelSearch },
+                  { key: "coding", title: "Coding AI", desc: "Model utama untuk pengaturcaraan.", provider: codingProvider, setProvider: setCodingProvider, model: codingModel, setModel: setCodingModel, models: codingModels, setModels: setCodingModels, search: codingModelSearch, setSearch: setCodingModelSearch },
+                  { key: "fallback", title: "Fallback AI", desc: "Provider bebas yang mengambil alih apabila AI utama gagal atau terkena had.", provider: fallbackProvider, setProvider: setFallbackProvider, model: fallbackModel, setModel: setFallbackModel, models: fallbackModels, setModels: setFallbackModels, search: fallbackModelSearch, setSearch: setFallbackModelSearch }
+                ].map(role => (
+                  <div className="flat-card" key={role.key} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    <span className="flat-card-title">{role.title}</span>
+                    <p className="flat-card-desc">{role.desc}</p>
+                    <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Provider</label>
+                    <select value={role.provider} onChange={e => { role.setProvider(e.target.value); role.setModels([]); }} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid var(--border)", background: "#242424", color: "inherit" }}>
+                      {providerOptions.map(([id, label]) => <option value={id} key={id}>{label}</option>)}
+                    </select>
+                    <button type="button" onClick={() => loadProviderModels(role.provider, role.setModels)} disabled={modelCatalogLoading === role.provider} style={{ padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(255,255,255,0.08)", color: "inherit" }}>
+                      {modelCatalogLoading === role.provider ? "Memuatkan model..." : "Telusuri model"}
+                    </button>
+                    {role.models.length > 0 && <>
+                      <input type="search" value={role.search} onChange={e => role.setSearch(e.target.value)} placeholder="Cari nama atau ID model..." style={{ width: "100%", padding: "9px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(255,255,255,0.05)", color: "inherit" }} />
+                      <div style={{ maxHeight: "190px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "5px" }}>
+                        {role.models.filter(item => (item.name + " " + item.id).toLowerCase().includes(role.search.toLowerCase())).slice(0, 100).map(item => (
+                          <button type="button" key={item.id} onClick={() => role.setModel(item.id)} style={{ textAlign: "left", padding: "8px 10px", borderRadius: "7px", border: "1px solid var(--border)", background: role.model === item.id ? "rgba(120,160,255,0.16)" : "rgba(255,255,255,0.035)", color: "inherit" }}>
+                            <span style={{ display: "block", fontSize: "13px" }}>{item.name}</span>
+                            <span style={{ display: "block", fontSize: "11px", opacity: 0.65, overflowWrap: "anywhere" }}>{item.id}{item.contextLength ? " · " + Number(item.contextLength).toLocaleString() + " context" : ""}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </>}
+                    <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Custom Model ID</label>
+                    <input type="text" value={role.model} onChange={e => role.setModel(e.target.value)} placeholder="Masukkan Model ID secara manual" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "rgba(255,255,255,0.05)", color: "inherit", fontSize: "14px", outline: "none" }} />
+                  </div>
+                ))}
               </div>
             </div>
           </div>
