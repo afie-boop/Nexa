@@ -113,6 +113,8 @@ function App() {
   const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
   const [tokenDetailsOpen, setTokenDetailsOpen] = useState(false);
   const [tokenDetailsType, setTokenDetailsType] = useState("general");
+  const [selectedModelContextLimit, setSelectedModelContextLimit] = useState(null);
+  const [contextLimitLoading, setContextLimitLoading] = useState(false);
   const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
   const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
   const [sessionActionMenuId, setSessionActionMenuId] = useState(null);
@@ -420,6 +422,41 @@ function App() {
       console.error(err);
     }
   }, [fallbackModel]);
+
+  useEffect(() => {
+    const modelId = (tokenDetailsType === "code" ? codingModel : generalModel).trim();
+    if (!tokenDetailsOpen || !modelId || modelId === "openrouter/free") {
+      setSelectedModelContextLimit(null);
+      setContextLimitLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setSelectedModelContextLimit(null);
+    setContextLimitLoading(true);
+    fetch(`/api/models/context-limit?model=${encodeURIComponent(modelId)}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      signal: controller.signal
+    })
+      .then(response => {
+        if (!response.ok) throw new Error("Metadata model tidak tersedia");
+        return response.json();
+      })
+      .then(data => {
+        if (!controller.signal.aborted) {
+          setSelectedModelContextLimit(Number(data.contextLimit) > 0 ? Number(data.contextLimit) : null);
+        }
+      })
+      .catch(error => {
+        if (error.name !== "AbortError") setSelectedModelContextLimit(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setContextLimitLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [tokenDetailsOpen, tokenDetailsType, generalModel, codingModel]);
 
 
   useEffect(() => {
@@ -1637,7 +1674,7 @@ function App() {
                   <div><span>Assistant messages</span><strong>{categorizedMessages.length}</strong></div>
                   <div><span>Session</span><strong className="token-detail-mono">{activeConversation.id || "—"}</strong></div>
                   <div><span>Provider</span><strong>{latestUsage.provider || "OpenRouter"}</strong></div>
-                  <div><span>Context limit</span><strong>{latestUsage.contextLimit ? formatNumber(latestUsage.contextLimit) : "Tidak dibekalkan provider"}</strong></div>
+                  <div><span>Context limit</span><strong>{latestUsage.contextLimit ? formatNumber(latestUsage.contextLimit) : contextLimitLoading ? "Mengesan model..." : selectedModelContextLimit ? formatNumber(selectedModelContextLimit) : "Tidak tersedia"}</strong></div>
                   <div><span>Usage</span><strong>{formatNumber(totalTokens)} tokens</strong></div>
                   <div><span>Output tokens</span><strong>{formatNumber(sumUsage("outputTokens"))}</strong></div>
                   <div><span>Cache tokens (read)</span><strong>{formatNumber(sumUsage("cacheReadTokens"))}</strong></div>
