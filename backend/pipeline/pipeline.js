@@ -74,7 +74,7 @@ async function runPipeline(data) {
     } catch (primaryError) {
       if (data.fallbackEnabled === false) throw primaryError;
       data.sendStatus?.("Fallback AI: " + (data.fallbackProvider || "openrouter") + " mengambil alih...");
-      response = await askProvider(data.fallbackProvider || "gemini", data.question, {
+      response = await askProvider(data.fallbackProvider || "openrouter", data.question, {
         model: data.fallbackModel || "openrouter/free",
         history: (data.history || []).slice(-6),
         system: fastSystemWithContext,
