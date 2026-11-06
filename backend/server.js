@@ -797,7 +797,7 @@ ${brainContext.context}
         "[END CURRENT DATE/TIME]"
       : question.trim();
 
-    const tokenTelemetry = { model: null, provider: "OpenRouter", inputTokens: 0, outputTokens: 0, totalTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+    const tokenTelemetry = { model: null, models: [], provider: "OpenRouter", inputTokens: 0, outputTokens: 0, totalTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
     const answer = await runPipeline({
       task,
       question: modelQuestion,
@@ -816,6 +816,15 @@ ${brainContext.context}
         const completionDetails = usage.completion_tokens_details || {};
         tokenTelemetry.model = entry?.model || tokenTelemetry.model;
         tokenTelemetry.provider = entry?.provider || tokenTelemetry.provider;
+        tokenTelemetry.models.push({
+          requestedModel: entry?.requestedModel || null,
+          model: entry?.model || null,
+          provider: entry?.provider || "OpenRouter",
+          usedFallback: Boolean(entry?.usedFallback),
+          inputTokens: Number(usage.prompt_tokens || 0),
+          outputTokens: Number(usage.completion_tokens || 0),
+          totalTokens: Number(usage.total_tokens || (Number(usage.prompt_tokens || 0) + Number(usage.completion_tokens || 0)))
+        });
         tokenTelemetry.inputTokens += Number(usage.prompt_tokens || 0);
         tokenTelemetry.outputTokens += Number(usage.completion_tokens || 0);
         tokenTelemetry.totalTokens += Number(usage.total_tokens || (Number(usage.prompt_tokens || 0) + Number(usage.completion_tokens || 0)));
