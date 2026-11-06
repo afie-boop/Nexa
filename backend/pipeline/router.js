@@ -1,4 +1,4 @@
-const logger = require("../utils/logger");
+const logger = require("../utils/logger");\n\nconst QUALITY_RULES = `\nQUALITY STANDARD — ANTI-SLOP:\n- Fahami maksud sebenar pengguna dan jawab perkara yang diminta.\n- Beri isi yang spesifik dan berguna; elakkan pembuka kosong, pujian automatik, pengulangan dan kesimpulan klise.\n- Jangan reka fakta, angka, sumber, ciri atau tindakan. Nyatakan ketidakpastian dengan jujur.\n- Ikut bahasa, nada dan tahap perincian pengguna secara semula jadi.\n- Jangan tambah penerangan, tajuk atau senarai yang tidak membantu.\n- Jika maklumat penting tiada, tanya satu soalan yang paling perlu.\n`;
 
 async function router(data) {
   logger.info("Router", "Memilih AI...");
