@@ -2452,8 +2452,9 @@ button, input, textarea, select {
 .token-usage-ring-button{padding:0;border:0;border-radius:0;box-sizing:border-box}
 
 
-/* Final token indicator sizing and precise count alignment. */
-.token-ring{width:21px;height:21px;left:calc(50% + 3px)}
-.token-ring::before{inset:2.5px}
-.token-ring-inner,.token-ring-dot{display:none}
-.token-usage-ring-button strong{left:calc(50% + 3px);width:100%;transform:translateX(-50%);text-align:center}
+/* Align the compact token indicator closely with the adjacent three-dot menu. */
+.token-usage-ring-button{flex:0 0 38px;width:38px;min-width:38px;margin-right:-4px}
+.token-ring{width:21px;height:21px;left:50%;background:conic-gradient(#888 calc(100% - var(--token-used,0%)),#3a3a3a 0)}
+.token-ring::before{inset:2.5px;background:#111}
+.token-usage-ring-button strong{left:50%;width:100%;transform:translateX(-50%);color:#888}
+@media(max-width:480px){.token-usage-ring-button{flex-basis:36px;width:36px;min-width:36px;margin-right:-4px}.top-bar-actions{gap:6px}}
