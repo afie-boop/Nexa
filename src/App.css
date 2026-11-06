@@ -2090,3 +2090,13 @@ button, input, textarea, select {
 .token-model-call strong{font-size:12px;color:#eee;overflow-wrap:anywhere}
 .token-model-call span,.token-model-call small{font-size:10px;color:#999;overflow-wrap:anywhere}
 @media(max-width:600px){.token-model-calls{padding:0 16px 10px}}
+
+
+/* Session menu: compact vertical-ellipsis control aligned to the far right */
+.session-menu-wrap{position:relative;display:flex;align-items:center}
+.session-menu-trigger{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:0;border-radius:8px;color:var(--secondary-text);background:transparent;cursor:pointer}
+.session-menu-trigger:hover,.session-menu-trigger[aria-expanded="true"]{color:var(--primary-text);background:var(--surface-hover)}
+.session-menu-popover{position:absolute;top:calc(100% + 8px);right:0;z-index:1200;min-width:168px;padding:5px;border:1px solid #353535;border-radius:10px;background:#1c1c1c;box-shadow:0 10px 28px rgba(0,0,0,.38)}
+.session-menu-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 11px;border:0;border-radius:7px;color:#e5e5e5;background:transparent;text-align:left;font:inherit;font-size:13px;cursor:pointer}
+.session-menu-item:hover:not(:disabled){background:#303030}
+.session-menu-item:disabled{opacity:.4;cursor:not-allowed}
