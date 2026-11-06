@@ -1513,127 +1513,85 @@ button, input, textarea, select {
   color: #fff !important;
 }
 
-/* Code — compact, readable, monochrome. */
+/* Code block — rounded charcoal style, with AXMchat syntax colours preserved. */
 .code-block-wrapper {
   margin: 16px 0 18px !important;
-  background: var(--code-bg) !important;
-  border: 1px solid #292929 !important;
-  border-radius: 16px !important;
+  background: #2b2b2b !important;
+  border: none !important;
+  border-radius: 24px !important;
   box-shadow: none !important;
   overflow: hidden;
 }
 
 .code-block-header {
-  min-height: 40px;
-  padding: 0 11px 0 14px !important;
-  background: #111 !important;
-  border-bottom: 1px solid #242424 !important;
-  color: #999 !important;
-  font-size: 10px !important;
-  letter-spacing: .04em;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 10px 14px 0 20px !important;
+  background: transparent !important;
+  border-bottom: none !important;
+  color: #aaa !important;
+  font-size: 12px !important;
+  letter-spacing: .02em;
 }
 
 .code-block-header .code-lang {
-  color: #ddd !important;
+  color: #bdbdbd !important;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
   font-weight: 700;
   text-transform: uppercase;
 }
 
 .code-block-header .copy-btn {
-  color: #aaa !important;
-  background: #1b1b1b !important;
-  border: 1px solid #292929 !important;
-  border-radius: 9px !important;
-  padding: 5px 8px !important;
-  font-size: 10px !important;
+  color: #e5e5e5 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 10px !important;
+  padding: 6px 8px !important;
+  font-size: 12px !important;
+  cursor: pointer;
 }
 
 .code-block-header .copy-btn:hover {
   color: #fff !important;
-  background: #282828 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
 .code-block-body {
-  background: #090909 !important;
+  background: transparent !important;
 }
 
 .code-block-body pre {
   margin: 0 !important;
-  padding: 15px 16px !important;
-  background: #090909 !important;
+  padding: 8px 20px 20px !important;
+  background: transparent !important;
   font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace !important;
-  font-size: 12.5px !important;
-  line-height: 1.7 !important;
+  font-size: 13.5px !important;
+  line-height: 1.65 !important;
   tab-size: 2;
+  white-space: pre-wrap !important;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  overflow-x: hidden;
 }
 
-/* react-syntax-highlighter injects inline token colors; these force monochrome. */
-.code-block-body pre span {
-  color: #d9dee8 !important;
-  text-shadow: none !important;
-}
-
-/* Soft syntax highlighting — readable colors without turning the UI into a rainbow. */
-.code-block-body pre span[class*="comment"] {
-  color: #6f7b8a !important;
-  font-style: italic;
-}
-
-.code-block-body pre span[class*="string"],
-.code-block-body pre span[class*="char"] {
-  color: #a8d5a2 !important;
-}
-
-.code-block-body pre span[class*="keyword"],
-.code-block-body pre span[class*="selector"],
-.code-block-body pre span[class*="doctype"] {
-  color: #c4a7ff !important;
-  font-weight: 600;
-}
-
-.code-block-body pre span[class*="boolean"],
-.code-block-body pre span[class*="number"] {
-  color: #e8b875 !important;
-}
-
-.code-block-body pre span[class*="function"],
-.code-block-body pre span[class*="method"] {
-  color: #8fc7ff !important;
-  font-weight: 600;
-}
-
-.code-block-body pre span[class*="class-name"],
-.code-block-body pre span[class*="builtin"] {
-  color: #72d6d0 !important;
-}
-
-.code-block-body pre span[class*="attr-name"],
-.code-block-body pre span[class*="property"] {
-  color: #d8b4fe !important;
-}
-
-.code-block-body pre span[class*="tag"] {
-  color: #ff9f9f !important;
-}
-
-.code-block-body pre span[class*="operator"],
-.code-block-body pre span[class*="punctuation"] {
-  color: #aeb7c5 !important;
-}
-
-.code-block-body pre span[class*="variable"] {
-  color: #f1c8a0 !important;
+.code-block-body pre code {
+  background: transparent !important;
+  white-space: inherit;
 }
 
 .inline-code {
-  color: #eee !important;
-  background: #181818 !important;
-  border: 1px solid #2a2a2a !important;
-  border-radius: 6px !important;
-  font-family: "JetBrains Mono", monospace !important;
-  padding: 2px 6px !important;
+  background-color: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.88em;
+  font-weight: 500;
+  display: inline !important;
+  border: 1px solid rgba(99, 102, 241, 0.2);
 }
 
 /* Composer — Pixel-like black surface with white send control. */
