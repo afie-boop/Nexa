@@ -154,7 +154,7 @@ function App() {
   const [fallbackModel, setFallbackModel] = useState(() => {
     try {
       const saved = localStorage.getItem("nexa_fallback_model");
-      return saved ? saved : "openrouter/free";
+      return saved && saved !== "openrouter/free" ? saved : "gemini-3.8-flash";
     } catch {
       return "openrouter/free";
     }
