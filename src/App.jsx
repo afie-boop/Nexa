@@ -164,31 +164,6 @@ function App() {
   const generalProvider = "openrouter";
   const codingProvider = "openrouter";
   const fallbackProvider = "openrouter";
-  const [generalModels, setGeneralModels] = useState([]);
-  const [codingModels, setCodingModels] = useState([]);
-  const [fallbackModels, setFallbackModels] = useState([]);
-  const [generalModelSearch, setGeneralModelSearch] = useState("");
-  const [codingModelSearch, setCodingModelSearch] = useState("");
-  const [fallbackModelSearch, setFallbackModelSearch] = useState("");
-  const [modelCatalogLoading, setModelCatalogLoading] = useState(false);
-  const [modelCatalogError, setModelCatalogError] = useState("");
-
-  async function loadProviderModels(setModels) {
-    setModelCatalogLoading(true);
-    setModelCatalogError("");
-    try {
-      const response = await fetch("/api/models?provider=openrouter", { credentials: "same-origin" });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Gagal memuatkan katalog model OpenRouter.");
-      setModels(Array.isArray(data.models) ? data.models : []);
-    } catch (error) {
-      setModelCatalogError(error.message || "Gagal memuatkan katalog model OpenRouter.");
-      setModels([]);
-    } finally {
-      setModelCatalogLoading(false);
-    }
-  }
-
   const [load, setLoad] = useState(false);
 
   // AI Control UI is removed; all configured AI roles remain enabled.
@@ -1808,32 +1783,16 @@ function App() {
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
               <h2 className="panel-title">AXMchat AI Models</h2>
-              <p className="panel-subtitle">Provider tunggal: OpenRouter. Pilih model berasingan untuk General AI, Coding AI dan Fallback AI.</p>
-              {modelCatalogError && <p style={{ color: "#ff8585", fontSize: "13px" }}>{modelCatalogError}</p>}
+              <p className="panel-subtitle">Pilih model untuk General AI, Coding AI dan Fallback AI.</p>
               <div className="grid-container">
                 {[
-                  { key: "general", title: "General AI", desc: "Model utama untuk sembang dan tugasan am.", model: generalModel, setModel: setGeneralModel, models: generalModels, setModels: setGeneralModels, search: generalModelSearch, setSearch: setGeneralModelSearch },
-                  { key: "coding", title: "Coding AI", desc: "Model utama untuk pengaturcaraan.", model: codingModel, setModel: setCodingModel, models: codingModels, setModels: setCodingModels, search: codingModelSearch, setSearch: setCodingModelSearch },
-                  { key: "fallback", title: "Fallback AI", desc: "Provider bebas yang mengambil alih apabila AI utama gagal atau terkena had.", model: fallbackModel, setModel: setFallbackModel, models: fallbackModels, setModels: setFallbackModels, search: fallbackModelSearch, setSearch: setFallbackModelSearch }
+                  { key: "general", title: "General AI", desc: "Model utama untuk sembang dan tugasan am.", model: generalModel, setModel: setGeneralModel },
+                  { key: "coding", title: "Coding AI", desc: "Model utama untuk pengaturcaraan.", model: codingModel, setModel: setCodingModel },
+                  { key: "fallback", title: "Fallback AI", desc: "Model gantian apabila AI utama gagal atau terkena had.", model: fallbackModel, setModel: setFallbackModel }
                 ].map(role => (
                   <div className="flat-card" key={role.key} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                     <span className="flat-card-title">{role.title}</span>
                     <p className="flat-card-desc">{role.desc}</p>
-                    <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Provider: OpenRouter</span>
-                    <button type="button" onClick={() => loadProviderModels(role.setModels)} disabled={modelCatalogLoading} style={{ padding: "9px 12px", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(255,255,255,0.08)", color: "inherit" }}>
-                      {modelCatalogLoading ? "Memuatkan model..." : "Telusuri model OpenRouter"}
-                    </button>
-                    {role.models.length > 0 && <>
-                      <input type="search" value={role.search} onChange={e => role.setSearch(e.target.value)} placeholder="Cari nama atau ID model..." style={{ width: "100%", padding: "9px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(255,255,255,0.05)", color: "inherit" }} />
-                      <div style={{ maxHeight: "190px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "5px" }}>
-                        {role.models.filter(item => (item.name + " " + item.id).toLowerCase().includes(role.search.toLowerCase())).slice(0, 100).map(item => (
-                          <button type="button" key={item.id} onClick={() => role.setModel(item.id)} style={{ textAlign: "left", padding: "8px 10px", borderRadius: "7px", border: "1px solid var(--border)", background: role.model === item.id ? "rgba(120,160,255,0.16)" : "rgba(255,255,255,0.035)", color: "inherit" }}>
-                            <span style={{ display: "block", fontSize: "13px" }}>{item.name}</span>
-                            <span style={{ display: "block", fontSize: "11px", opacity: 0.65, overflowWrap: "anywhere" }}>{item.id}{item.contextLength ? " · " + Number(item.contextLength).toLocaleString() + " context" : ""}{item.pricing ? " · pricing " + JSON.stringify(item.pricing) : ""}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </>}
                     <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Custom Model ID</label>
                     <input type="text" value={role.model} onChange={e => role.setModel(e.target.value)} placeholder="Masukkan Model ID secara manual" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "rgba(255,255,255,0.05)", color: "inherit", fontSize: "14px", outline: "none" }} />
                   </div>
