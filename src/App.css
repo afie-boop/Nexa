@@ -2450,3 +2450,9 @@ button, input, textarea, select {
 
 /* Keep the ring button's footprint clean while matching adjacent menu controls. */
 .token-usage-ring-button{padding:0;border:0;border-radius:0;box-sizing:border-box}
+
+
+/* Refine the token ring: slightly smaller, shifted right, with no center dot. */
+.token-ring{width:27px;height:27px;left:calc(50% + 3px)}
+.token-ring-inner,.token-ring-dot{display:none}
+.token-ring::before{inset:3px}
