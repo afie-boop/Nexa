@@ -73,6 +73,36 @@ const { checkRateLimit } = require("./security/rate_limiter");
 
 const app = express();
 
+// Cache OpenRouter model metadata so the token panel can show the actual model context window.
+let openRouterModelsCache = { expiresAt: 0, models: [] };
+async function getOpenRouterContextLimit(modelId) {
+  if (!modelId || modelId === "openrouter/free") return null;
+  try {
+    const now = Date.now();
+    if (openRouterModelsCache.expiresAt <= now || !openRouterModelsCache.models.length) {
+      const response = await axios.get("https://openrouter.ai/api/v1/models", {
+        headers: process.env.OPENROUTER_KEY ? { Authorization: "Bearer " + process.env.OPENROUTER_KEY } : {},
+        timeout: 5000
+      });
+      openRouterModelsCache = {
+        expiresAt: now + 30 * 60 * 1000,
+        models: Array.isArray(response.data?.data) ? response.data.data : []
+      };
+    }
+    const normalizedId = String(modelId).split(":")[0].toLowerCase();
+    const model = openRouterModelsCache.models.find(item =>
+      String(item.id || "").toLowerCase() === String(modelId).toLowerCase()
+    ) || openRouterModelsCache.models.find(item =>
+      String(item.id || "").toLowerCase() === normalizedId
+    );
+    const limit = Number(model?.top_provider?.context_length || model?.context_length);
+    return Number.isFinite(limit) && limit > 0 ? limit : null;
+  } catch (error) {
+    console.warn("[Token Context Limit] Tidak dapat mendapatkan metadata model:", error.message);
+    return null;
+  }
+}
+
 function getSafeAiErrorMessage(error) {
   const status = Number(error?.response?.status);
   const message = String(error?.message || "").toLowerCase();
@@ -797,7 +827,8 @@ ${brainContext.context}
         "[END CURRENT DATE/TIME]"
       : question.trim();
 
-    const tokenTelemetry = { model: null, models: [], provider: "OpenRouter", inputTokens: 0, outputTokens: 0, totalTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+    const tokenTelemetry = { model: null, models: [], provider: "OpenRouter", contextLimit: null, inputTokens: 0, outputTokens: 0, totalTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+    let contextLimitLookup = null;
     const answer = await runPipeline({
       task,
       question: modelQuestion,
@@ -815,6 +846,12 @@ ${brainContext.context}
         const promptDetails = usage.prompt_tokens_details || {};
         const completionDetails = usage.completion_tokens_details || {};
         tokenTelemetry.model = entry?.model || tokenTelemetry.model;
+        if (entry?.model) {
+          contextLimitLookup = getOpenRouterContextLimit(entry.model).then(limit => {
+            if (limit) tokenTelemetry.contextLimit = limit;
+            return limit;
+          });
+        }
         tokenTelemetry.provider = entry?.provider || tokenTelemetry.provider;
         tokenTelemetry.models.push({
           requestedModel: entry?.requestedModel || null,
@@ -839,7 +876,8 @@ ${brainContext.context}
     // Return the completed AI answer immediately. Persistence and memory learning
     // are best-effort background work and must never hold the chat response open.
     tokenTelemetry.model = tokenTelemetry.model || (task === "code" ? codingModel : generalModel) || fallbackModel || null;
-    sendAnswer(answer, { ...tokenTelemetry, contextLimit: null, usage: tokenTelemetry.totalTokens });
+    if (contextLimitLookup) await contextLimitLookup;
+    sendAnswer(answer, { ...tokenTelemetry, usage: tokenTelemetry.totalTokens });
 
     const persistChatInBackground = async () => {
       try {
