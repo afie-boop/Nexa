@@ -1006,22 +1006,22 @@ function App() {
         <div className="code-block-wrapper">
           <div className="code-block-header">
             <span className="code-lang">{lang}</span>
-            <button className="copy-btn" onClick={() => copyCode(content, key)}>
+            <button
+              type="button"
+              className="copy-btn"
+              onClick={() => copyCode(content, key)}
+              aria-label={copiedIdx === key ? "Kod disalin" : "Salin kod"}
+              title={copiedIdx === key ? "Kod disalin" : "Salin kod"}
+            >
               {copiedIdx === key ? (
-                <>
-                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="copy-btn-icon" height="14" width="14" xmlns="http://www.w3.org/2000/svg">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                  </svg>
-                  <span>Disalin!</span>
-                </>
+                <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="copy-btn-icon" height="20" width="20" xmlns="http://www.w3.org/2000/svg">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
               ) : (
-                <>
-                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="copy-btn-icon" height="14" width="14" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-                  </svg>
-                  <span>Salin kod</span>
-                </>
+                <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="copy-btn-icon" height="20" width="20" xmlns="http://www.w3.org/2000/svg">
+                  <rect x="8" y="8" width="12" height="12" rx="2"></rect>
+                  <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path>
+                </svg>
               )}
             </button>
           </div>
