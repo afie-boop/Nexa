@@ -1629,7 +1629,8 @@ function App() {
                 <div className="token-details-header"><div><strong>{tokenDetailsType === "code" ? "Code tokens" : "General tokens"}</strong><span>Maklumat penggunaan {tokenDetailsType === "code" ? "Coding AI" : "General AI"} untuk sesi semasa</span></div><button type="button" onClick={() => setTokenDetailsOpen(false)} aria-label="Tutup">×</button></div>
                 <div className="token-details-grid">
                   <div><span>Jumlah messages</span><strong>{categorizedMessages.length}</strong></div>
-                  <div><span>Model sebenar digunakan</span><strong>{latestUsage.models?.length ? [...new Set(latestUsage.models.map(item => item.model).filter(Boolean))].join(", ") : latestUsage.model || "Belum tersedia"}</strong></div>
+                  <div><span>Model ID utama (Models)</span><strong className="token-detail-mono">{(tokenDetailsType === "code" ? codingModel : generalModel).trim() || "Belum ditetapkan"}</strong></div>
+                  <div><span>Model ID Fallback (Models)</span><strong className="token-detail-mono">{fallbackModel.trim() || "Belum ditetapkan"}</strong></div>
                   <div><span>Total tokens</span><strong>{formatNumber(totalTokens)}</strong></div>
                   <div><span>Input tokens</span><strong>{formatNumber(sumUsage("inputTokens"))}</strong></div>
                   <div><span>Reasoning tokens</span><strong>{formatNumber(sumUsage("reasoningTokens"))}</strong></div>
