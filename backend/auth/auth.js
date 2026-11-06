@@ -67,7 +67,7 @@ function normalizeUsername(username) {
 }
 async function initUserStore() {
   if (storeReady) return;
-  if (process.env.DATABASE_URL) {
+  if (process.env.AXMCHAT_DATABASE_URL || process.env.DATABASE_URL) {
     pgPool = createDatabasePool({ max: 5, connectionTimeoutMillis: 10000 });
     await pgPool.query(
       "CREATE TABLE IF NOT EXISTS axmchat_users (" +
@@ -76,7 +76,7 @@ async function initUserStore() {
     );
   } else {
     if (process.env.NODE_ENV === "production") {
-      throw new Error("DATABASE_URL mesti ditetapkan dalam production supaya akaun AXMchat tidak hilang selepas restart/deploy.");
+      throw new Error("AXMCHAT_DATABASE_URL atau DATABASE_URL mesti ditetapkan dalam production supaya akaun AXMchat tidak hilang selepas restart/deploy.");
     }
     fs.mkdirSync(path.dirname(USERS_FILE), { recursive: true });
     if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "[]", "utf8");
