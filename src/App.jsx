@@ -97,6 +97,7 @@ function App() {
   const [editTitle, setEditTitle] = useState("");
   const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
   const [tokenDetailsOpen, setTokenDetailsOpen] = useState(false);
+  const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
   const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
   const [sessionActionMenuId, setSessionActionMenuId] = useState(null);
   const sessionLongPressTimerRef = useRef(null);
@@ -1529,20 +1530,46 @@ function App() {
             <button type="button" className="token-usage-trigger" onClick={() => setTokenDetailsOpen(true)} title="Lihat penggunaan token dan maklumat sesi" aria-label="Maklumat penggunaan token">
               <strong>{(() => { const total = chat.reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
             </button>
-            <button
-              className="card-action-btn"
-              onClick={handleShareChat}
-              disabled={chat.length === 0}
-            >
-              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="14" width="14" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="18" cy="5" r="3"></circle>
-                <circle cx="6" cy="12" r="3"></circle>
-                <circle cx="18" cy="19" r="3"></circle>
-                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-              </svg>
-              <span>{copiedIdx === "top-bar-share" ? "Disalin ✓" : "Share Chat"}</span>
-            </button>
+            <div className="session-menu-wrap">
+              <button
+                type="button"
+                className="session-menu-trigger"
+                onClick={() => setSessionMenuOpen(open => !open)}
+                aria-label="Menu sesi"
+                aria-expanded={sessionMenuOpen}
+                aria-haspopup="menu"
+                title="Menu sesi"
+              >
+                <svg stroke="currentColor" fill="currentColor" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <circle cx="12" cy="5" r="1.8" />
+                  <circle cx="12" cy="12" r="1.8" />
+                  <circle cx="12" cy="19" r="1.8" />
+                </svg>
+              </button>
+              {sessionMenuOpen && (
+                <div className="session-menu-popover" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    className="session-menu-item"
+                    onClick={() => {
+                      setSessionMenuOpen(false);
+                      handleShareChat();
+                    }}
+                    disabled={chat.length === 0}
+                  >
+                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                      <circle cx="18" cy="5" r="3"></circle>
+                      <circle cx="6" cy="12" r="3"></circle>
+                      <circle cx="18" cy="19" r="3"></circle>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                    <span>{copiedIdx === "top-bar-share" ? "Disalin ✓" : "Kongsi sesi"}</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
