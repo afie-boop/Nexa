@@ -7,7 +7,7 @@ const MEMORY_MAX_KEYS = 5000;
 let memoryCalls = 0;
 
 function dbEnabled() {
-  return !!process.env.DATABASE_URL;
+  return !!(process.env.AXMCHAT_DATABASE_URL || process.env.DATABASE_URL);
 }
 
 function getPool() {
@@ -96,7 +96,14 @@ async function checkRateLimit(key, limit, windowMs) {
       retryAfter: Math.max(1, Math.ceil((windowMs - (now - startedAt)) / 1000))
     };
   } catch (error) {
-    console.warn("[RateLimit Warning]: persistent limiter unavailable; using bounded local fallback.", error.message);
+    if (process.env.NODE_ENV === "production") {
+      // Never silently downgrade to per-instance memory limits in production:
+      // doing so would let attackers bypass limits by spreading requests
+      // across instances or waiting for a restart.
+      console.error("[RateLimit Error]: persistent limiter unavailable in production.", error.message);
+      throw new Error("Persistent rate limiter unavailable.");
+    }
+    console.warn("[RateLimit Warning]: using bounded local fallback outside production.", error.message);
     return memoryCheck(key, limit, windowMs);
   }
 }
