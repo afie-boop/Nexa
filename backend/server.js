@@ -829,6 +829,7 @@ ${brainContext.context}
 
     // Return the completed AI answer immediately. Persistence and memory learning
     // are best-effort background work and must never hold the chat response open.
+    tokenTelemetry.model = tokenTelemetry.model || (task === "code" ? codingModel : generalModel) || fallbackModel || null;
     sendAnswer(answer, { ...tokenTelemetry, contextLimit: null, usage: tokenTelemetry.totalTokens });
 
     const persistChatInBackground = async () => {
