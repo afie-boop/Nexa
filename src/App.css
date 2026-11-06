@@ -2435,3 +2435,14 @@ button, input, textarea, select {
   .home-clock-time { font-size: 21px; }
   .home-clock-date { font-size: 10px; letter-spacing: .025em; }
 }
+
+
+/* Final overrides for the unified remaining-token ring. */
+.token-usage-ring-button{position:relative;display:flex;flex:0 0 48px;width:48px;height:60px;min-width:48px;padding:0;align-items:flex-end;justify-content:center;overflow:visible;border:0;border-radius:0;background:transparent;color:var(--primary-text)}
+.token-usage-ring-button:hover,.token-usage-ring-button:focus-visible{border:0;background:transparent;color:#fff}
+.token-ring{position:absolute;top:50%;left:50%;width:31px;height:31px;display:grid;place-items:center;border-radius:50%;background:conic-gradient(#e5e5e5 calc(100% - var(--token-used,0%)),#454545 0);transform:translate(-50%,-50%)}
+.token-ring::before{content:"";position:absolute;inset:3px;border-radius:50%;background:#111}
+.token-ring-inner{position:relative;z-index:1;width:7px;height:7px;display:grid;place-items:center;border-radius:50%;background:#d8d8d8}
+.token-ring-dot{width:3px;height:3px;border-radius:50%;background:#111}
+.token-usage-ring-button strong{position:absolute;bottom:2px;left:0;width:100%;overflow:hidden;color:#a9a9a9;font-size:10px;font-weight:600;line-height:1;text-align:center;text-overflow:ellipsis;white-space:nowrap;font-variant-numeric:tabular-nums}
+@media(max-width:480px){.top-bar-actions{gap:8px}.token-usage-ring-button{flex-basis:44px;width:44px;min-width:44px}}
