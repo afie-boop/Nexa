@@ -826,11 +826,23 @@ function App() {
           } else if (data.type === "status") {
             if (data.text) setLoadingStatus(data.text);
           } else if (data.type === "answer") {
-            finalAnswer = data.text;
+            finalAnswer = typeof data.text === "string" ? data.text : "";
           } else if (data.type === "error") {
             serverError = data.text;
           }
         }
+      }
+
+      // Flush the decoder and parse any final SSE event left in the buffer.
+      buffer += decoder.decode();
+      const trailingParts = buffer.split("\n\n");
+      for (const part of trailingParts) {
+        if (!part.startsWith("data: ")) continue;
+        const data = JSON.parse(part.slice(6));
+        if (data.type === "answer") finalAnswer = typeof data.text === "string" ? data.text : "";
+        else if (data.type === "error") serverError = data.text;
+        else if (data.type === "status" && data.text) setLoadingStatus(data.text);
+        else if (data.type === "process_step" && data.label) setLoadingStatus(data.label);
       }
 
       if (serverError) throw new Error(serverError);
