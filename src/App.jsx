@@ -1533,11 +1533,10 @@ function App() {
             </button>
 
             <div className="ai-status-container">
-              <span className="ai-name">AXMchat</span>
-              <div className="status-indicator">
-                <span className={`status-dot ${currentStatus === "Thinking" ? "thinking" : ""}`} />
+              {load && <div className="status-indicator">
+                <span className="status-dot thinking" />
                 <span>{currentStatus}</span>
-              </div>
+              </div>}
             </div>
           </div>
 
@@ -1618,10 +1617,6 @@ function App() {
             {/* 2. Hero Section (when empty) */}
             {chat.length === 0 && !load ? (
               <div className="hero-section animate-fade">
-                <div className="hero-logo">A</div>
-                <h2 className="hero-title">Hello, I'm AXMchat.</h2>
-                <p className="hero-tagline">Build. Think. Create.</p>
-
                 <div className="suggestion-prompts-container">
                   <button
                     className="suggestion-btn"
