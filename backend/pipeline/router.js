@@ -9,6 +9,8 @@ async function router(data) {
     history = [],
     generalModel,
     codingModel,
+    generalProvider = "openrouter",
+    codingProvider = "openrouter",
     fallbackModel,
     internalSystemContext = "",
     sendStatus = () => {}
@@ -18,10 +20,10 @@ async function router(data) {
 
   let provider, model;
   if (task === "code") {
-    provider = "openrouter";
+    provider = codingProvider;
     model = codingModel || "openrouter/free";
   } else {
-    provider = "openrouter";
+    provider = generalProvider;
     model = generalModel || "qwen/qwen3-235b-a22b-2507";
   }
 
