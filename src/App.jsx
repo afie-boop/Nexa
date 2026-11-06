@@ -160,18 +160,8 @@ function App() {
 
   const [load, setLoad] = useState(false);
 
-  const [aiAvailability, setAiAvailability] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("axmchat_ai_availability") || "null");
-      return {
-        general: saved?.general !== false,
-        coding: saved?.coding !== false,
-        fallback: saved?.fallback !== false
-      };
-    } catch {
-      return { general: true, coding: true, fallback: true };
-    }
-  });
+  // AI Control UI is removed; all configured AI roles remain enabled.
+  const aiAvailability = { general: true, coding: true, fallback: true };
 
   const [responseMode, setResponseMode] = useState(() => {
     try {
@@ -384,14 +374,6 @@ function App() {
       console.error(err);
     }
   }, [memoryEnabled]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("axmchat_ai_availability", JSON.stringify(aiAvailability));
-    } catch (err) {
-      console.error(err);
-    }
-  }, [aiAvailability]);
 
   useEffect(() => {
     try {
@@ -1003,10 +985,27 @@ function App() {
   }
 
   function clearChat() {
-    if (window.confirm("Adakah anda pasti mahu memadamkan semua sejarah chat?")) {
-      updateActiveMessages([]);
-      setError(null);
+    if (!window.confirm("Padam SEMUA sejarah perbualan pada peranti ini? Memori Brain tidak akan dipadam.")) return;
+    const newSession = {
+      id: "conv_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+      title: "Sesi Baru",
+      messages: [],
+      pinned: false,
+      archived: false,
+      createdAt: Date.now()
+    };
+    try {
+      localStorage.setItem("nexa_conversations", JSON.stringify([newSession]));
+      localStorage.setItem("nexa_active_id", newSession.id);
+    } catch (err) {
+      console.error("Gagal memadam sejarah tempatan:", err);
     }
+    setConversations([newSession]);
+    setActiveId(newSession.id);
+    setActiveNav("chats");
+    setSessionHistoryOpen(false);
+    setHistoryMenuVisible(false);
+    setError(null);
   }
 
   const filteredConversations = conversations.filter(c => {
@@ -1697,26 +1696,6 @@ function App() {
             <div className="sub-panel-inner">
               <h2 className="panel-title">AXMchat AI Models</h2>
               <p className="panel-subtitle">Tetapkan Model ID tersuai untuk General AI, Coding AI, dan Fallback AI.</p>
-
-              <div className="flat-card" style={{ marginBottom: "16px" }}>
-                <h3 style={{ fontSize: "16px", fontWeight: "600", marginBottom: "6px" }}>AI Control</h3>
-                <p className="flat-card-desc" style={{ marginBottom: "12px" }}>Hidupkan atau matikan AI yang dibenarkan bekerja. Tetapan ini dikuatkuasakan di server.</p>
-                {[
-                  ["general", "General AI", "AI untuk sembang dan tugasan umum."],
-                  ["coding", "Coding AI", "AI untuk coding, debugging dan tugasan teknikal."],
-                  ["fallback", "Fallback AI", "AI cadangan apabila model utama gagal."]
-                ].map(([key, label, desc], index) => (
-                  <div key={key} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "16px", padding: "12px 0", borderTop: index === 0 ? "none" : "1px solid var(--border)" }}>
-                    <div>
-                      <strong style={{ display: "block", fontSize: "14px" }}>{label}</strong>
-                      <span style={{ fontSize: "12px", color: "var(--secondary-text)" }}>{desc}</span>
-                    </div>
-                    <button type="button" className="card-action-btn" aria-pressed={aiAvailability[key]} onClick={() => setAiAvailability(prev => ({ ...prev, [key]: !prev[key] }))}>
-                      {aiAvailability[key] ? "ON" : "OFF"}
-                    </button>
-                  </div>
-                ))}
-              </div>
 
               <div className="grid-container">
                 <div className="flat-card">                  <span className="flat-card-title">General AI</span>
