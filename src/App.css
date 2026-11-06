@@ -2072,7 +2072,7 @@ button, input, textarea, select {
 .token-details-header button{flex:0 0 34px;width:34px;height:34px;border:1px solid #3a3a3a;border-radius:9px;color:#f5f5f5;background:#242424;font-size:22px;cursor:pointer}
 .token-details-header button:hover{background:#303030}
 .token-details-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:13px;padding:18px 24px 22px;overflow:visible}
-.token-details-grid>div{min-width:0;min-height:68px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:8px;padding:13px 15px;border:1px solid #383838;border-radius:11px;background:#222}
+.token-details-grid>div{min-width:0;min-height:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:6px;padding:5px 0;border:0;border-radius:0;background:transparent}
 .token-details-grid span{display:block;color:#a3a3a3;font-size:11px;font-weight:500;line-height:1.35;letter-spacing:.01em}
 .token-details-grid strong{display:block;max-width:100%;overflow-wrap:anywhere;word-break:break-word;color:#f2f2f2;font-size:13px;font-weight:550;line-height:1.45}
 .token-details-grid .token-detail-mono{font-family:monospace;font-size:11px;color:#d0d0d0}
@@ -2084,7 +2084,7 @@ button, input, textarea, select {
 .token-raw-list pre{max-height:none;overflow:visible;margin:0;padding:0 0 12px;white-space:pre-wrap;overflow-wrap:anywhere;color:#d8d8d8;font:inherit;font-size:13px;line-height:1.6;font-family:inherit}
 .token-raw-list>p{padding:10px 0;color:#999;font-size:12px}
 .token-model-calls{padding:0 24px 14px;max-height:none;overflow:visible}
-.token-model-call{display:flex;flex-direction:column;gap:6px;margin-bottom:9px;padding:12px 14px;border:1px solid #303030;border-radius:9px;background:#202020}
+.token-model-call{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;padding:8px 0;border:0;border-bottom:1px solid #292929;border-radius:0;background:transparent}
 .token-model-call strong{font-size:12px;color:#eee;overflow-wrap:anywhere;line-height:1.45}
 .token-model-call span,.token-model-call small{font-size:10px;color:#a3a3a3;overflow-wrap:anywhere;line-height:1.5}
 @media(max-width:600px){
