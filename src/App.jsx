@@ -1689,7 +1689,7 @@ function App() {
                   <div><span>Cache tokens (read)</span><strong>{formatNumber(sumUsage("cacheReadTokens"))}</strong></div>
                   <div><span>Cache tokens (write)</span><strong>{formatNumber(sumUsage("cacheWriteTokens"))}</strong></div>
                   <div><span>Provider terakhir</span><strong>{latestUsage.provider || "OpenRouter"}</strong></div>
-                  <div><span>Context limit</span><strong>{latestUsage.contextLimit ? formatNumber(latestUsage.contextLimit) : contextLimitLoading ? "Mengesan model..." : selectedModelContextLimit ? formatNumber(selectedModelContextLimit) : "Tidak tersedia"}</strong></div>
+                  <div><span>Context limit</span><strong>{latestUsage.contextLimit ? formatNumber(latestUsage.contextLimit) : modelContextLimits[latestUsage.model || generalModel] ? formatNumber(modelContextLimits[latestUsage.model || generalModel]) : "Lihat per model di bawah"}</strong></div>
                   <div><span>Session</span><strong className="token-detail-mono">{activeConversation.id || "—"}</strong></div>
                   <div><span>Session created</span><strong>{activeConversation.createdAt ? new Date(activeConversation.createdAt).toLocaleString() : "Tidak diketahui"}</strong></div>
                 </div>
