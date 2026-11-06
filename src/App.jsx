@@ -1578,7 +1578,7 @@ function App() {
                 <div className="token-details-header"><div><strong>Usage details</strong><span>Maklumat penggunaan sesi semasa</span></div><button type="button" onClick={() => setTokenDetailsOpen(false)} aria-label="Tutup">×</button></div>
                 <div className="token-details-grid">
                   <div><span>Jumlah messages</span><strong>{chat.length}</strong></div>
-                  <div><span>Model</span><strong>{latestUsage.model || "Belum tersedia"}</strong></div>
+                  <div><span>Model sebenar digunakan</span><strong>{latestUsage.models?.length ? [...new Set(latestUsage.models.map(item => item.model).filter(Boolean))].join(", ") : latestUsage.model || "Belum tersedia"}</strong></div>
                   <div><span>Total tokens</span><strong>{formatNumber(totalTokens)}</strong></div>
                   <div><span>Input tokens</span><strong>{formatNumber(sumUsage("inputTokens"))}</strong></div>
                   <div><span>Reasoning tokens</span><strong>{formatNumber(sumUsage("reasoningTokens"))}</strong></div>
@@ -1593,6 +1593,15 @@ function App() {
                   <div><span>Assistant messages</span><strong>{assistantMessages.length}</strong></div>
                   <div><span>Session created</span><strong>{activeConversation.createdAt ? new Date(activeConversation.createdAt).toLocaleString() : "Tidak diketahui"}</strong></div>
                 </div>
+                {latestUsage.models?.length > 0 && <div className="token-model-calls">
+                  <div className="token-raw-heading">Model calls ({latestUsage.models.length})</div>
+                  {latestUsage.models.map((item, index) => <div className="token-model-call" key={index}>
+                    <strong>{item.model || "Model tidak diketahui"}</strong>
+                    <span>{item.usedFallback ? "Fallback" : "Primary"} · {item.provider}</span>
+                    <small>Input {formatNumber(item.inputTokens)} · Output {formatNumber(item.outputTokens)} · Total {formatNumber(item.totalTokens)}</small>
+                    {item.requestedModel && item.requestedModel !== item.model && <small>Diminta: {item.requestedModel}</small>}
+                  </div>)}
+                </div>}
                 <div className="token-raw-heading">Raw messages ({rawMessages.length})</div>
                 <div className="token-raw-list">{rawMessages.length ? rawMessages.map(item => <article key={item.index}><div><strong>#{item.index} {item.role}</strong><span>{item.text.length.toLocaleString()} chars</span></div><pre>{item.text}</pre></article>) : <p>Belum ada mesej dalam sesi ini.</p>}</div>
               </section>
