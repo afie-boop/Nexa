@@ -62,9 +62,9 @@ async function runPipeline(data) {
       ? (data.codingModel || "openrouter/free")
       : (data.generalModel || "qwen/qwen3-235b-a22b-2507");
 
-    const fastSystem = fastTask === "code"
-      ? "Jawab terus dengan penyelesaian yang diperlukan. Jangan buat analisis panjang atau langkah tambahan yang tidak diminta. Jika memberi kod, pastikan kod boleh digunakan."
-      : "Jawab terus, tepat, dan padat. Elakkan penerangan atau langkah tambahan yang tidak diperlukan.";
+    const fastSystem = QUALITY_RULES + (fastTask === "code"
+      ? "\nCODING: Beri penyelesaian yang boleh digunakan. Jangan reka fail, API atau struktur projek yang belum diberikan. Jangan ubah bahagian yang tidak diminta. Beri kod lengkap apabila diminta."
+      : "\nGENERAL: Jawab secara tepat, bernas dan semula jadi. Beri contoh hanya apabila membantu.");
 
     const internalContextRule = INTERNAL_CONTEXT_RULE +
       "\nGunakan runtime context dalaman hanya apabila diperlukan untuk menjawab soalan. Jangan volunteer tarikh, masa, timezone atau metadata lain untuk soalan yang tidak berkaitan.";
