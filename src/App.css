@@ -2066,7 +2066,7 @@ button, input, textarea, select {
 .token-usage-trigger strong{font-size:14px;font-weight:650}
 .token-usage-dot{width:15px;height:15px;display:inline-block;border:2px solid #d4d4d4;border-radius:50%}
 .token-details-backdrop{position:fixed;inset:0;z-index:3000;display:flex;justify-content:flex-end;align-items:stretch;padding:0;background:rgba(0,0,0,.66)}
-.token-details-panel{width:min(520px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden;color:#f5f5f5;background:#0d0d0d;border-left:1px solid #292929;box-shadow:-18px 0 50px rgba(0,0,0,.35)}
+.token-details-panel{width:min(520px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden;color:#f5f5f5;background:#141414;border-left:1px solid #383838;box-shadow:-18px 0 50px rgba(0,0,0,.35)}
 .token-details-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px;border-bottom:1px solid #242424}
 .token-details-header>div{display:grid;gap:4px}.token-details-header strong{font-size:15px;font-weight:650;letter-spacing:.01em}.token-details-header span{color:#a6a6a6;font-size:12px}
 .token-details-header button{width:32px;height:32px;border:1px solid #292929;border-radius:7px;color:#f5f5f5;background:transparent;font-size:22px;cursor:pointer}
