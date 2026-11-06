@@ -39,10 +39,13 @@ async function askGemini(message, options = {}) {
   }
 
   const model = String(options.model || DEFAULT_MODEL).trim();
-  const messages = [];
-  if (options.system) messages.push({ role: "system", content: String(options.system) });
-  if (Array.isArray(options.history)) messages.push(...options.history.slice(-12));
-  messages.push({ role: "user", content: String(message || "") });
+  const messages = Array.isArray(options.messages)
+    ? options.messages
+    : [
+        ...(options.system ? [{ role: "system", content: String(options.system) }] : []),
+        ...(Array.isArray(options.history) ? options.history.slice(-12) : []),
+        { role: "user", content: String(message || "") }
+      ];
 
   const { contents, systemText } = toGeminiContents(messages);
   if (!contents.length) throw new Error("Fallback Gemini menerima mesej kosong.");
