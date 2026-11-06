@@ -328,24 +328,39 @@ function App() {
   }, []);
   useEffect(() => {
     let cancelled = false;
+
     async function checkGitHubStatus() {
+      if (!authUser) {
+        setGithubConnected(false);
+        setGithubUsername(null);
+        setGithubAuthLoading(false);
+        return;
+      }
+
+      setGithubAuthLoading(true);
       try {
         const res = await fetch("/api/auth/github/status", { credentials: "same-origin" });
         const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Gagal menyemak sambungan GitHub.");
         if (!cancelled) {
           setGithubConnected(!!data.connected);
           setGithubUsername(data.username || null);
           setGithubAuthError("");
         }
       } catch (err) {
-        if (!cancelled) setGithubAuthError("Gagal menyemak sambungan GitHub.");
+        if (!cancelled) {
+          setGithubConnected(false);
+          setGithubUsername(null);
+          setGithubAuthError("Gagal menyemak sambungan GitHub.");
+        }
       } finally {
         if (!cancelled) setGithubAuthLoading(false);
       }
     }
+
     checkGitHubStatus();
     return () => { cancelled = true; };
-  }, []);
+  }, [authUser]);
 
   function connectGitHub() {
     window.location.assign("/api/auth/github");
