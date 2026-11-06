@@ -28,9 +28,9 @@ async function executeOpenRouterCall(messages, model, requestOptions = {}) {
     const response = await send(body);
     const choice = response.data?.choices?.[0];
     const content = choice?.message?.content;
-    requestOptions.onUsage?.({ model: response.data?.model || model, provider: choice?.provider || response.data?.provider || "OpenRouter", usage: response.data?.usage || {} });
+    requestOptions.onUsage?.({ requestedModel: model, model: response.data?.model || model, provider: choice?.provider || response.data?.provider || "OpenRouter", usedFallback: Boolean(requestOptions.usedFallback), usage: response.data?.usage || {} });
     if (content !== undefined && content !== null) {
-      return { content: String(content), finishReason: choice.finish_reason || null };
+      return { content: String(content), finishReason: choice.finish_reason || null, model: response.data?.model || model, provider: choice?.provider || response.data?.provider || "OpenRouter" };
     }
     throw new Error("Balasan OpenRouter tidak mengandungi format kandungan yang sah.");
   } catch (err) {
@@ -40,9 +40,9 @@ async function executeOpenRouterCall(messages, model, requestOptions = {}) {
       const retry = await send(retryBody);
       const choice = retry.data?.choices?.[0];
       const content = choice?.message?.content;
-      requestOptions.onUsage?.({ model: retry.data?.model || model, provider: choice?.provider || retry.data?.provider || "OpenRouter", usage: retry.data?.usage || {} });
+      requestOptions.onUsage?.({ requestedModel: model, model: retry.data?.model || model, provider: choice?.provider || retry.data?.provider || "OpenRouter", usedFallback: Boolean(requestOptions.usedFallback), usage: retry.data?.usage || {} });
       if (content !== undefined && content !== null) {
-        return { content: String(content), finishReason: choice.finish_reason || null };
+        return { content: String(content), finishReason: choice.finish_reason || null, model: retry.data?.model || model, provider: choice?.provider || retry.data?.provider || "OpenRouter" };
       }
     }
     throw err;
@@ -95,7 +95,7 @@ async function askOpenRouter(message, options = {}) {
     } catch (primaryError) {
       if (!fallbackEnabled || !backupModel || backupModel === primaryModel) throw primaryError;
       console.warn("[OpenRouter Fallback] Switching from " + primaryModel + " to " + backupModel + ": " + primaryError.message);
-      return await callWithRetries(messages, backupModel, { maxRetries: 0, maxTokens, reasoningEffort: null, onUsage });
+      return await callWithRetries(messages, backupModel, { maxRetries: 0, maxTokens, reasoningEffort: null, onUsage, usedFallback: true });
     }
   };
 
@@ -111,11 +111,13 @@ async function askOpenRouter(message, options = {}) {
       role: "user",
       content: "Sambung tepat dari tempat jawapan terakhir terhenti. Jangan ulang kandungan yang sudah diberi, jangan ringkaskan, dan jangan tinggalkan mana-mana bahagian. Jika sedang menulis kod, sambung kod yang sama sehingga lengkap dan pastikan penutup blok, fungsi dan fail disertakan."
     });
-    result = await callWithRetries(messages, primaryModel, {
+    const continuationModel = result.model || primaryModel;
+    result = await callWithRetries(messages, continuationModel, {
       maxRetries: 1,
       maxTokens,
       reasoningEffort,
-      onUsage
+      onUsage,
+      usedFallback: continuationModel !== primaryModel
     });
     completeText += result.content || "";
   }
