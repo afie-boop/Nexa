@@ -118,6 +118,7 @@ function App() {
   const [editTitle, setEditTitle] = useState("");
   const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
   const [tokenDetailsOpen, setTokenDetailsOpen] = useState(false);
+  const [tokenDetailsType, setTokenDetailsType] = useState("general");
   const [selectedModelContextLimit, setSelectedModelContextLimit] = useState(null);
   const [contextLimitLoading, setContextLimitLoading] = useState(false);
   const [modelContextLimits, setModelContextLimits] = useState({});
@@ -1596,8 +1597,11 @@ function App() {
           </div>
 
           <div className="top-bar-actions">
-            <button type="button" className="token-usage-trigger" onClick={() => setTokenDetailsOpen(true)} title="Token usage" aria-label="Token usage">
-              <span>Token</span><strong>{(() => { const total = chat.filter(item => item.type === "ai").reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
+            <button type="button" className="token-usage-trigger" onClick={() => { setTokenDetailsType("general"); setTokenDetailsOpen(true); }} title="Token General AI" aria-label="Token General AI">
+              <span>General</span><strong>{(() => { const total = chat.filter(item => item.type === "ai" && item.usageCategory !== "code").reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
+            </button>
+            <button type="button" className="token-usage-trigger" onClick={() => { setTokenDetailsType("code"); setTokenDetailsOpen(true); }} title="Token Coding AI" aria-label="Token Coding AI">
+              <span>Code</span><strong>{(() => { const total = chat.filter(item => item.type === "ai" && item.usageCategory === "code").reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
             </button>
             <div className="session-menu-wrap">
               <button
@@ -1646,47 +1650,33 @@ function App() {
         </header>
 
         {tokenDetailsOpen && (() => {
-          const assistantMessages = chat.map((item, index) => ({ ...item, _index: index })).filter(item => item.type === "ai");
-          const usageMessages = assistantMessages.filter(item => item.usage);
+          const allAssistantMessages = chat.map((item, index) => ({ ...item, _index: index })).filter(item => item.type === "ai");
+          const categorizedMessages = allAssistantMessages.filter(item => (item.usageCategory || "general") === tokenDetailsType);
+          const usageMessages = categorizedMessages.filter(item => item.usage);
           const sumUsage = key => usageMessages.reduce((sum, item) => sum + Number(item.usage?.[key] || 0), 0);
           const latestUsage = [...usageMessages].reverse().find(item => item.usage)?.usage || {};
           const totalTokens = sumUsage("totalTokens");
           const formatNumber = value => Number(value || 0).toLocaleString();
           const selectedMessageIndexes = new Set();
-          assistantMessages.forEach(item => {
+          categorizedMessages.forEach(item => {
             selectedMessageIndexes.add(item._index);
             for (let i = item._index - 1; i >= 0; i--) {
               if (chat[i]?.type === "user") { selectedMessageIndexes.add(i); break; }
             }
           });
           const rawMessages = chat.map((item, index) => ({ role: item.type === "user" ? "User" : "Assistant", text: String(item.text || ""), index: index + 1 })).filter((item, index) => selectedMessageIndexes.has(index));
-          const modelCalls = usageMessages.flatMap(item => Array.isArray(item.usage?.models) ? item.usage.models : []);
-          const aggregatedModelCalls = [...modelCalls.reduce((map, item) => {
-            const key = [item.model || "unknown", item.provider || "", item.usedFallback ? "fallback" : "primary"].join("|");
-            const current = map.get(key) || { ...item, inputTokens: 0, outputTokens: 0, totalTokens: 0, calls: 0 };
-            current.inputTokens += Number(item.inputTokens || 0);
-            current.outputTokens += Number(item.outputTokens || 0);
-            current.totalTokens += Number(item.totalTokens || 0);
-            current.calls += 1;
-            map.set(key, current);
-            return map;
-          }, new Map()).values()];
-          const configuredModels = [
-            { label: "General", model: generalModel },
-            { label: "Coding", model: codingModel },
-            { label: "Fallback", model: fallbackModel }
-          ].filter(item => item.model?.trim());
           return (
             <div className="token-details-backdrop" onClick={() => setTokenDetailsOpen(false)}>
               <section className="token-details-panel" role="dialog" aria-modal="true" aria-label="Token usage details" onClick={event => event.stopPropagation()}>
-                <div className="token-details-header"><div><strong>Token usage</strong><span>Gabungan penggunaan General AI dan Coding AI untuk sesi semasa</span></div><button type="button" onClick={() => setTokenDetailsOpen(false)} aria-label="Tutup">×</button></div>
+                <div className="token-details-header"><div><strong>{tokenDetailsType === "code" ? "Code tokens" : "General tokens"}</strong><span>Maklumat penggunaan {tokenDetailsType === "code" ? "Coding AI" : "General AI"} untuk sesi semasa</span></div><button type="button" onClick={() => setTokenDetailsOpen(false)} aria-label="Tutup">×</button></div>
                 <div className="token-details-grid">
-                  <div><span>Jumlah messages</span><strong>{assistantMessages.length}</strong></div>
-                  <div><span>Model sebenar digunakan</span><strong className="token-detail-mono">{latestUsage.models?.length ? [...new Set(latestUsage.models.map(item => item.model).filter(Boolean))].join(", ") : latestUsage.model || "Belum tersedia"}</strong></div>
+                  <div><span>Jumlah messages</span><strong>{categorizedMessages.length}</strong></div>
+                  <div><span>Model ID utama (Models)</span><strong className="token-detail-mono">{(tokenDetailsType === "code" ? codingModel : generalModel).trim() || "Belum ditetapkan"}</strong></div>
+                  <div><span>Model ID Fallback (Models)</span><strong className="token-detail-mono">{fallbackModel.trim() || "Belum ditetapkan"}</strong></div>
                   <div><span>Total tokens</span><strong>{formatNumber(totalTokens)}</strong></div>
                   <div><span>Input tokens</span><strong>{formatNumber(sumUsage("inputTokens"))}</strong></div>
                   <div><span>Reasoning tokens</span><strong>{formatNumber(sumUsage("reasoningTokens"))}</strong></div>
-                  <div><span>Assistant messages</span><strong>{assistantMessages.length}</strong></div>
+                  <div><span>Assistant messages</span><strong>{categorizedMessages.length}</strong></div>
                   <div><span>Session</span><strong className="token-detail-mono">{activeConversation.id || "—"}</strong></div>
                   <div><span>Provider</span><strong>{latestUsage.provider || "OpenRouter"}</strong></div>
                   <div><span>Context limit</span><strong>{latestUsage.contextLimit ? formatNumber(latestUsage.contextLimit) : "Tidak dibekalkan provider"}</strong></div>
@@ -1694,6 +1684,7 @@ function App() {
                   <div><span>Output tokens</span><strong>{formatNumber(sumUsage("outputTokens"))}</strong></div>
                   <div><span>Cache tokens (read)</span><strong>{formatNumber(sumUsage("cacheReadTokens"))}</strong></div>
                   <div><span>Cache tokens (write)</span><strong>{formatNumber(sumUsage("cacheWriteTokens"))}</strong></div>
+                  
                   <div><span>Session created</span><strong>{activeConversation.createdAt ? new Date(activeConversation.createdAt).toLocaleString() : "Tidak diketahui"}</strong></div>
                 </div>
                 {latestUsage.models?.length > 0 && <div className="token-model-calls">
