@@ -28,6 +28,7 @@ async function executeOpenRouterCall(messages, model, requestOptions = {}) {
     const response = await send(body);
     const choice = response.data?.choices?.[0];
     const content = choice?.message?.content;
+    requestOptions.onUsage?.({ model: response.data?.model || model, provider: choice?.provider || response.data?.provider || "OpenRouter", usage: response.data?.usage || {} });
     if (content !== undefined && content !== null) {
       return { content: String(content), finishReason: choice.finish_reason || null };
     }
@@ -39,6 +40,7 @@ async function executeOpenRouterCall(messages, model, requestOptions = {}) {
       const retry = await send(retryBody);
       const choice = retry.data?.choices?.[0];
       const content = choice?.message?.content;
+      requestOptions.onUsage?.({ model: retry.data?.model || model, provider: choice?.provider || retry.data?.provider || "OpenRouter", usage: retry.data?.usage || {} });
       if (content !== undefined && content !== null) {
         return { content: String(content), finishReason: choice.finish_reason || null };
       }
@@ -75,7 +77,8 @@ async function askOpenRouter(message, options = {}) {
     maxTokens,
     reasoningEffort,
     fallbackEnabled = true,
-    maxContinuations = 4
+    maxContinuations = 4,
+    onUsage
   } = options;
 
   const messages = [];
@@ -88,11 +91,11 @@ async function askOpenRouter(message, options = {}) {
 
   const request = async () => {
     try {
-      return await callWithRetries(messages, primaryModel, { maxRetries, maxTokens, reasoningEffort });
+      return await callWithRetries(messages, primaryModel, { maxRetries, maxTokens, reasoningEffort, onUsage });
     } catch (primaryError) {
       if (!fallbackEnabled || !backupModel || backupModel === primaryModel) throw primaryError;
       console.warn("[OpenRouter Fallback] Switching from " + primaryModel + " to " + backupModel + ": " + primaryError.message);
-      return await callWithRetries(messages, backupModel, { maxRetries: 0, maxTokens, reasoningEffort: null });
+      return await callWithRetries(messages, backupModel, { maxRetries: 0, maxTokens, reasoningEffort: null, onUsage });
     }
   };
 
@@ -111,7 +114,8 @@ async function askOpenRouter(message, options = {}) {
     result = await callWithRetries(messages, primaryModel, {
       maxRetries: 1,
       maxTokens,
-      reasoningEffort
+      reasoningEffort,
+      onUsage
     });
     completeText += result.content || "";
   }
