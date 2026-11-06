@@ -173,9 +173,9 @@ function App() {
   });
 
   const responseModes = {
-    fast: { label: "Fast", description: "Jawapan pantas & ringkas", icon: "⚡" },
-    balance: { label: "Balance", description: "Seimbang antara kelajuan & kualiti", icon: "⚖" },
-    thinking: { label: "Thinking", description: "Reasoning lebih mendalam", icon: "🧠" }
+    fast: { label: "Fast" },
+    balance: { label: "Balance" },
+    thinking: { label: "Thinking" }
   };
 
   const [modeMenuOpen, setModeMenuOpen] = useState(false);
@@ -1635,10 +1635,8 @@ function App() {
                       aria-expanded={modeMenuOpen}
                       aria-haspopup="menu"
                     >
-                      <span className="mode-picker-icon">{responseModes[responseMode].icon}</span>
                       <span className="mode-picker-copy">
                         <strong>{responseModes[responseMode].label}</strong>
-                        <span>{responseModes[responseMode].description}</span>
                       </span>
                       <svg className="mode-picker-chevron" stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="14" width="14">
                         <polyline points="6 9 12 15 18 9"></polyline>
@@ -1660,10 +1658,8 @@ function App() {
                               setModeMenuOpen(false);
                             }}
                           >
-                            <span className="mode-option-icon">{mode.icon}</span>
                             <span className="mode-option-copy">
                               <strong>{mode.label}</strong>
-                              <span>{mode.description}</span>
                             </span>
                             {responseMode === key && <span className="mode-option-check">✓</span>}
                           </button>
