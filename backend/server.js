@@ -179,11 +179,37 @@ app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("Content-Security-Policy", [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://github.com https://api.github.com"
+  ].join("; "));
   if (process.env.NODE_ENV === "production") res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   next();
 });
 app.use(express.json({ limit: "256kb" }));
 app.use(cookieParser());
+
+// Reject cross-origin state-changing browser requests to reduce CSRF risk.
+// Same-origin frontend requests continue to work; non-browser clients without
+// an Origin header are not affected by this browser-origin check.
+app.use((req, res, next) => {
+  if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next();
+  const origin = req.get("origin");
+  if (!origin) return next();
+  const expectedOrigin = `${req.protocol}://${req.get("host")}`;
+  if (origin !== expectedOrigin) {
+    return res.status(403).json({ status: "error", message: "Permintaan silang asal disekat." });
+  }
+  return next();
+});
 
 const protectedAuth = (req, res, next) => {
   const session = getAuth(req);
