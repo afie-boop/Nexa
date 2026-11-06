@@ -2452,7 +2452,8 @@ button, input, textarea, select {
 .token-usage-ring-button{padding:0;border:0;border-radius:0;box-sizing:border-box}
 
 
-/* Refine the token ring: slightly smaller, shifted right, with no center dot. */
-.token-ring{width:27px;height:27px;left:calc(50% + 3px)}
+/* Final token indicator sizing and precise count alignment. */
+.token-ring{width:21px;height:21px;left:calc(50% + 3px)}
+.token-ring::before{inset:2.5px}
 .token-ring-inner,.token-ring-dot{display:none}
-.token-ring::before{inset:3px}
+.token-usage-ring-button strong{left:calc(50% + 3px);width:100%;transform:translateX(-50%);text-align:center}
