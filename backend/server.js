@@ -53,6 +53,7 @@ console.log("=================================");
 console.log("Nexa Boot");
 console.log("=================================");
 console.log("OpenRouter Key :", !!process.env.OPENROUTER_KEY);
+console.log("Gemini Fallback:", !!process.env.GEMINI_API_KEY);
 console.log("PORT           :", process.env.PORT || 3000);
 console.log("=================================");
 
@@ -107,7 +108,7 @@ function getSafeAiErrorMessage(error) {
   const status = Number(error?.response?.status);
   const message = String(error?.message || "").toLowerCase();
 
-  if (status === 429 || /rate.?limit|too many requests|quota/.test(message)) {
+  if (status === 429 || /http 429|rate.?limit|too many requests|quota|resource exhausted/.test(message)) {
     return "Maaf, model sedang rate limit. Cuba lagi sebentar.";
   }
 
@@ -115,7 +116,7 @@ function getSafeAiErrorMessage(error) {
     return "Maaf, model mengambil terlalu lama untuk merespons. Cuba lagi.";
   }
 
-  if (status >= 500 && status <= 599 || /openrouter|network|socket|econnreset|enotfound|eai_again/.test(message)) {
+  if (status >= 500 && status <= 599 || /openrouter|google gemini|network|socket|econnreset|enotfound|eai_again/.test(message)) {
     return "Maaf, terdapat ralat pada OpenRouter. Cuba lagi sebentar.";
   }
 
