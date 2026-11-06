@@ -156,7 +156,7 @@ function App() {
       const saved = localStorage.getItem("nexa_fallback_model");
       return saved && saved !== "openrouter/free" ? saved : "gemini-3.8-flash";
     } catch {
-      return "openrouter/free";
+      return "gemini-3.8-flash";
     }
   });
 
@@ -434,6 +434,10 @@ function App() {
       console.error(err);
     }
   }, [fallbackModel]);
+
+  useEffect(() => { localStorage.setItem("axm_general_provider", generalProvider); }, [generalProvider]);
+  useEffect(() => { localStorage.setItem("axm_coding_provider", codingProvider); }, [codingProvider]);
+  useEffect(() => { localStorage.setItem("axm_fallback_provider", fallbackProvider); }, [fallbackProvider]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -1839,7 +1843,7 @@ function App() {
                         {role.models.filter(item => (item.name + " " + item.id).toLowerCase().includes(role.search.toLowerCase())).slice(0, 100).map(item => (
                           <button type="button" key={item.id} onClick={() => role.setModel(item.id)} style={{ textAlign: "left", padding: "8px 10px", borderRadius: "7px", border: "1px solid var(--border)", background: role.model === item.id ? "rgba(120,160,255,0.16)" : "rgba(255,255,255,0.035)", color: "inherit" }}>
                             <span style={{ display: "block", fontSize: "13px" }}>{item.name}</span>
-                            <span style={{ display: "block", fontSize: "11px", opacity: 0.65, overflowWrap: "anywhere" }}>{item.id}{item.contextLength ? " · " + Number(item.contextLength).toLocaleString() + " context" : ""}</span>
+                            <span style={{ display: "block", fontSize: "11px", opacity: 0.65, overflowWrap: "anywhere" }}>{item.id}{item.contextLength ? " · " + Number(item.contextLength).toLocaleString() + " context" : ""}{item.pricing ? " · pricing " + JSON.stringify(item.pricing) : ""}</span>
                           </button>
                         ))}
                       </div>
