@@ -1,6 +1,7 @@
 const TEMPORARY_PATTERNS = [
   /^(hi|hello|hey|ok|okay|thanks|thank you|lol|haha|test)\b/i,
-  /\b(right now|just now|for now|sementara|buat masa ini)\b/i
+  /\b(right now|just now|for now|sementara|buat masa ini|hari ini sahaja|today only)\b/i,
+  /^(tolong|please|boleh tak|can you|buatkan|carikan|cari|terangkan|explain|ringkaskan|translate)\b/i
 ];
 
 const DURABLE_TYPES = new Set(["preference", "fact", "goal", "project", "knowledge", "instruction"]);
