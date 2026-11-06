@@ -2308,3 +2308,47 @@ button, input, textarea, select {
 @media (max-width: 360px) {
   .token-details-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+
+/* Homepage live clock */
+.hero-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+.home-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 17px 28px 15px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
+  box-shadow: 0 14px 44px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.045);
+  backdrop-filter: blur(14px);
+}
+.home-clock-time {
+  color: #f5f5f5;
+  font-size: clamp(34px, 7vw, 48px);
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: -.055em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 28px rgba(255,255,255,.12);
+}
+.home-clock-date {
+  color: #858585;
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  text-align: center;
+}
+@media (max-width: 600px) {
+  .home-clock { gap: 8px; padding: 16px 24px 14px; border-radius: 18px; }
+  .home-clock-time { font-size: 40px; }
+  .home-clock-date { font-size: 10px; letter-spacing: .07em; }
+}
