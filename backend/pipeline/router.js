@@ -46,6 +46,11 @@ Gunakan Bahasa Melayu atau Indonesia mengikut pengguna.
     system += "\n\nAdditional runtime context:\n" + internalSystemContext;
   }
 
+  const fallbackCandidates = [fallbackModel, task === "code" ? generalModel : codingModel, generalModel, codingModel, "openrouter/free"]
+    .map(value => String(value || "").trim())
+    .filter((value, index, values) => value && value !== model && values.indexOf(value) === index);
+  const resolvedFallbackModel = fallbackCandidates[0] || null;
+
   logger.success("Router", `${provider} | ${model}`);
 
   return {
@@ -54,7 +59,7 @@ Gunakan Bahasa Melayu atau Indonesia mengikut pengguna.
     history,
     provider,
     model,
-    fallbackModel: fallbackModel || "openrouter/free",
+    fallbackModel: resolvedFallbackModel,
     system,
   };
 }
