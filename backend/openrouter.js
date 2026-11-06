@@ -1,4 +1,5 @@
 const axios = require("axios");
+const askGemini = require("./gemini");
 require("dotenv").config();
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -88,9 +89,25 @@ async function askOpenRouter(message, options = {}) {
     try {
       return await callWithRetries(messages, primaryModel, { maxRetries, maxTokens, reasoningEffort, onUsage });
     } catch (primaryError) {
-      if (!fallbackEnabled || !backupModel || backupModel === primaryModel) throw primaryError;
-      console.warn("[OpenRouter Fallback] Switching from " + primaryModel + " to " + backupModel + ": " + primaryError.message);
-      return await callWithRetries(messages, backupModel, { maxRetries: 0, maxTokens, reasoningEffort, onUsage, usedFallback: true });
+      if (!fallbackEnabled) throw primaryError;
+      console.warn("[Independent Fallback] OpenRouter failed for " + primaryModel + "; switching to Google Gemini: " + primaryError.message);
+      try {
+        return {
+          content: await askGemini(message, {
+            history,
+            system,
+            maxTokens,
+            reasoningEffort,
+            onUsage
+          }),
+          finishReason: "stop",
+          model: process.env.GEMINI_FALLBACK_MODEL || "gemini-3.8-flash",
+          provider: "Google Gemini"
+        };
+      } catch (fallbackError) {
+        fallbackError.fallbackAttempted = true;
+        throw fallbackError;
+      }
     }
   };
 
