@@ -1851,7 +1851,7 @@ function App() {
         {activeNav === "brain" && (
           <div className="sub-panel-container animate-fade">
             <div className="sub-panel-inner">
-              <BrainGraph onBack={() => setActiveNav("chats")} />
+              <BrainGraph />
 
             </div>
           </div>
