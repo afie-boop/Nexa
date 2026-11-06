@@ -1825,14 +1825,25 @@ function App() {
                     </button>
                     {role.models.length > 0 && <>
                       <input type="search" value={role.search} onChange={e => role.setSearch(e.target.value)} placeholder="Cari nama atau ID model..." style={{ width: "100%", padding: "9px 10px", borderRadius: "8px", border: "1px solid var(--border)", background: "rgba(255,255,255,0.05)", color: "inherit" }} />
-                      <div style={{ maxHeight: "190px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "5px" }}>
-                        {role.models.filter(item => (item.name + " " + item.id).toLowerCase().includes(role.search.toLowerCase())).slice(0, 100).map(item => (
-                          <button type="button" key={item.id} onClick={() => role.setModel(item.id)} style={{ textAlign: "left", padding: "8px 10px", borderRadius: "7px", border: "1px solid var(--border)", background: role.model === item.id ? "rgba(120,160,255,0.16)" : "rgba(255,255,255,0.035)", color: "inherit" }}>
-                            <span style={{ display: "block", fontSize: "13px" }}>{item.name}</span>
-                            <span style={{ display: "block", fontSize: "11px", opacity: 0.65, overflowWrap: "anywhere" }}>{item.id}{item.contextLength ? " · " + Number(item.contextLength).toLocaleString() + " context" : ""}{item.pricing ? " · pricing " + JSON.stringify(item.pricing) : ""}</span>
-                          </button>
+                      <select
+                        value={role.models.some(item => item.id === role.model) ? role.model : ""}
+                        onChange={e => role.setModel(e.target.value)}
+                        size={Math.min(8, Math.max(3, role.models.filter(item => (item.name + " " + item.id).toLowerCase().includes(role.search.toLowerCase())).length))}
+                        style={{ width: "100%", minHeight: "110px", padding: "8px", borderRadius: "8px", border: "1px solid var(--border)", background: "#242424", color: "inherit" }}
+                      >
+                        <option value="" disabled>Pilih model OpenRouter...</option>
+                        {role.models.filter(item => (item.name + " " + item.id).toLowerCase().includes(role.search.toLowerCase())).slice(0, 250).map(item => (
+                          <option key={item.id} value={item.id}>{item.name} — {item.id}{item.contextLength ? " · " + Number(item.contextLength).toLocaleString() + " context" : ""}</option>
                         ))}
-                      </div>
+                      </select>
+                      <span style={{ fontSize: "11px", color: "var(--secondary-text)" }}>
+                        {role.models.filter(item => (item.name + " " + item.id).toLowerCase().includes(role.search.toLowerCase())).length} model ditemui · model dipilih: {role.model || "Belum dipilih"}
+                      </span>
+                      {role.models.find(item => item.id === role.model)?.pricing && (
+                        <span style={{ fontSize: "11px", color: "var(--secondary-text)" }}>
+                          Harga prompt: ${role.models.find(item => item.id === role.model).pricing.prompt || "—"} / token · completion: ${role.models.find(item => item.id === role.model).pricing.completion || "—"} / token
+                        </span>
+                      )}
                     </>}
                     <label style={{ fontSize: "12px", color: "var(--secondary-text)" }}>Custom Model ID</label>
                     <input type="text" value={role.model} onChange={e => role.setModel(e.target.value)} placeholder="Masukkan Model ID secara manual" style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "rgba(255,255,255,0.05)", color: "inherit", fontSize: "14px", outline: "none" }} />
