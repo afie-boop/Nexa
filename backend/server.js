@@ -371,7 +371,9 @@ app.post("/api/auth/guest", (req, res) => {
 });
 
 app.post("/api/auth/logout", (req, res) => {
-  clearGitHubSession(req);
+  // Keep the user's encrypted GitHub connection on this device.
+  // It remains bound to the AXMchat user ID and is restored after the next login.
+  // Users can explicitly revoke it through /api/auth/github/disconnect.
   clearAuth(res);
   return res.json({ authenticated: false });
 });
