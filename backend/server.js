@@ -625,11 +625,12 @@ app.post("/chat", chatRateLimit, async (req, res) => {
     );
   }
 
-  function sendAnswer(text) {
+  function sendAnswer(text, telemetry = null) {
     res.write(
       `data: ${JSON.stringify({
         type: "answer",
-        text
+        text,
+        telemetry
       })}\n\n`
     );
     res.end();
@@ -796,6 +797,7 @@ ${brainContext.context}
         "[END CURRENT DATE/TIME]"
       : question.trim();
 
+    const tokenTelemetry = { model: null, provider: "OpenRouter", inputTokens: 0, outputTokens: 0, totalTokens: 0, reasoningTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
     const answer = await runPipeline({
       task,
       question: modelQuestion,
@@ -808,13 +810,26 @@ ${brainContext.context}
       forcedTask: forcedAiTask,
       aiAvailability,
       responseMode,
+      onUsage: (entry) => {
+        const usage = entry?.usage || {};
+        const promptDetails = usage.prompt_tokens_details || {};
+        const completionDetails = usage.completion_tokens_details || {};
+        tokenTelemetry.model = entry?.model || tokenTelemetry.model;
+        tokenTelemetry.provider = entry?.provider || tokenTelemetry.provider;
+        tokenTelemetry.inputTokens += Number(usage.prompt_tokens || 0);
+        tokenTelemetry.outputTokens += Number(usage.completion_tokens || 0);
+        tokenTelemetry.totalTokens += Number(usage.total_tokens || (Number(usage.prompt_tokens || 0) + Number(usage.completion_tokens || 0)));
+        tokenTelemetry.reasoningTokens += Number(completionDetails.reasoning_tokens || usage.reasoning_tokens || 0);
+        tokenTelemetry.cacheReadTokens += Number(promptDetails.cached_tokens || usage.cache_read_tokens || 0);
+        tokenTelemetry.cacheWriteTokens += Number(promptDetails.cache_write_tokens || usage.cache_write_tokens || 0);
+      },
       sendStatus,
       sendProcessStep
     });
 
     // Return the completed AI answer immediately. Persistence and memory learning
     // are best-effort background work and must never hold the chat response open.
-    sendAnswer(answer);
+    sendAnswer(answer, { ...tokenTelemetry, contextLimit: null, usage: tokenTelemetry.totalTokens });
 
     const persistChatInBackground = async () => {
       try {
