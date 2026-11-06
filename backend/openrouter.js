@@ -56,7 +56,10 @@ async function callWithRetries(messages, model, options) {
       console.warn("[OpenRouter Temporary Error " + (err.response?.status || "Network") + "] model " + model + ", attempt " + (attempt + 1) + "/" + (options.maxRetries + 1));
     }
   }
-  throw lastErr || new Error("Gagal berkomunikasi dengan model " + model + ".");
+  const status = lastErr?.response?.status;
+  const message = lastErr?.response?.data?.error?.message || lastErr?.message || "Ralat rangkaian.";
+  // Do not rethrow AxiosError: its config contains the Authorization header/API key.
+  throw new Error("OpenRouter " + (status ? "HTTP " + status : "network error") + " selepas " + (options.maxRetries + 1) + " percubaan untuk " + model + ": " + message);
 }
 
 async function askOpenRouter(message, options = {}) {
