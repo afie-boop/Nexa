@@ -47,6 +47,21 @@ function App() {
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
 
+  const getHomeGreeting = () => {
+    const hour = new Date().getHours();
+    const greetings = hour < 5
+      ? ["Hello, night owl", "Still up?", "Late-night thoughts?"]
+      : hour < 12
+        ? ["Good morning", "Hey, early bird", "Ready to create?"]
+        : hour < 18
+          ? ["Hello there", "What's on your mind?", "Ready when you are"]
+          : ["Good evening", "Hello, night owl", "A little idea tonight?"];
+    return greetings[Math.floor(Math.random() * greetings.length)];
+  };
+  const [homeGreeting, setHomeGreeting] = useState(getHomeGreeting);
+
+
+
   // Online / Offline state tracking
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -447,6 +462,7 @@ function App() {
     };
     setConversations(prev => [newConv, ...prev]);
     setActiveId(newId);
+    setHomeGreeting(getHomeGreeting());
     setSidebarOpen(false);
     setActiveNav("chats");
   };
@@ -1234,7 +1250,6 @@ function App() {
       <aside className={`sidebar ${sidebarOpen ? "open" : ""}`}>
         <div className="sidebar-header">
           <div className="logo-container">
-            <div className="logo-icon">A</div>
             <div className="logo-text">AXMchat</div>
           </div>          <button className="new-chat-btn" onClick={handleNewChat}>
             <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
@@ -1643,9 +1658,7 @@ function App() {
             {/* 2. Hero Section (when empty) */}
             {chat.length === 0 && !load ? (
               <div className="hero-section animate-fade">
-                <div className="hero-logo">A</div>
-                <h2 className="hero-title">Hello, I'm AXMchat.</h2>
-                <p className="hero-tagline">Build. Think. Create.</p>
+                <h2 className="hero-title">{homeGreeting}</h2>
                 <div className="suggestion-prompts-container">
                   <button
                     className="suggestion-btn"
