@@ -96,6 +96,7 @@ function App() {
   const [editingId, setEditingId] = useState(null);
   const [editTitle, setEditTitle] = useState("");
   const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
+  const [tokenDetailsOpen, setTokenDetailsOpen] = useState(false);
   const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
   const [sessionActionMenuId, setSessionActionMenuId] = useState(null);
   const sessionLongPressTimerRef = useRef(null);
@@ -807,6 +808,7 @@ function App() {
       const decoder = new TextDecoder();
       let buffer = "";
       let finalAnswer = null;
+      let finalTelemetry = null;
       let serverError = null;
 
       while (true) {
@@ -827,6 +829,7 @@ function App() {
             if (data.text) setLoadingStatus(data.text);
           } else if (data.type === "answer") {
             finalAnswer = typeof data.text === "string" ? data.text : "";
+            finalTelemetry = data.telemetry || null;
           } else if (data.type === "error") {
             serverError = data.text;
           }
@@ -839,7 +842,10 @@ function App() {
       for (const part of trailingParts) {
         if (!part.startsWith("data: ")) continue;
         const data = JSON.parse(part.slice(6));
-        if (data.type === "answer") finalAnswer = typeof data.text === "string" ? data.text : "";
+        if (data.type === "answer") {
+          finalAnswer = typeof data.text === "string" ? data.text : "";
+          finalTelemetry = data.telemetry || null;
+        }
         else if (data.type === "error") serverError = data.text;
         else if (data.type === "status" && data.text) setLoadingStatus(data.text);
         else if (data.type === "process_step" && data.label) setLoadingStatus(data.label);
@@ -851,7 +857,7 @@ function App() {
       const aiMsgId = "msg_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
       updateActiveMessages(prev => [
         ...prev,
-        { id: aiMsgId, type: "ai", text: finalAnswer, feedback: null, feedbackReason: "" }
+        { id: aiMsgId, type: "ai", text: finalAnswer, usage: finalTelemetry, feedback: null, feedbackReason: "" }
       ]);
     } catch (err) {
       setError(err.message || "Gagal hubungi server. Cuba refresh.");
@@ -1536,6 +1542,10 @@ function App() {
           </div>
 
           <div className="top-bar-actions">
+            <button type="button" className="token-usage-trigger" onClick={() => setTokenDetailsOpen(true)} title="Lihat penggunaan token dan maklumat sesi" aria-label="Maklumat penggunaan token">
+              <span className="token-usage-dot" />
+              <strong>{(() => { const total = chat.reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
+            </button>
             <button
               className="card-action-btn"
               onClick={handleShareChat}
@@ -1552,6 +1562,43 @@ function App() {
             </button>
           </div>
         </header>
+
+        {tokenDetailsOpen && (() => {
+          const userMessages = chat.filter(item => item.type === "user");
+          const assistantMessages = chat.filter(item => item.type === "ai");
+          const usageMessages = assistantMessages.filter(item => item.usage);
+          const sumUsage = key => usageMessages.reduce((sum, item) => sum + Number(item.usage?.[key] || 0), 0);
+          const latestUsage = [...usageMessages].reverse().find(item => item.usage)?.usage || {};
+          const totalTokens = sumUsage("totalTokens");
+          const formatNumber = value => Number(value || 0).toLocaleString();
+          const rawMessages = chat.map((item, index) => ({ role: item.type === "user" ? "User" : "Assistant", text: String(item.text || ""), index: index + 1 }));
+          return (
+            <div className="token-details-backdrop" onClick={() => setTokenDetailsOpen(false)}>
+              <section className="token-details-panel" role="dialog" aria-modal="true" aria-label="Token usage details" onClick={event => event.stopPropagation()}>
+                <div className="token-details-header"><div><strong>Usage details</strong><span>Maklumat penggunaan sesi semasa</span></div><button type="button" onClick={() => setTokenDetailsOpen(false)} aria-label="Tutup">×</button></div>
+                <div className="token-details-grid">
+                  <div><span>Jumlah messages</span><strong>{chat.length}</strong></div>
+                  <div><span>Model</span><strong>{latestUsage.model || "Belum tersedia"}</strong></div>
+                  <div><span>Total tokens</span><strong>{formatNumber(totalTokens)}</strong></div>
+                  <div><span>Input tokens</span><strong>{formatNumber(sumUsage("inputTokens"))}</strong></div>
+                  <div><span>Reasoning tokens</span><strong>{formatNumber(sumUsage("reasoningTokens"))}</strong></div>
+                  <div><span>User messages</span><strong>{userMessages.length}</strong></div>
+                  <div><span>Session</span><strong className="token-detail-mono">{activeConversation.id || "—"}</strong></div>
+                  <div><span>Provider</span><strong>{latestUsage.provider || "OpenRouter"}</strong></div>
+                  <div><span>Context limit</span><strong>{latestUsage.contextLimit ? formatNumber(latestUsage.contextLimit) : "Tidak dibekalkan provider"}</strong></div>
+                  <div><span>Usage</span><strong>{formatNumber(totalTokens)} tokens</strong></div>
+                  <div><span>Output tokens</span><strong>{formatNumber(sumUsage("outputTokens"))}</strong></div>
+                  <div><span>Cache tokens (read)</span><strong>{formatNumber(sumUsage("cacheReadTokens"))}</strong></div>
+                  <div><span>Cache tokens (write)</span><strong>{formatNumber(sumUsage("cacheWriteTokens"))}</strong></div>
+                  <div><span>Assistant messages</span><strong>{assistantMessages.length}</strong></div>
+                  <div><span>Session created</span><strong>{activeConversation.createdAt ? new Date(activeConversation.createdAt).toLocaleString() : "Tidak diketahui"}</strong></div>
+                </div>
+                <div className="token-raw-heading">Raw messages ({rawMessages.length})</div>
+                <div className="token-raw-list">{rawMessages.length ? rawMessages.map(item => <article key={item.index}><div><strong>#{item.index} {item.role}</strong><span>{item.text.length.toLocaleString()} chars</span></div><pre>{item.text}</pre></article>) : <p>Belum ada mesej dalam sesi ini.</p>}</div>
+              </section>
+            </div>
+          );
+        })()}
 
         {/* Display Banner Errors if present */}
         {error && <div className="error-banner animate-slide">{error}</div>}
