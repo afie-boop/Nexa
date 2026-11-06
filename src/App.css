@@ -2055,21 +2055,32 @@ button, input, textarea, select {
 }
 
 
-/* Session token usage popover */
-.token-usage-trigger{display:inline-flex;align-items:center;justify-content:center;gap:9px;min-width:76px;height:38px;padding:0 12px;border:1px solid var(--border);border-radius:10px;color:var(--primary-text);background:rgba(255,255,255,.055);cursor:pointer;transition:background .18s ease,border-color .18s ease}
-.token-usage-trigger:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
-.token-usage-trigger strong{font-size:14px;font-weight:700}
-.token-usage-dot{width:17px;height:17px;display:inline-block;border:3px solid rgba(226,232,240,.9);border-radius:50%}
-.token-details-backdrop{position:fixed;inset:0;z-index:3000;display:flex;justify-content:flex-end;align-items:stretch;padding:14px;background:rgba(0,0,0,.58);backdrop-filter:blur(5px)}
-.token-details-panel{width:min(560px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden;color:var(--primary-text);background:#111827;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.48)}
-.token-details-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 20px;border-bottom:1px solid var(--border)}
-.token-details-header>div{display:grid;gap:4px}.token-details-header strong{font-size:16px}.token-details-header span{color:var(--secondary-text);font-size:12px}
-.token-details-header button{width:34px;height:34px;border:0;border-radius:8px;color:var(--primary-text);background:rgba(255,255,255,.08);font-size:24px;cursor:pointer}
-.token-details-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:16px 18px;overflow-y:auto}
-.token-details-grid>div{min-width:0;display:flex;flex-direction:column;gap:6px;padding:11px 12px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.065);border-radius:10px}
-.token-details-grid span{color:var(--secondary-text);font-size:11px}.token-details-grid strong{overflow-wrap:anywhere;color:var(--primary-text);font-size:13px;font-weight:650}.token-details-grid .token-detail-mono{font-family:"JetBrains Mono",monospace;font-size:11px}
-.token-raw-heading{padding:12px 18px 8px;border-top:1px solid var(--border);font-size:13px;font-weight:700}
-.token-raw-list{min-height:80px;overflow-y:auto;padding:0 18px 18px}.token-raw-list article{margin:8px 0;overflow:hidden;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:rgba(0,0,0,.18)}
-.token-raw-list article>div{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;background:rgba(255,255,255,.045)}.token-raw-list article strong{font-size:11px}.token-raw-list article span{color:var(--secondary-text);font-size:10px}
-.token-raw-list pre{max-height:220px;overflow:auto;padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;color:#dbeafe;font:11px/1.55 "JetBrains Mono",monospace}.token-raw-list>p{padding:10px 0;color:var(--secondary-text);font-size:12px}
-@media(max-width:600px){.token-details-backdrop{padding:0}.token-details-panel{width:100%;border-radius:0}.token-details-grid{gap:7px;padding:12px}.token-details-grid>div{padding:9px}}
+/* AXMchat monochrome token usage panel */
+.token-usage-trigger {
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  min-width:76px;height:38px;padding:0 12px;
+  border:1px solid #292929;border-radius:8px;color:#f5f5f5;
+  background:transparent;cursor:pointer;transition:background .15s ease,border-color .15s ease
+}
+.token-usage-trigger:hover{background:#171717;border-color:#505050}
+.token-usage-trigger strong{font-size:14px;font-weight:650}
+.token-usage-dot{width:15px;height:15px;display:inline-block;border:2px solid #d4d4d4;border-radius:50%}
+.token-details-backdrop{position:fixed;inset:0;z-index:3000;display:flex;justify-content:flex-end;align-items:stretch;padding:0;background:rgba(0,0,0,.66)}
+.token-details-panel{width:min(520px,100%);max-height:100%;display:flex;flex-direction:column;overflow:hidden;color:#f5f5f5;background:#0d0d0d;border-left:1px solid #292929;box-shadow:-18px 0 50px rgba(0,0,0,.35)}
+.token-details-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px;border-bottom:1px solid #242424}
+.token-details-header>div{display:grid;gap:4px}.token-details-header strong{font-size:15px;font-weight:650;letter-spacing:.01em}.token-details-header span{color:#a6a6a6;font-size:12px}
+.token-details-header button{width:32px;height:32px;border:1px solid #292929;border-radius:7px;color:#f5f5f5;background:transparent;font-size:22px;cursor:pointer}
+.token-details-header button:hover{background:#1a1a1a}
+.token-details-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 22px;padding:10px 22px;overflow-y:auto}
+.token-details-grid>div{min-width:0;display:flex;flex-direction:column;gap:5px;padding:12px 0;border-bottom:1px solid #202020;background:transparent}
+.token-details-grid span{color:#999;font-size:11px}
+.token-details-grid strong{overflow-wrap:anywhere;color:#f2f2f2;font-size:13px;font-weight:550}
+.token-details-grid .token-detail-mono{font-family:monospace;font-size:11px;color:#d0d0d0}
+.token-raw-heading{padding:16px 22px 9px;border-top:1px solid #242424;font-size:12px;font-weight:650;letter-spacing:.02em}
+.token-raw-list{min-height:80px;overflow-y:auto;padding:0 22px 20px}
+.token-raw-list article{margin:0;overflow:hidden;border:0;border-bottom:1px solid #252525;border-radius:0;background:transparent}
+.token-raw-list article>div{display:flex;justify-content:space-between;gap:10px;padding:10px 0;background:transparent}
+.token-raw-list article strong{font-size:11px;font-weight:650}.token-raw-list article span{color:#888;font-size:10px}
+.token-raw-list pre{max-height:220px;overflow:auto;padding:0 0 12px;white-space:pre-wrap;overflow-wrap:anywhere;color:#d8d8d8;font:11px/1.55 monospace}
+.token-raw-list>p{padding:10px 0;color:#999;font-size:12px}
+@media(max-width:600px){.token-details-backdrop{padding:0}.token-details-panel{width:100%;border-left:0}.token-details-grid{gap:0 14px;padding:8px 16px}.token-details-grid>div{padding:10px 0}.token-details-header{padding:16px}.token-raw-heading{padding:14px 16px 8px}.token-raw-list{padding:0 16px 16px}}
