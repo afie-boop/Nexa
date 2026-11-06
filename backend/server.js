@@ -96,12 +96,35 @@ function getSafeAiErrorMessage(error) {
   return "Maaf, berlaku ralat pada model. Cuba lagi sebentar.";
 }
 
-function signGitHubOAuthState(state, userId) {
+function createGitHubOAuthState(userId) {
   const secret = process.env.AUTH_SESSION_SECRET || process.env.GITHUB_SESSION_SECRET || process.env.GITHUB_CLIENT_SECRET;
   if (!secret) throw new Error("OAuth state secret belum dikonfigurasi.");
-  return crypto.createHmac("sha256", secret)
-    .update(`${state}.${String(userId)}`)
-    .digest("hex");
+  const payload = Buffer.from(JSON.stringify({
+    userId: String(userId),
+    nonce: crypto.randomBytes(32).toString("hex"),
+    issuedAt: Date.now()
+  })).toString("base64url");
+  const signature = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+  return `${payload}.${signature}`;
+}
+
+function verifyGitHubOAuthState(state, userId) {
+  try {
+    if (typeof state !== "string") return false;
+    const [payload, signature] = state.split(".");
+    if (!payload || !signature || !/^[a-f0-9]{64}$/.test(signature)) return false;
+    const secret = process.env.AUTH_SESSION_SECRET || process.env.GITHUB_SESSION_SECRET || process.env.GITHUB_CLIENT_SECRET;
+    if (!secret) return false;
+    const expected = crypto.createHmac("sha256", secret).update(payload).digest("hex");
+    const actualBuffer = Buffer.from(signature, "hex");
+    const expectedBuffer = Buffer.from(expected, "hex");
+    if (actualBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(actualBuffer, expectedBuffer)) return false;
+    const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
+    const age = Date.now() - Number(data.issuedAt);
+    return data.userId === String(userId) && /^[a-f0-9]{64}$/.test(String(data.nonce || "")) && Number.isFinite(age) && age >= 0 && age <= 10 * 60 * 1000;
+  } catch (_) {
+    return false;
+  }
 }
 
 
@@ -312,15 +335,8 @@ app.get("/api/auth/github", protectedAuth, (req, res) => {
       message: "GITHUB_CALLBACK_URL belum dikonfigurasi dalam persekitaran server."
     });
   }
-  const state = crypto.randomBytes(32).toString("hex");
-  const stateBinding = signGitHubOAuthState(state, req.auth.userId);
-  res.cookie("nexa_github_oauth_state", `${state}.${stateBinding}`, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 10 * 60 * 1000
-  });
+  // Signed state carries the AXMchat user identity; no temporary browser cookie is needed.
+  const state = createGitHubOAuthState(req.auth.userId);
   const redirectUri = encodeURIComponent(callbackUrl);
   const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=repo&state=${encodeURIComponent(state)}`;
   return res.redirect(githubAuthUrl);
@@ -329,29 +345,10 @@ app.get("/api/auth/github", protectedAuth, (req, res) => {
 // GET /api/auth/github/callback - Handle OAuth callback
 app.get("/api/auth/github/callback", protectedAuth, async (req, res) => {
   const { code, state } = req.query;
-  const expectedStateCookie = req.cookies?.nexa_github_oauth_state;
-  const [expectedState, expectedBinding] = typeof expectedStateCookie === "string"
-    ? expectedStateCookie.split(".")
-    : [];
-  let stateValid = false;
-  try {
-    const expected = expectedState && expectedBinding
-      ? signGitHubOAuthState(expectedState, req.auth.userId)
-      : "";
-    stateValid = typeof state === "string" &&
-      typeof expectedState === "string" &&
-      typeof expectedBinding === "string" &&
-      state.length === expectedState.length &&
-      expectedBinding.length === expected.length &&
-      crypto.timingSafeEqual(Buffer.from(state), Buffer.from(expectedState)) &&
-      crypto.timingSafeEqual(Buffer.from(expectedBinding), Buffer.from(expected));
-  } catch (_) {
-    stateValid = false;
-  }
+  const stateValid = verifyGitHubOAuthState(state, req.auth.userId);
   if (!code || !stateValid) {
     return res.status(400).send("Permintaan OAuth GitHub tidak sah atau telah tamat.");
   }
-  res.clearCookie("nexa_github_oauth_state", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/" });
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
 
