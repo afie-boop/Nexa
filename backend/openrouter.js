@@ -12,7 +12,7 @@ function isTemporaryError(err) {
 async function executeOpenRouterCall(messages, model, requestOptions = {}) {
   const body = { model, messages };
   if (Number.isInteger(requestOptions.maxTokens) && requestOptions.maxTokens > 0) body.max_tokens = requestOptions.maxTokens;
-  if (requestOptions.reasoningEffort) body.reasoning_effort = requestOptions.reasoningEffort;
+  if (requestOptions.reasoningEffort) body.reasoning = { effort: requestOptions.reasoningEffort };
 
   const send = (payload) => axios.post("https://openrouter.ai/api/v1/chat/completions", payload, {
     headers: {
@@ -34,17 +34,9 @@ async function executeOpenRouterCall(messages, model, requestOptions = {}) {
     }
     throw new Error("Balasan OpenRouter tidak mengandungi format kandungan yang sah.");
   } catch (err) {
-    if (requestOptions.reasoningEffort && err.response?.status === 400) {
-      const retryBody = { model, messages };
-      if (Number.isInteger(requestOptions.maxTokens) && requestOptions.maxTokens > 0) retryBody.max_tokens = requestOptions.maxTokens;
-      const retry = await send(retryBody);
-      const choice = retry.data?.choices?.[0];
-      const content = choice?.message?.content;
-      requestOptions.onUsage?.({ requestedModel: model, model: retry.data?.model || model, provider: choice?.provider || retry.data?.provider || "OpenRouter", usedFallback: Boolean(requestOptions.usedFallback), usage: retry.data?.usage || {} });
-      if (content !== undefined && content !== null) {
-        return { content: String(content), finishReason: choice.finish_reason || null, model: retry.data?.model || model, provider: choice?.provider || retry.data?.provider || "OpenRouter" };
-      }
-    }
+    // Never silently downgrade Thinking/Balance to a request without reasoning.
+    // A provider/model incompatibility must surface instead of pretending the
+    // selected response mode was honored.
     throw err;
   }
 }
@@ -95,7 +87,7 @@ async function askOpenRouter(message, options = {}) {
     } catch (primaryError) {
       if (!fallbackEnabled || !backupModel || backupModel === primaryModel) throw primaryError;
       console.warn("[OpenRouter Fallback] Switching from " + primaryModel + " to " + backupModel + ": " + primaryError.message);
-      return await callWithRetries(messages, backupModel, { maxRetries: 0, maxTokens, reasoningEffort: null, onUsage, usedFallback: true });
+      return await callWithRetries(messages, backupModel, { maxRetries: 0, maxTokens, reasoningEffort, onUsage, usedFallback: true });
     }
   };
 
