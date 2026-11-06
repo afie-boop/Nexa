@@ -1715,8 +1715,8 @@ function App() {
               <div className="hero-section animate-fade">
                 <h2 className="hero-title">{homeGreeting}</h2>
                 <div className="home-clock" aria-label="Waktu semasa">
-                  <span className="home-clock-time">{homeClock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}</span>
-                  <span className="home-clock-date">{homeClock.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+                  <span className="home-clock-time">{homeClock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}</span>
+                  <span className="home-clock-date">{homeClock.toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}</span>
                 </div>
               </div>
             ) : (
