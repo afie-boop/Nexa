@@ -658,6 +658,20 @@ app.get("/api/models", async (req, res) => {
   }
 });
 
+app.get("/api/models/context-limit", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const modelId = typeof req.query.model === "string" ? req.query.model.trim() : "";
+  if (!modelId || modelId.length > 200 || !/^[a-zA-Z0-9._:/-]+$/.test(modelId)) {
+    return res.status(400).json({ error: "Model ID tidak sah." });
+  }
+  try {
+    const contextLimit = await getOpenRouterContextLimit(modelId);
+    return res.json({ model: modelId, contextLimit });
+  } catch (error) {
+    return res.status(502).json({ error: "Metadata model tidak dapat diperoleh." });
+  }
+});
+
 app.post("/chat", chatRateLimit, async (req, res) => {
   const rawQuestion = req.body?.question;
   const question = typeof rawQuestion === "string" ? rawQuestion.trim().slice(0, 12000) : "";
