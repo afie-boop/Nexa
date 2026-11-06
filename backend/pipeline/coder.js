@@ -1,12 +1,12 @@
 const logger = require("../utils/logger");
 
-const askOpenRouter = require("../openrouter");
+const { askProvider } = require("../providers");
 
 async function coder(data) {
   logger.info("Coder", "Menjana jawapan AI...");
 
   const {
-    provider,
+    provider = "openrouter",
     model,
     fallbackModel,
     question,
@@ -25,15 +25,13 @@ async function coder(data) {
   try {
     let response;
 
-    response = await askOpenRouter(question, {
+    response = await askProvider(provider, question, {
       model,
-      fallbackModel,
       history,
       system,
       maxTokens,
       reasoningEffort,
       maxRetries,
-      fallbackEnabled,
       onUsage
     });
 
