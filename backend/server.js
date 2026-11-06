@@ -71,6 +71,7 @@ const { learnFromChat } = require("./brain/learning");
 const { getWorkContext, saveWorkContext, formatWorkContext } = require("./brain/workContext");
 const { normalizeResponseMode, classifyFastTask } = require("./responseModes");
 const { checkRateLimit } = require("./security/rate_limiter");
+const { PROVIDERS, listProviderModels } = require("./providers");
 
 const app = express();
 
@@ -615,6 +616,23 @@ app.post("/api/brain/memories/reset", brainNoStore, rateLimitBrain("restore"), r
   }
 });
 
+app.get("/api/models/providers", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  return res.json({ providers: Object.entries(PROVIDERS).map(([id, item]) => ({ id, name: item.label, configured: !!process.env[item.key] })) });
+});
+
+app.get("/api/models", async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  try {
+    const provider = String(req.query.provider || "openrouter").toLowerCase();
+    const models = await listProviderModels(provider);
+    return res.json({ provider, models });
+  } catch (error) {
+    const status = /API key .* belum ditetapkan/.test(error.message) ? 400 : 502;
+    return res.status(status).json({ error: error.message || "Gagal mendapatkan katalog model." });
+  }
+});
+
 app.post("/chat", chatRateLimit, async (req, res) => {
   const rawQuestion = req.body?.question;
   const question = typeof rawQuestion === "string" ? rawQuestion.trim().slice(0, 12000) : "";
@@ -683,6 +701,9 @@ app.post("/chat", chatRateLimit, async (req, res) => {
     }
 
     const { generalModel, codingModel, fallbackModel } = req.body;
+    const generalProvider = String(req.body?.generalProvider || "openrouter").toLowerCase();
+    const codingProvider = String(req.body?.codingProvider || "openrouter").toLowerCase();
+    const fallbackProvider = String(req.body?.fallbackProvider || "gemini").toLowerCase();
     const aiAvailability = {
       general: req.body?.aiAvailability?.general !== false,
       coding: req.body?.aiAvailability?.coding !== false,
@@ -837,6 +858,9 @@ ${brainContext.context}
       generalModel,
       codingModel,
       fallbackModel,
+      generalProvider,
+      codingProvider,
+      fallbackProvider,
       fallbackEnabled: aiAvailability.fallback,
       internalSystemContext,
       forcedTask: forcedAiTask,
