@@ -1036,8 +1036,7 @@ function App() {
   const getDynamicStatus = () => {
     if (!isOnline) return "Offline";
     if (load) return "Thinking";
-    if (isOnline && !load && chat.length > 0) return "Ready";
-    return "Online";
+    return "Ready";
   };
 
   const currentStatus = getDynamicStatus();
