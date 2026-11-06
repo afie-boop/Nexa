@@ -124,13 +124,34 @@ async function askOpenRouter(message, options = {}) {
       content: "Sambung tepat dari tempat jawapan terakhir terhenti. Jangan ulang kandungan yang sudah diberi, jangan ringkaskan, dan jangan tinggalkan mana-mana bahagian. Jika sedang menulis kod, sambung kod yang sama sehingga lengkap dan pastikan penutup blok, fungsi dan fail disertakan."
     });
     const continuationModel = result.model || primaryModel;
-    result = await callWithRetries(messages, continuationModel, {
-      maxRetries: 1,
-      maxTokens,
-      reasoningEffort,
-      onUsage,
-      usedFallback: continuationModel !== primaryModel
-    });
+    try {
+      result = await callWithRetries(messages, continuationModel, {
+        maxRetries: 1,
+        maxTokens,
+        reasoningEffort,
+        onUsage,
+        usedFallback: continuationModel !== primaryModel
+      });
+    } catch (continuationError) {
+      if (!fallbackEnabled) throw continuationError;
+      console.warn("[Independent Fallback] OpenRouter continuation failed; switching to Google Gemini:", continuationError.message);
+      try {
+        result = {
+          content: await askGemini("", {
+            messages,
+            maxTokens,
+            reasoningEffort,
+            onUsage
+          }),
+          finishReason: "stop",
+          model: process.env.GEMINI_FALLBACK_MODEL || "gemini-3.8-flash",
+          provider: "Google Gemini"
+        };
+      } catch (fallbackError) {
+        fallbackError.fallbackAttempted = true;
+        throw fallbackError;
+      }
+    }
     completeText += result.content || "";
   }
 
