@@ -36,7 +36,7 @@ function buildNodes(memories) {
   return { nodes, edges };
 }
 
-export default function BrainGraph({ onBack }) {
+export default function BrainGraph() {
   const [memories, setMemories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -87,9 +87,6 @@ export default function BrainGraph({ onBack }) {
   return (
     <section className="second-brain" aria-label="Second Brain graph">
       <header className="brain-fullscreen-header">
-        <button type="button" className="brain-back-button" onClick={onBack} aria-label="Kembali ke AXMchat">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
-        </button>
         <span className="brain-small-title">Second Brain</span>
       </header>
 
