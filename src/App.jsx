@@ -1785,26 +1785,21 @@ function App() {
               <h2 className="panel-title">AXMchat AI Models</h2>
               <p className="panel-subtitle">Urus model AI yang digunakan oleh setiap fungsi AXMchat.</p>
 
-              <div className="flat-card" style={{ marginBottom: "18px", display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <div style={{ width: "38px", height: "38px", borderRadius: "11px", display: "grid", placeItems: "center", background: "rgba(120,160,255,0.13)", color: "#9bbcff", flexShrink: 0 }}>
-                    <svg stroke="currentColor" fill="none" strokeWidth="1.8" viewBox="0 0 24 24" width="21" height="21"><path d="M14 3h7v7M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <strong style={{ display: "block", fontSize: "14px" }}>Cari model di OpenRouter</strong>
-                    <span style={{ display: "block", fontSize: "12px", color: "var(--secondary-text)", marginTop: "3px" }}>Pilih model yang sesuai, kemudian salin Model ID.</span>
-                  </div>
+              <div className="flat-card" style={{ marginBottom: "18px", padding: "14px 16px" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "10px" }}>
+                  <strong style={{ fontSize: "14px" }}>Cara tukar model AI</strong>
+                  <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" style={{ color: "var(--primary-text)", fontSize: "12px", fontWeight: 600, textDecoration: "none", whiteSpace: "nowrap" }}>
+                    Cari model ↗
+                  </a>
                 </div>
-                <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", width: "100%", boxSizing: "border-box", padding: "11px 14px", borderRadius: "9px", background: "rgba(120,160,255,0.14)", border: "1px solid rgba(120,160,255,0.28)", color: "inherit", textDecoration: "none", fontSize: "13px", fontWeight: 600 }}>
-                  Buka OpenRouter Models
-                  <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" width="14" height="14"><path d="M14 3h7v7M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-                </a>
-                <div style={{ display: "grid", gap: "8px", fontSize: "12px", color: "var(--secondary-text)", lineHeight: 1.55 }}>
-                  <div><strong style={{ color: "var(--primary-text)" }}>Cara guna</strong></div>
-                  <div><span style={{ color: "var(--primary-text)", fontWeight: 600 }}>1.</span> Buka OpenRouter melalui pautan di atas.</div>
-                  <div><span style={{ color: "var(--primary-text)", fontWeight: 600 }}>2.</span> Cari model yang ingin digunakan dan salin Model ID (contoh: <code>openai/gpt-4o-mini</code>).</div>
-                  <div><span style={{ color: "var(--primary-text)", fontWeight: 600 }}>3.</span> Tampal Model ID ke ruangan model di bawah untuk menggantikan model AI tersebut.</div>
-                </div>
+                <p style={{ margin: "0 0 8px", color: "var(--secondary-text)", fontSize: "12px", lineHeight: 1.5 }}>
+                  Pilih model di OpenRouter, kemudian salin Model ID.
+                </p>
+                <ol style={{ margin: 0, paddingLeft: "18px", display: "grid", gap: "6px", color: "var(--secondary-text)", fontSize: "12px", lineHeight: 1.5 }}>
+                  <li>Buka senarai model melalui pautan <strong style={{ color: "var(--primary-text)" }}>Cari model</strong>.</li>
+                  <li>Pilih model dan salin ID-nya, contohnya <code>openai/gpt-4o-mini</code>.</li>
+                  <li>Tampal ID itu pada ruangan model General AI, Coding AI atau Fallback AI di bawah.</li>
+                </ol>
               </div>
 
               <div className="grid-container">
