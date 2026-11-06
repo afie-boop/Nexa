@@ -846,7 +846,7 @@ ${brainContext.context}
         const promptDetails = usage.prompt_tokens_details || {};
         const completionDetails = usage.completion_tokens_details || {};
         tokenTelemetry.model = entry?.model || tokenTelemetry.model;
-        if (entry?.model) {
+        if (entry?.model && (entry?.provider || "OpenRouter") === "OpenRouter") {
           contextLimitLookup = getOpenRouterContextLimit(entry.model).then(limit => {
             if (limit) tokenTelemetry.contextLimit = limit;
             return limit;
