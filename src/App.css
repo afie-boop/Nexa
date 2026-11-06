@@ -1513,50 +1513,57 @@ button, input, textarea, select {
   color: #fff !important;
 }
 
-/* Code block — rounded charcoal style, with AXMchat syntax colours preserved. */
+/* AXMchat Code Block Design v2 */
 .code-block-wrapper {
   margin: 16px 0 18px !important;
-  background: #2b2b2b !important;
+  background: #303030 !important;
   border: none !important;
-  border-radius: 24px !important;
+  border-radius: 26px !important;
   box-shadow: none !important;
   overflow: hidden;
 }
 
+/* Header: label kiri, ikon salin kanan, tiada garisan */
 .code-block-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 48px;
-  padding: 10px 14px 0 20px !important;
+  min-height: 50px;
+  padding: 0 16px !important;
   background: transparent !important;
   border-bottom: none !important;
-  color: #aaa !important;
-  font-size: 12px !important;
-  letter-spacing: .02em;
 }
 
 .code-block-header .code-lang {
-  color: #bdbdbd !important;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace !important;
-  font-size: 12px !important;
-  font-weight: 700;
+  color: #c9c9c9 !important;
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600;
+  letter-spacing: 0 !important;
   text-transform: uppercase;
 }
 
 .code-block-header .copy-btn {
-  color: #e5e5e5 !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0 !important;
+  color: #fff !important;
   background: transparent !important;
   border: none !important;
-  border-radius: 10px !important;
-  padding: 6px 8px !important;
-  font-size: 12px !important;
+  border-radius: 8px !important;
   cursor: pointer;
 }
 
 .code-block-header .copy-btn:hover {
-  color: #fff !important;
   background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.code-block-header .copy-btn .copy-btn-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .code-block-body {
@@ -1565,21 +1572,31 @@ button, input, textarea, select {
 
 .code-block-body pre {
   margin: 0 !important;
-  padding: 8px 20px 20px !important;
+  padding: 10px 16px 18px !important;
   background: transparent !important;
-  font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace !important;
-  font-size: 13.5px !important;
-  line-height: 1.65 !important;
+  border: none !important;
+  font-family: "JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
   tab-size: 2;
-  white-space: pre-wrap !important;
-  word-break: break-word;
-  overflow-wrap: anywhere;
   overflow-x: hidden;
+  white-space: pre-wrap !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
 }
 
 .code-block-body pre code {
   background: transparent !important;
-  white-space: inherit;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+  text-shadow: none !important;
+  font-variant-ligatures: none;
+  white-space: pre-wrap !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
 }
 
 .inline-code {
