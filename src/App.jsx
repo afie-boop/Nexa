@@ -118,7 +118,6 @@ function App() {
   const [editTitle, setEditTitle] = useState("");
   const [sessionHistoryOpen, setSessionHistoryOpen] = useState(false);
   const [tokenDetailsOpen, setTokenDetailsOpen] = useState(false);
-  const [tokenDetailsType, setTokenDetailsType] = useState("general");
   const [selectedModelContextLimit, setSelectedModelContextLimit] = useState(null);
   const [contextLimitLoading, setContextLimitLoading] = useState(false);
   const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
@@ -430,7 +429,7 @@ function App() {
   }, [fallbackModel]);
 
   useEffect(() => {
-    const modelId = (tokenDetailsType === "code" ? codingModel : generalModel).trim();
+    const modelId = generalModel.trim();
     if (!tokenDetailsOpen || !modelId || modelId === "openrouter/free") {
       setSelectedModelContextLimit(null);
       setContextLimitLoading(false);
@@ -462,7 +461,7 @@ function App() {
       });
 
     return () => controller.abort();
-  }, [tokenDetailsOpen, tokenDetailsType, generalModel, codingModel]);
+  }, [tokenDetailsOpen, generalModel]);
 
 
   useEffect(() => {
@@ -1598,11 +1597,8 @@ function App() {
           </div>
 
           <div className="top-bar-actions">
-            <button type="button" className="token-usage-trigger" onClick={() => { setTokenDetailsType("general"); setTokenDetailsOpen(true); }} title="Token General AI" aria-label="Token General AI">
-              <span>General</span><strong>{(() => { const total = chat.filter(item => item.type === "ai" && item.usageCategory !== "code").reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
-            </button>
-            <button type="button" className="token-usage-trigger" onClick={() => { setTokenDetailsType("code"); setTokenDetailsOpen(true); }} title="Token Coding AI" aria-label="Token Coding AI">
-              <span>Code</span><strong>{(() => { const total = chat.filter(item => item.type === "ai" && item.usageCategory === "code").reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
+            <button type="button" className="token-usage-trigger" onClick={() => setTokenDetailsOpen(true)} title="Token usage" aria-label="Token usage">
+              <span>Tokens</span><strong>{(() => { const total = chat.filter(item => item.type === "ai").reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0); return total >= 1000 ? (total / 1000).toFixed(total >= 10000 ? 0 : 1) + "k" : String(total); })()}</strong>
             </button>
             <div className="session-menu-wrap">
               <button
@@ -1651,52 +1647,70 @@ function App() {
         </header>
 
         {tokenDetailsOpen && (() => {
-          const allAssistantMessages = chat.map((item, index) => ({ ...item, _index: index })).filter(item => item.type === "ai");
-          const categorizedMessages = allAssistantMessages.filter(item => (item.usageCategory || "general") === tokenDetailsType);
-          const usageMessages = categorizedMessages.filter(item => item.usage);
+          const assistantMessages = chat.map((item, index) => ({ ...item, _index: index })).filter(item => item.type === "ai");
+          const usageMessages = assistantMessages.filter(item => item.usage);
           const sumUsage = key => usageMessages.reduce((sum, item) => sum + Number(item.usage?.[key] || 0), 0);
           const latestUsage = [...usageMessages].reverse().find(item => item.usage)?.usage || {};
           const totalTokens = sumUsage("totalTokens");
           const formatNumber = value => Number(value || 0).toLocaleString();
           const selectedMessageIndexes = new Set();
-          categorizedMessages.forEach(item => {
+          assistantMessages.forEach(item => {
             selectedMessageIndexes.add(item._index);
             for (let i = item._index - 1; i >= 0; i--) {
               if (chat[i]?.type === "user") { selectedMessageIndexes.add(i); break; }
             }
           });
           const rawMessages = chat.map((item, index) => ({ role: item.type === "user" ? "User" : "Assistant", text: String(item.text || ""), index: index + 1 })).filter((item, index) => selectedMessageIndexes.has(index));
+          const modelCalls = usageMessages.flatMap(item => Array.isArray(item.usage?.models) ? item.usage.models : []);
+          const aggregatedModelCalls = [...modelCalls.reduce((map, item) => {
+            const key = [item.model || "unknown", item.provider || "", item.usedFallback ? "fallback" : "primary"].join("|");
+            const current = map.get(key) || { ...item, inputTokens: 0, outputTokens: 0, totalTokens: 0, calls: 0 };
+            current.inputTokens += Number(item.inputTokens || 0);
+            current.outputTokens += Number(item.outputTokens || 0);
+            current.totalTokens += Number(item.totalTokens || 0);
+            current.calls += 1;
+            map.set(key, current);
+            return map;
+          }, new Map()).values()];
+          const configuredModels = [
+            { label: "General", model: generalModel },
+            { label: "Coding", model: codingModel },
+            { label: "Fallback", model: fallbackModel }
+          ].filter(item => item.model?.trim());
           return (
             <div className="token-details-backdrop" onClick={() => setTokenDetailsOpen(false)}>
               <section className="token-details-panel" role="dialog" aria-modal="true" aria-label="Token usage details" onClick={event => event.stopPropagation()}>
-                <div className="token-details-header"><div><strong>{tokenDetailsType === "code" ? "Code tokens" : "General tokens"}</strong><span>Maklumat penggunaan {tokenDetailsType === "code" ? "Coding AI" : "General AI"} untuk sesi semasa</span></div><button type="button" onClick={() => setTokenDetailsOpen(false)} aria-label="Tutup">×</button></div>
+                <div className="token-details-header"><div><strong>Token usage</strong><span>Gabungan penggunaan General AI dan Coding AI untuk sesi semasa</span></div><button type="button" onClick={() => setTokenDetailsOpen(false)} aria-label="Tutup">×</button></div>
                 <div className="token-details-grid">
-                  <div><span>Jumlah messages</span><strong>{categorizedMessages.length}</strong></div>
-                  <div><span>Model ID utama (Models)</span><strong className="token-detail-mono">{(tokenDetailsType === "code" ? codingModel : generalModel).trim() || "Belum ditetapkan"}</strong></div>
-                  <div><span>Model ID Fallback (Models)</span><strong className="token-detail-mono">{fallbackModel.trim() || "Belum ditetapkan"}</strong></div>
+                  <div><span>Jumlah messages</span><strong>{assistantMessages.length}</strong></div>
                   <div><span>Total tokens</span><strong>{formatNumber(totalTokens)}</strong></div>
                   <div><span>Input tokens</span><strong>{formatNumber(sumUsage("inputTokens"))}</strong></div>
-                  <div><span>Reasoning tokens</span><strong>{formatNumber(sumUsage("reasoningTokens"))}</strong></div>
-                  <div><span>Assistant messages</span><strong>{categorizedMessages.length}</strong></div>
-                  <div><span>Session</span><strong className="token-detail-mono">{activeConversation.id || "—"}</strong></div>
-                  <div><span>Provider</span><strong>{latestUsage.provider || "OpenRouter"}</strong></div>
-                  <div><span>Context limit</span><strong>{latestUsage.contextLimit ? formatNumber(latestUsage.contextLimit) : contextLimitLoading ? "Mengesan model..." : selectedModelContextLimit ? formatNumber(selectedModelContextLimit) : "Tidak tersedia"}</strong></div>
-                  <div><span>Usage</span><strong>{formatNumber(totalTokens)} tokens</strong></div>
                   <div><span>Output tokens</span><strong>{formatNumber(sumUsage("outputTokens"))}</strong></div>
+                  <div><span>Reasoning tokens</span><strong>{formatNumber(sumUsage("reasoningTokens"))}</strong></div>
                   <div><span>Cache tokens (read)</span><strong>{formatNumber(sumUsage("cacheReadTokens"))}</strong></div>
                   <div><span>Cache tokens (write)</span><strong>{formatNumber(sumUsage("cacheWriteTokens"))}</strong></div>
-                  
+                  <div><span>Provider terakhir</span><strong>{latestUsage.provider || "OpenRouter"}</strong></div>
+                  <div><span>Context limit</span><strong>{latestUsage.contextLimit ? formatNumber(latestUsage.contextLimit) : contextLimitLoading ? "Mengesan model..." : selectedModelContextLimit ? formatNumber(selectedModelContextLimit) : "Tidak tersedia"}</strong></div>
+                  <div><span>Session</span><strong className="token-detail-mono">{activeConversation.id || "—"}</strong></div>
                   <div><span>Session created</span><strong>{activeConversation.createdAt ? new Date(activeConversation.createdAt).toLocaleString() : "Tidak diketahui"}</strong></div>
                 </div>
-                {latestUsage.models?.length > 0 && <div className="token-model-calls">
-                  <div className="token-raw-heading">Model calls ({latestUsage.models.length})</div>
-                  {latestUsage.models.map((item, index) => <div className="token-model-call" key={index}>
-                    <strong>{item.model || "Model tidak diketahui"}</strong>
-                    <span>{item.usedFallback ? "Fallback" : "Primary"} · {item.provider}</span>
-                    <small>Input {formatNumber(item.inputTokens)} · Output {formatNumber(item.outputTokens)} · Total {formatNumber(item.totalTokens)}</small>
-                    {item.requestedModel && item.requestedModel !== item.model && <small>Diminta: {item.requestedModel}</small>}
+                <div className="token-raw-heading">AI models</div>
+                <div className="token-model-calls">
+                  {configuredModels.map(item => <div className="token-model-call" key={item.label}>
+                    <strong>{item.label}</strong>
+                    <span>{item.model}</span>
                   </div>)}
-                </div>}
+                </div>
+                {aggregatedModelCalls.length > 0 && <>
+                  <div className="token-raw-heading">Models used in this session ({aggregatedModelCalls.length})</div>
+                  <div className="token-model-calls">
+                    {aggregatedModelCalls.map((item, index) => <div className="token-model-call" key={index}>
+                      <strong>{item.model || "Model tidak diketahui"}</strong>
+                      <span>{item.usedFallback ? "Fallback" : "Primary"} · {item.provider || "Provider tidak diketahui"} · {item.calls} calls</span>
+                      <small>Input {formatNumber(item.inputTokens)} · Output {formatNumber(item.outputTokens)} · Total {formatNumber(item.totalTokens)}</small>
+                    </div>)}
+                  </div>
+                </>}
                 <div className="token-raw-heading">Raw messages ({rawMessages.length})</div>
                 <div className="token-raw-list">{rawMessages.length ? rawMessages.map(item => <article key={item.index}><div><strong>#{item.index} {item.role}</strong><span>{item.text.length.toLocaleString()} chars</span></div><pre>{item.text}</pre></article>) : <p>Belum ada mesej dalam sesi ini.</p>}</div>
               </section>
