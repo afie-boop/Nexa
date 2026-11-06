@@ -29,7 +29,7 @@ async function runPipeline(data) {
   if (data.forcedTask === "fallback") {
     data.sendStatus?.("Fallback AI: " + (data.fallbackProvider || "openrouter") + "...");
     const response = await askProvider(data.fallbackProvider || "openrouter", data.question, {
-      model: data.fallbackModel,
+      model: data.fallbackModel || "openrouter/free",
       history: (data.history || []).slice(-12),
       system: INTERNAL_CONTEXT_RULE + "\n" + (data.internalSystemContext || ""),
       maxTokens: modePolicy.maxTokens,
@@ -73,9 +73,9 @@ async function runPipeline(data) {
       });
     } catch (primaryError) {
       if (data.fallbackEnabled === false) throw primaryError;
-      data.sendStatus?.("Fallback AI: " + (data.fallbackProvider || "gemini") + " mengambil alih...");
+      data.sendStatus?.("Fallback AI: " + (data.fallbackProvider || "openrouter") + " mengambil alih...");
       response = await askProvider(data.fallbackProvider || "gemini", data.question, {
-        model: data.fallbackModel || "gemini-3.8-flash",
+        model: data.fallbackModel || "openrouter/free",
         history: (data.history || []).slice(-6),
         system: fastSystemWithContext,
         maxTokens: modePolicy.maxTokens,
@@ -218,7 +218,7 @@ async function runPipeline(data) {
     logger.error(err);
 
     // If a non-model pipeline stage fails before the provider fallback runs,
-    // give the independent Gemini provider one final chance to answer.
+    // give the OpenRouter fallback model one final chance to answer.
     if (data.fallbackEnabled !== false && !err.fallbackAttempted) {
       try {
         data.sendStatus?.("Fallback AI: " + (data.fallbackProvider || "openrouter") + "...");
