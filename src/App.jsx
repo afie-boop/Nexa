@@ -1695,13 +1695,25 @@ function App() {
                 </div>
                 <div className="token-raw-heading">AI models</div>
                 <div className="token-model-calls">
-                  {(aggregatedModelCalls.length ? aggregatedModelCalls : configuredModels.map(item => ({ ...item, inputTokens: 0, outputTokens: 0, totalTokens: 0, calls: 0 }))).map((item, index) => {
+                  {(aggregatedModelCalls.length ? aggregatedModelCalls : configuredModels.map(item => ({ ...item, provider: "openrouter", inputTokens: 0, outputTokens: 0, totalTokens: 0, calls: 0, usedFallback: item.label === "Fallback" }))).map((item, index) => {
                     const modelId = item.model || "Model tidak diketahui";
                     const contextLimit = modelContextLimits[modelId];
-                    return <div className="token-model-call" key={`${modelId}-${index}`}>
+                    return <div className="token-model-call" key={`${modelId}-${item.provider || "openrouter"}-${index}`}>
                       <strong>{modelId}</strong>
                       <span>Context limit</span>
                       <small>{contextLimit ? `${formatNumber(item.inputTokens)} / ${formatNumber(contextLimit)}` : "Tidak tersedia"}</small>
+                      <span>Provider</span>
+                      <small>OpenRouter / {item.provider || "openrouter"}</small>
+                      <span>Input tokens</span>
+                      <small>{formatNumber(item.inputTokens)}</small>
+                      <span>Output tokens</span>
+                      <small>{formatNumber(item.outputTokens)}</small>
+                      <span>Total tokens</span>
+                      <small>{formatNumber(item.totalTokens)}</small>
+                      <span>Calls</span>
+                      <small>{formatNumber(item.calls)}</small>
+                      <span>Route</span>
+                      <small>{item.usedFallback ? "Fallback" : "Primary"}</small>
                     </div>;
                   })}
                 </div>
