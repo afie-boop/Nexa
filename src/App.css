@@ -2316,7 +2316,10 @@ button, input, textarea, select {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 6px;
+}
+.hero-section .hero-title {
+  margin-bottom: 0;
 }
 .home-clock {
   display: flex;
