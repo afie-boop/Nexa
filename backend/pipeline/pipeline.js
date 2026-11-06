@@ -65,7 +65,9 @@ async function runPipeline(data) {
     const fastStart = Date.now();
     const response = await askOpenRouter(data.question, {
       model: fastModel,
-      fallbackModel: data.fallbackModel || "openrouter/free",
+      fallbackModel: [data.fallbackModel, fastTask === "code" ? data.generalModel : data.codingModel, data.generalModel, data.codingModel, "openrouter/free"]
+        .map(value => String(value || "").trim())
+        .find(value => value && value !== fastModel) || null,
       fallbackEnabled: data.fallbackEnabled !== false,
       history: (data.history || []).slice(-6),
       system: fastSystemWithContext,
