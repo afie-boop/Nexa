@@ -71,7 +71,8 @@ async function runPipeline(data) {
       system: fastSystemWithContext,
       maxRetries: modePolicy.maxRetries,
       maxTokens: modePolicy.maxTokens,
-      reasoningEffort: modePolicy.reasoningEffort
+      reasoningEffort: modePolicy.reasoningEffort,
+      onUsage: data.onUsage
     });
 
     if (!response || !response.trim()) throw new Error("AI tidak memberikan jawapan.");
