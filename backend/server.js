@@ -812,8 +812,11 @@ ${brainContext.context}
       sendProcessStep
     });
 
-    // Persist before closing the stream so a new chat cannot race memory writes.
-    if (responseMode === "fast") {
+    // Return the completed AI answer immediately. Persistence and memory learning
+    // are best-effort background work and must never hold the chat response open.
+    sendAnswer(answer);
+
+    const persistChatInBackground = async () => {
       try {
         await saveWorkContext(brainUserId, {
           lastTaskType: task,
@@ -822,67 +825,31 @@ ${brainContext.context}
           currentTask: question
         });
       } catch (workContextError) {
-        console.warn("[Fast WorkContext Save Warning]:", workContextError.message);
+        console.warn("[WorkContext Save Warning]:", workContextError.message);
       }
 
-      if (memoryEnabled) {
-        try {
-          const learning = await learnFromChat(brain, [...history.filter(item => item.role === "user"), { role: "user", content: question }].slice(-8), brainScope, {
+      if (!memoryEnabled) return;
+      try {
+        const learning = await learnFromChat(
+          brain,
+          [...history.filter(item => item.role === "user"), { role: "user", content: question }].slice(-8),
+          brainScope,
+          {
             mode: process.env.BRAIN_MEMORY_MODE || "auto",
             confidenceThreshold: 0.75,
             maxMemories: 3
-          });
-          if (learning?.updated || learning?.saved?.some(item => item.created)) {
-            sendStatus("Brain berjaya menyimpan atau mengemas kini memori.");
           }
-        } catch (learningError) {
-          console.warn("[Fast Brain Learning Warning]:", learningError.message);
-        }
-      }
-
-      sendAnswer(answer);
-      return;
-    }
-
-    // Persist this exchange as shared working state for both AI roles.
-    try {
-      await saveWorkContext(brainUserId, {
-        lastTaskType: task,
-        lastQuestion: question,
-        lastAnswer: answer,
-        currentTask: question
-      });
-    } catch (workContextError) {
-      console.warn("[WorkContext Save Warning]:", workContextError.message);
-    }
-
-    // Brain Learning Loop: learn only durable information from the user's
-    // own message, scoped to the stable Brain user identity. GitHub is not
-    // required for personal memory. The assistant response is never persisted.
-    if (memoryEnabled) try {
-      const learning = await learnFromChat(brain, [...history.filter(item => item.role === "user"), { role: "user", content: question }].slice(-8), brainScope, {
-        mode: process.env.BRAIN_MEMORY_MODE || "auto",
-        confidenceThreshold: 0.75,
-        maxMemories: 3
-      });
-
-      if (learning.updated) {
-        sendStatus("Brain mengemas kini " + learning.updated + " memori.");
-      }
-      if (learning.consolidated && learning.consolidated.length) {
-        sendStatus("Brain menggabungkan " + learning.consolidated.length + " memori berkaitan.");
-      } else if (learning.saved && learning.saved.some(item => item.created)) {
-        sendStatus(
-          "Brain menyimpan " +
-          learning.saved.filter(item => item.created).length +
-          " memori."
         );
+        if (learning?.updated || learning?.saved?.some(item => item.created)) {
+          console.log("[Brain Learning] Chat memory updated.");
+        }
+      } catch (learningError) {
+        console.warn("[Brain Learning Loop Warning]:", learningError.message);
       }
-    } catch (learningError) {
-      console.warn("[Brain Learning Loop Warning]:", learningError.message);
-    }
+    };
 
-    sendAnswer(answer);
+    void persistChatInBackground();
+    return;
 
   } catch (error) {
 
