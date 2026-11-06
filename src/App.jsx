@@ -1608,14 +1608,12 @@ function App() {
               return (
                 <button
                   type="button"
-                  className="token-usage-trigger token-usage-ring-button"
+                  className="token-usage-trigger token-usage-text-button"
                   onClick={() => setTokenDetailsOpen(true)}
                   title="Token tersisa dan butiran penggunaan"
                   aria-label={remainingTokens === null ? "Buka butiran token" : `${remainingTokens.toLocaleString()} token tersisa`}
                 >
-                  <span className="token-ring" style={{ "--token-used": `${usedPercent}%` }}>
-                    <span className="token-ring-inner"><span className="token-ring-dot" /></span>
-                  </span>
+                  <span>Tokens</span>
                   <strong>{remainingTokens === null ? "—" : compact(remainingTokens)}</strong>
                 </button>
               );
