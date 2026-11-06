@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import ReactMarkdown from "react-markdown";
@@ -43,6 +44,220 @@ const axmCodeTheme = {
   'namespace': { color: '#56b6c2', opacity: 0.9 },
   'maybe-class-name': { color: '#56b6c2' },
 };
+
+
+/* AXMchat code blocks: compact snippets + downloadable long-file cards */
+const LONG_CODE_LINES = 25;
+const RUNNABLE = ["html", "svg"];
+const CODE_EXT = {
+  javascript: "js", js: "js", jsx: "jsx", typescript: "ts", ts: "ts", tsx: "tsx",
+  python: "py", py: "py", html: "html", css: "css", json: "json", svg: "svg",
+  bash: "sh", sh: "sh", text: "txt"
+};
+
+function getCodeFileName(node, lang) {
+  const meta = node?.meta || node?.data?.meta || "";
+  const match = /(?:title|file|filename)=["']?([^"'\s]+)["']?/.exec(meta);
+  return match ? match[1] : \`kod.\${CODE_EXT[lang] || lang || "txt"}\`;
+}
+
+function useCodeCopy() {
+  const [copied, setCopied] = useState(false);
+  const copy = useCallback(async (value) => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const field = document.createElement("textarea");
+        field.value = value;
+        field.style.position = "fixed";
+        field.style.opacity = "0";
+        document.body.appendChild(field);
+        field.select();
+        document.execCommand("copy");
+        field.remove();
+      }
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch (error) {
+      console.error("Gagal menyalin kod:", error);
+    }
+  }, []);
+  return [copied, copy];
+}
+
+function downloadCodeFile(name, value) {
+  const url = URL.createObjectURL(new Blob([value], { type: "text/plain;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function buildCodePreview(lang, value) {
+  if (lang === "svg") {
+    return \`<!doctype html><html><body style="margin:0;display:grid;place-items:center;min-height:100vh;background:#fff">\${value}</body></html>\`;
+  }
+  return value;
+}
+
+function CodeSvg({ children, size = 20 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      {children}
+    </svg>
+  );
+}
+const CodeIconCopy = () => <CodeSvg><rect x="9" y="9" width="13" height="13" rx="2" ry="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></CodeSvg>;
+const CodeIconCheck = () => <CodeSvg><polyline points="20 6 9 17 4 12" /></CodeSvg>;
+const CodeIconDownload = () => <CodeSvg><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></CodeSvg>;
+const CodeIconClose = () => <CodeSvg><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></CodeSvg>;
+const CodeIconExpand = () => <CodeSvg><polyline points="15 3 21 3 21 9" /><polyline points="9 21 3 21 3 15" /><line x1="21" y1="3" x2="14" y2="10" /><line x1="3" y1="21" x2="10" y2="14" /></CodeSvg>;
+const CodeIconPlay = () => <CodeSvg><polygon points="5 3 19 12 5 21 5 3" /></CodeSvg>;
+const CodeIconFile = () => <CodeSvg size={22}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></CodeSvg>;
+
+function CodeHighlight({ lang, content, fontSize = 13, padding = "10px 16px 18px" }) {
+  return (
+    <SyntaxHighlighter
+      language={lang}
+      style={axmCodeTheme}
+      wrapLongLines
+      customStyle={{
+        margin: 0, border: "none", borderRadius: 0, padding,
+        fontSize: \`\${fontSize}px\`, lineHeight: "1.4", background: "transparent",
+        textShadow: "none", overflowX: "hidden", whiteSpace: "pre-wrap",
+        wordBreak: "normal", overflowWrap: "break-word"
+      }}
+      codeTagProps={{
+        style: {
+          fontSize: \`\${fontSize}px\`, lineHeight: "1.4", padding: 0, margin: 0,
+          textShadow: "none", whiteSpace: "pre-wrap", wordBreak: "normal",
+          overflowWrap: "break-word", fontVariantLigatures: "none",
+          fontFamily: '"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace'
+        }
+      }}
+    >
+      {content}
+    </SyntaxHighlighter>
+  );
+}
+
+function CodeFileCard({ fileName, lang, lines, content, onOpen }) {
+  return (
+    <div className="cf-card" role="button" tabIndex={0}
+      onClick={() => onOpen("code")}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen("code");
+        }
+      }}>
+      <div className="cf-icon"><CodeIconFile /></div>
+      <div className="cf-text">
+        <div className="cf-title">{fileName}</div>
+        <div className="cf-sub">Kod · {lang.toUpperCase()} · {lines} baris</div>
+      </div>
+      <button type="button" className="cf-btn" onClick={(event) => {
+        event.stopPropagation();
+        downloadCodeFile(fileName, content);
+      }}>Muat turun</button>
+    </div>
+  );
+}
+
+function CodeViewerPanel({ fileName, lang, lines, content, startTab, onClose }) {
+  const canRun = RUNNABLE.includes(lang);
+  const [tab, setTab] = useState(canRun ? startTab : "code");
+  const [fontSize, setFontSize] = useState(13);
+  const [copied, copy] = useCodeCopy();
+
+  useEffect(() => {
+    const handleKey = (event) => { if (event.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", handleKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="cv-overlay" onClick={onClose}>
+      <div className="cv-panel" onClick={(event) => event.stopPropagation()}>
+        <div className="cv-head">
+          <div className="cv-head-text">
+            <div className="cv-title">{fileName}</div>
+            <div className="cv-sub">{lang.toUpperCase()} · {lines} baris</div>
+          </div>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Tutup"><CodeIconClose /></button>
+        </div>
+        <div className="cv-toolbar">
+          {canRun ? (
+            <div className="cv-tabs">
+              <button type="button" className={tab === "code" ? "active" : ""} onClick={() => setTab("code")}>Kod</button>
+              <button type="button" className={tab === "preview" ? "active" : ""} onClick={() => setTab("preview")}>Pratonton</button>
+            </div>
+          ) : <div />}
+          <div className="cv-actions">
+            {tab === "code" && <>
+              <button type="button" className="icon-btn txt" onClick={() => setFontSize((size) => Math.max(9, size - 1))} aria-label="Kecilkan">A−</button>
+              <button type="button" className="icon-btn txt" onClick={() => setFontSize((size) => Math.min(22, size + 1))} aria-label="Besarkan">A+</button>
+            </>}
+            <button type="button" className="icon-btn" onClick={() => copy(content)} aria-label="Salin kod">{copied ? <CodeIconCheck /> : <CodeIconCopy />}</button>
+            <button type="button" className="icon-btn" onClick={() => downloadCodeFile(fileName, content)} aria-label="Muat turun"><CodeIconDownload /></button>
+          </div>
+        </div>
+        <div className="cv-body">
+          {tab === "code" ? (
+            <CodeHighlight lang={lang} content={content} fontSize={fontSize} padding="14px 16px 28px" />
+          ) : (
+            <iframe className="cv-frame" title="Pratonton kod" sandbox="allow-scripts" srcDoc={buildCodePreview(lang, content)} />
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function CodeBlock({ node, lang, content, onCopy }) {
+  const [copied, copy] = useCodeCopy();
+  const [panel, setPanel] = useState(null);
+  const closePanel = useCallback(() => setPanel(null), []);
+  const lines = content.split("\\n").length;
+  const fileName = getCodeFileName(node, lang);
+  const isLong = lines > LONG_CODE_LINES;
+  const canRun = RUNNABLE.includes(lang);
+
+  return (
+    <>
+      {isLong ? (
+        <CodeFileCard fileName={fileName} lang={lang} lines={lines} content={content} onOpen={setPanel} />
+      ) : (
+        <div className="code-block-wrapper">
+          <div className="code-block-header">
+            <span className="code-lang">{lang}</span>
+            <div className="code-block-actions">
+              {canRun && <button type="button" className="copy-btn" aria-label="Jalankan" title="Jalankan" onClick={() => setPanel("preview")}><CodeIconPlay /></button>}
+              <button type="button" className="copy-btn" aria-label="Besarkan" title="Besarkan" onClick={() => setPanel("code")}><CodeIconExpand /></button>
+              <button type="button" className="copy-btn" aria-label={copied ? "Kod disalin" : "Salin kod"} title={copied ? "Kod disalin" : "Salin kod"} onClick={() => copy(content)}>
+                {copied ? <CodeIconCheck /> : <CodeIconCopy />}
+              </button>
+            </div>
+          </div>
+          <div className="code-block-body"><CodeHighlight lang={lang} content={content} /></div>
+        </div>
+      )}
+      {panel && <CodeViewerPanel fileName={fileName} lang={lang} lines={lines} content={content} startTab={panel} onClose={closePanel} />}
+    </>
+  );
+}
+
 
 function App() {
   const msgRef = useRef(null);
@@ -1001,75 +1216,16 @@ function App() {
 
   const MarkdownComponents = {
     code({ node, className, children, ...props }) {
-      const match = /language-(\w+)/.exec(className || "");
+      const match = /language-(\\w+)/.exec(className || "");
       const isInline = !match;
-      const lang = match ? match[1] : "text";
-      const content = String(children).replace(/\n$/, "");
-      const key = node?.position
-        ? `${node.position.start.line}-${node.position.start.column}`
-        : content.slice(0, 20) + content.length;
+      const lang = match ? match[1].toLowerCase() : "text";
+      const content = String(children).replace(/\\n$/, "");
 
       if (isInline) {
-        return (
-          <code className="inline-code" {...props}>
-            {children}
-          </code>
-        );
+        return <code className="inline-code" {...props}>{children}</code>;
       }
 
-      return (
-        <div className="code-block-wrapper">
-          <div className="code-block-header">
-            <span className="code-lang">{lang}</span>
-            <button
-              type="button"
-              className="copy-btn"
-              onClick={() => copyCode(content, key)}
-              aria-label={copiedIdx === key ? "Kod disalin" : "Salin kod"}
-              title={copiedIdx === key ? "Kod disalin" : "Salin kod"}
-            >
-              {copiedIdx === key ? (
-                <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="copy-btn-icon" height="20" width="20" xmlns="http://www.w3.org/2000/svg">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-              ) : (
-                <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" className="copy-btn-icon" height="20" width="20" xmlns="http://www.w3.org/2000/svg">
-                  <rect x="8" y="8" width="12" height="12" rx="2"></rect>
-                  <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path>
-                </svg>
-              )}
-            </button>
-          </div>
-          <div className="code-block-body">
-            <SyntaxHighlighter
-              language={lang}
-              style={axmCodeTheme}
-              wrapLongLines={true}
-              customStyle={{
-                margin: 0,
-                borderRadius: "0",
-                padding: "16px",
-                fontSize: "13px",
-                lineHeight: "1.6",
-                background: "transparent",
-                whiteSpace: "pre-wrap",
-                overflowWrap: "anywhere",
-                wordBreak: "break-word",
-              }}
-              codeTagProps={{
-                style: {
-                  whiteSpace: "pre-wrap",
-                  overflowWrap: "anywhere",
-                  wordBreak: "break-word",
-                  fontFamily: '"JetBrains Mono", monospace',
-                },
-              }}
-            >
-              {content}
-            </SyntaxHighlighter>
-          </div>
-        </div>
-      );
+      return <CodeBlock node={node} lang={lang} content={content} />;
     },
   };
 
