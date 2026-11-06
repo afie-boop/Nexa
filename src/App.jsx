@@ -1032,15 +1032,6 @@ function App() {
     return matchesTitle || matchesContent;
   });
 
-  // Calculate current dynamic status
-  const getDynamicStatus = () => {
-    if (!isOnline) return "Offline";
-    if (load) return "Thinking";
-    return "Ready";
-  };
-
-  const currentStatus = getDynamicStatus();
-
   const renderedChat = useMemo(() => (
                   chat.map((c, i) => {
                     const messageId = c.id || `msg_legacy_${i}`;
@@ -1531,13 +1522,7 @@ function App() {
               </svg>
             </button>
 
-            <div className="ai-status-container">
-              <span className="ai-name">AXMchat</span>
-              <div className="status-indicator">
-                <span className={`status-dot ${currentStatus === "Thinking" ? "thinking" : ""}`} />
-                <span>{currentStatus}</span>
-              </div>
-            </div>
+
           </div>
 
           <div className="top-bar-actions">
