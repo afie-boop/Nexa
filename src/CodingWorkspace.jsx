@@ -30,7 +30,7 @@ function makePreviewDocument(files) {
       "var source=" + safeJsx + ";" +
       "source=source.replace(/^\\s*import\\s+[^\\n]*\\n/gm,'').replace(/^\\s*export\\s+default\\s+/gm,'').replace(/^\\s*export\\s+(?=(function|class|const|let|var)\\b)/gm,'');" +
       "var compiled=Babel.transform(source,{presets:['env','react']}).code;" +
-      "var runner=new Function('React','ReactDOM',compiled+';if(typeof App!==\'undefined\'&&!/createRoot|ReactDOM\\.render/.test(" + JSON.stringify(jsx) + ")){ReactDOM.createRoot(document.getElementById(\'root\')||document.body).render(React.createElement(App));}');" +
+      "var runner=new Function('React','ReactDOM','var useState=React.useState,useEffect=React.useEffect,useMemo=React.useMemo,useRef=React.useRef,useCallback=React.useCallback;'+compiled+';if(typeof App!==\'undefined\'&&!/createRoot|ReactDOM\\.render/.test(" + JSON.stringify(jsx) + ")){ReactDOM.createRoot(document.getElementById(\'root\')||document.body).render(React.createElement(App));}');" +
       "runner(React,ReactDOM);" +
       "}catch(error){var box=document.getElementById('__axm_error');if(box){box.style.display='block';box.textContent='JSX preview error: '+error.message;}}})();<\/script>";
   }
