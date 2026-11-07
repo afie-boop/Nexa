@@ -94,14 +94,15 @@ export default function CodingWorkspace() {
   }
 
   const visibleFolders = useMemo(() => {
-    if (query.trim()) return [];
+    if (query.trim() || showTrash) return [];
     return store.folders
       .filter(path => parentPath(path) === currentFolder)
       .sort((a, b) => baseName(a).localeCompare(baseName(b)));
   }, [store.folders, currentFolder, query, showTrash]);
 
   const visibleFiles = useMemo(() => {
-    if (showTrash) return [];\n    let list = store.files.filter(file => query.trim()
+    if (showTrash) return [];
+    let list = store.files.filter(file => query.trim()
       ? file.path.toLowerCase().includes(query.trim().toLowerCase())
       : parentPath(file.path) === currentFolder);
     if (sort === "date") list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
