@@ -2010,6 +2010,9 @@ function App() {
                     <circle cx="12" cy="5" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="12" cy="19" r="1.8" />
                   </svg>
                 </button>
+                <button type="button" className="coding-sort-trigger" onClick={() => codingWorkspaceRef.current?.cycleSort()} aria-label="Tukar susunan fail" title="Tukar susunan fail">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+                </button>
                 {sessionMenuOpen && <div className="session-menu-popover" role="menu">
                   <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); codingWorkspaceRef.current?.chooseFiles(); }}>
                     <span aria-hidden="true">☑</span><span>Pilih</span>
