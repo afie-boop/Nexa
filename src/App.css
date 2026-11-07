@@ -2691,3 +2691,30 @@ button, input, textarea, select {
   margin: 0 !important;
   transform: none;
 }
+
+
+/* Refined file card and source viewer code layout. */
+.cf-btn {
+  padding: 6px 9px !important;
+  font-size: 11px !important;
+  line-height: 1.2;
+  border-radius: 8px !important;
+  white-space: nowrap;
+}
+.cv-body {
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.cv-body pre {
+  max-width: 100%;
+  overflow-x: auto !important;
+  white-space: pre !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  tab-size: 2;
+}
+.cv-body pre code {
+  white-space: pre !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
