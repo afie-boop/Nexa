@@ -6,10 +6,10 @@ function readFileStore() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
     if (saved && !Array.isArray(saved) && Array.isArray(saved.files)) {
-      return { files: saved.files, folders: Array.isArray(saved.folders) ? saved.folders : [] };
+      return { files: saved.files, folders: Array.isArray(saved.folders) ? saved.folders : [], trash: Array.isArray(saved.trash) ? saved.trash : [] };
     }
   } catch (_) {}
-  return { files: [], folders: [] };
+  return { files: [], folders: [], trash: [] };
 }
 
 function parentPath(path) {
@@ -63,6 +63,9 @@ export default function CodingWorkspace() {
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("name");
   const [showFolderForm, setShowFolderForm] = useState(false);
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [showTrash, setShowTrash] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
   const [folderName, setFolderName] = useState("");
   const [selected, setSelected] = useState([]);
   const [menu, setMenu] = useState(null);
@@ -95,17 +98,17 @@ export default function CodingWorkspace() {
     return store.folders
       .filter(path => parentPath(path) === currentFolder)
       .sort((a, b) => baseName(a).localeCompare(baseName(b)));
-  }, [store.folders, currentFolder, query]);
+  }, [store.folders, currentFolder, query, showTrash]);
 
   const visibleFiles = useMemo(() => {
-    let list = store.files.filter(file => query.trim()
+    if (showTrash) return [];\n    let list = store.files.filter(file => query.trim()
       ? file.path.toLowerCase().includes(query.trim().toLowerCase())
       : parentPath(file.path) === currentFolder);
     if (sort === "date") list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     else if (sort === "type") list.sort((a, b) => extensionOf(a.path).localeCompare(extensionOf(b.path)) || baseName(a.path).localeCompare(baseName(b.path)));
     else list.sort((a, b) => baseName(a.path).localeCompare(baseName(b.path)));
     return list;
-  }, [store.files, currentFolder, query, sort]);
+  }, [store.files, currentFolder, query, sort, showTrash]);
 
   const totalBytes = useMemo(() => store.files.reduce((sum, file) => sum + new Blob([file.content || ""]).size, 0), [store.files]);
   const breadcrumbs = currentFolder ? currentFolder.split("/") : [];
@@ -195,21 +198,14 @@ export default function CodingWorkspace() {
 
   return (
     <main className="fm-shell">
-      <header className="fm-header">
-        <div className="fm-heading">
-          <div className="fm-heading-icon"><FileGlyph folder /></div>
-          <div><h2>My Files</h2><p>Files created by AXMchat AI</p></div>
-        </div>
-        <button type="button" className="fm-new-folder" onClick={() => setShowFolderForm(value => !value)}><span>＋</span> New folder</button>
+      <header className="fm-actions">
+        <button type="button" className="fm-create-button" onClick={() => setShowCreateMenu(value => !value)}>＋ Buat <span>⌄</span></button>
+        {showCreateMenu && <div className="fm-create-menu">
+          <button type="button" onClick={() => { setSelectionMode(value => !value); setSelected([]); setShowCreateMenu(false); }}>☑ {selectionMode ? "Tutup pilihan" : "Pilih"}</button>
+          <button type="button" onClick={() => { setShowFolderForm(true); setShowTrash(false); setShowCreateMenu(false); }}>＋ Cipta folder</button>
+          <button type="button" onClick={() => { setShowTrash(true); setSelected([]); setShowCreateMenu(false); }}>▣ Sampah <span>{(store.trash || []).length}</span></button>
+        </div>}
       </header>
-
-      <div className="fm-summary">
-        <div><strong>{store.files.length}</strong><span>Files</span></div>
-        <i />
-        <div><strong>{store.folders.length}</strong><span>Folders</span></div>
-        <i />
-        <div><strong>{formatBytes(totalBytes)}</strong><span>Used</span></div>
-      </div>
 
       <div className="fm-toolbar">
         <label className="fm-search">
@@ -227,15 +223,15 @@ export default function CodingWorkspace() {
       </form>}
 
       <nav className="fm-breadcrumbs" aria-label="Folder path">
-        <button type="button" onClick={() => { setCurrentFolder(""); setQuery(""); }}>Files</button>
-        {breadcrumbs.map((part, index) => {
+        <button type="button" onClick={() => { setCurrentFolder(""); setQuery(""); setShowTrash(false); }}>Files</button>
+        {!showTrash && breadcrumbs.map((part, index) => {
           const path = breadcrumbs.slice(0, index + 1).join("/");
           return <span key={path}><b>›</b><button type="button" onClick={() => { setCurrentFolder(path); setQuery(""); }}>{part}</button></span>;
         })}
-        {query && <span><b>›</b><em>Search results</em></span>}
+        {showTrash && <span><b>›</b><em>Sampah</em></span>}{query && <span><b>›</b><em>Search results</em></span>}
       </nav>
 
-      {selected.length > 0 && <div className="fm-selection">
+      {selectionMode && selected.length > 0 && <div className="fm-selection">
         <span>{selected.length} selected</span>
         <button type="button" onClick={deleteSelected}>Delete selected</button>
         <button type="button" onClick={() => setSelected([])}>Clear</button>
@@ -244,7 +240,7 @@ export default function CodingWorkspace() {
       <section className="fm-content">
         <div className="fm-list-head">
           <span>Name</span><span>Size</span><span>Modified</span>
-          <button type="button" onClick={() => setSelected(allVisibleSelected ? [] : visibleFiles.map(file => file.path))}>{allVisibleSelected ? "Clear" : "Select all"}</button>
+          {selectionMode && <button type="button" onClick={() => setSelected(allVisibleSelected ? [] : visibleFiles.map(file => file.path))}>{allVisibleSelected ? "Clear" : "Select all"}</button>}
         </div>
 
         {visibleFolders.map(path => <div className="fm-row" key={path}>
@@ -261,7 +257,7 @@ export default function CodingWorkspace() {
           const ext = extensionOf(file.path);
           const checked = selected.includes(file.path);
           return <div className={"fm-row " + (checked ? "selected" : "")} key={file.path}>
-            <input className="fm-check" type="checkbox" checked={checked} onChange={() => toggleSelected(file.path)} aria-label={"Select " + baseName(file.path)} />
+            {selectionMode && <input className="fm-check" type="checkbox" checked={checked} onChange={() => toggleSelected(file.path)} aria-label={"Select " + baseName(file.path)} />}
             <button type="button" className="fm-item-main" onClick={() => setPreview(file)}>
               <span className="fm-item-icon"><FileGlyph ext={ext} /></span>
               <span className="fm-item-copy"><strong>{baseName(file.path)}</strong><small>{ext.toUpperCase()} · AI generated</small></span>
@@ -279,14 +275,22 @@ export default function CodingWorkspace() {
           </div>;
         })}
 
-        {!visibleFolders.length && !visibleFiles.length && <div className="fm-empty">
+        {showTrash && <div className="fm-trash-list">
+          {!(store.trash || []).length ? <div className="fm-empty"><strong>Sampah kosong</strong><p>Fail yang dipadam akan muncul di sini.</p></div> : (store.trash || []).map((item, index) => <div className="fm-trash-row" key={item.path + "-" + index}>
+            <span className="fm-item-icon"><FileGlyph folder={item.type === "folder"} ext={extensionOf(item.path)} /></span>
+            <span className="fm-item-copy"><strong>{baseName(item.path)}</strong><small>{item.type === "folder" ? "Folder" : extensionOf(item.path).toUpperCase()}</small></span>
+            <button type="button" onClick={() => restoreTrashItem(item)}>Pulihkan</button>
+            <button type="button" className="danger" onClick={() => permanentlyDeleteTrashItem(item)}>Padam</button>
+          </div>)}
+        </div>}
+        {!showTrash && !visibleFolders.length && !visibleFiles.length && <div className="fm-empty">
           <div className="fm-empty-icon"><FileGlyph folder /></div>
           <strong>{query ? "No matching files" : "No files yet"}</strong>
           <p>{query ? "Try another search term." : "When AXMchat creates code, tap “Save to Files” on its code block. Your saved files will appear here."}</p>
         </div>}
       </section>
 
-      <footer className="fm-footer"><span>{store.files.length} files · {formatSize(String(totalBytes))} used</span><span>{notice || "Stored on this device"}</span></footer>
+      <footer className="fm-footer"><span>{showTrash ? (store.trash || []).length + " item dalam sampah" : store.files.length + " fail"}</span><span>{notice || "Stored on this device"}</span></footer>
 
       {preview && <div className="fm-preview-backdrop" onClick={() => setPreview(null)}>
         <section className="fm-preview" role="dialog" aria-modal="true" aria-label={baseName(preview.path)} onClick={event => event.stopPropagation()}>
