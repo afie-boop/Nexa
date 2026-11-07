@@ -1929,6 +1929,19 @@ function App() {
             {/* 2. Hero Section (when empty) */}
             {chat.length === 0 && !load ? (
               <div className="hero-section animate-fade">
+                <svg className="home-brand-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" aria-hidden="true">
+                  <g transform="translate(-241.5 -105) scale(0.78)">
+                    <path fill="currentColor" fillRule="evenodd" d="M940 368 Q965 345 992 368
+                      L1308 752 Q1335 785 1308 818
+                      L995 1210 Q965 1240 935 1210
+                      L620 818 Q595 785 620 752 Z
+                      M900 535 Q915 520 932 537
+                      L1120 758 Q1148 790 1125 815
+                      L985 985 Q970 1000 970 1015
+                      L970 1100 Q968 1112 960 1105
+                      L745 815 Q725 790 745 758 Z"/>
+                  </g>
+                </svg>
                 <h2 className="hero-title">{homeGreeting}</h2>
                 <div className="home-clock" aria-label="Waktu semasa">
                   <span className="home-clock-time">{homeClock.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone })}</span>
