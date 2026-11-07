@@ -2815,3 +2815,21 @@ button:not(:disabled):active {
   }
   .skeleton-line::after { animation-duration: 3s; }
 }
+
+
+/* Transparent diamond brand mark above the homepage greeting. */
+.home-brand-mark {
+  display: block;
+  width: 62px;
+  height: 62px;
+  margin: 0 0 14px;
+  color: #f5f5f5;
+  flex: 0 0 auto;
+}
+@media (max-width: 600px) {
+  .home-brand-mark {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 12px;
+  }
+}
