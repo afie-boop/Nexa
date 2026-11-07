@@ -263,7 +263,7 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
         <button type="button" onClick={() => setSelected([])}>Clear</button>
       </div>}
 
-      <section className="fm-content">
+      <section className={"fm-content " + (!showTrash && !visibleFolders.length && !visibleFiles.length ? "fm-content-empty" : "")}>
         {selectionMode && <div className="fm-list-head"><span></span><span></span><span></span><button type="button" onClick={() => setSelected(allVisibleSelected ? [] : visibleFiles.map(file => file.path))}>{allVisibleSelected ? "Clear" : "Select all"}</button></div>}
 
         {visibleFolders.map(path => {
@@ -318,7 +318,6 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
         </div>}
       </section>
 
-      <footer className="fm-footer"><span>{showTrash ? (store.trash || []).length + " item dalam sampah" : store.files.length + " fail"}</span><span>{notice || "Stored on this device"}</span></footer>
 
       {preview && <div className="fm-preview-backdrop" onClick={() => setPreview(null)}>
         <section className="fm-preview" role="dialog" aria-modal="true" aria-label={baseName(preview.path)} onClick={event => event.stopPropagation()}>
