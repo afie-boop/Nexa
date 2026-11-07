@@ -5326,3 +5326,20 @@ button:not(:disabled):active {
   #root .fm-row { padding-left: 0; padding-right: 0; }
   #root .fm-list-head { padding-left: 0; padding-right: 0; }
 }
+
+
+/* Move Coding file manager up to the panel's top edge */
+#root .coding-workspace-page {
+  padding-top: 0 !important;
+}
+#root .coding-workspace-page .coding-workspace-inner {
+  gap: 0;
+}
+#root .coding-workspace-page .fm-shell {
+  margin-top: 0;
+}
+@media (max-width:768px) {
+  #root .coding-workspace-page {
+    padding-top: 0 !important;
+  }
+}
