@@ -79,7 +79,8 @@ const CodingWorkspace = forwardRef(function CodingWorkspace({ onCycleSort }, ref
     setSortMode: mode => setSort(mode),
     toggleSearch: () => setSearchOpen(value => !value),
     createFolder: () => { setShowFolderForm(true); setShowTrash(false); },
-    openTrash: () => { setShowTrash(true); setSelected([]); setQuery(""); setCurrentFolder(""); }
+    openTrash: () => { setShowTrash(true); setSelected([]); setQuery(""); setCurrentFolder(""); },
+    openFiles: () => { setShowTrash(false); setSelected([]); setSelectionMode(false); setQuery(""); setCurrentFolder(""); setFilter("all"); setShowFolderForm(false); }
   }), []);
 
   useEffect(() => {
@@ -248,11 +249,7 @@ const CodingWorkspace = forwardRef(function CodingWorkspace({ onCycleSort }, ref
         <button type="button" className="fm-cancel" onClick={() => { setShowFolderForm(false); setFolderName(""); }}>Cancel</button>
       </form>}
 
-      <div className="fm-category-bar">
-        <label className="fm-filter"><select value={filter} onChange={event => setFilter(event.target.value)} aria-label="Tapis item">
-          <option value="all">Semua</option><option value="folders">Folder</option><option value="files">Fail</option>
-        </select><span aria-hidden="true">▾</span></label>
-      </div>
+
       {selectionMode && selected.length > 0 && <div className="fm-selection">
         <span>{selected.length} selected</span>
         <button type="button" onClick={deleteSelected}>Delete selected</button>
