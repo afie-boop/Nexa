@@ -98,6 +98,40 @@ function downloadCodeFile(name, value) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function saveGeneratedCodeFile(name, value, lang) {
+  const extension = ({ javascript: "js", js: "js", jsx: "jsx", typescript: "ts", ts: "ts", tsx: "tsx", python: "py", py: "py", html: "html", css: "css", json: "json", svg: "svg", bash: "sh", sh: "sh", text: "txt" })[lang] || lang || "txt";
+  const cleanPath = String(name || ("kod." + extension)).replace(/\\\\/g, "/").replace(/^\\/+/, "").split("/").filter(part => part && part !== "." && part !== "..").join("/") || ("kod." + extension);
+  let store;
+  try {
+    const saved = JSON.parse(localStorage.getItem("axmchat_generated_files") || "null");
+    store = saved && !Array.isArray(saved) && Array.isArray(saved.files) ? saved : { files: [], folders: [] };
+  } catch (_) {
+    store = { files: [], folders: [] };
+  }
+  const files = Array.isArray(store.files) ? [...store.files] : [];
+  const folders = Array.isArray(store.folders) ? [...store.folders] : [];
+  const existing = files.findIndex(file => file.path === cleanPath);
+  const previous = existing >= 0 ? files[existing] : null;
+  const now = Date.now();
+  const record = { id: previous?.id || ("ai_file_" + now + "_" + Math.random().toString(36).slice(2, 7)), path: cleanPath, content: value, language: lang, source: "ai", createdAt: previous?.createdAt || now, updatedAt: now };
+  if (existing >= 0) files[existing] = record;
+  else files.push(record);
+  const parts = cleanPath.split("/");
+  let folderPath = "";
+  parts.slice(0, -1).forEach(part => {
+    folderPath = folderPath ? folderPath + "/" + part : part;
+    if (!folders.includes(folderPath)) folders.push(folderPath);
+  });
+  try {
+    localStorage.setItem("axmchat_generated_files", JSON.stringify({ files, folders }));
+    window.dispatchEvent(new Event("axmchat-generated-files-updated"));
+    return true;
+  } catch (error) {
+    console.error("Gagal menyimpan fail AI:", error);
+    return false;
+  }
+}
+
 function buildCodePreview(lang, value) {
   if (lang === "svg") {
     return "<!doctype html><html><body style=\"margin:0;display:grid;place-items:center;min-height:100vh;background:#fff\">" + value + "</body></html>";
@@ -176,7 +210,7 @@ function CodeHighlight({ lang, content, fontSize = 13, padding = "10px 16px 18px
   );
 }
 
-function CodeFileCard({ fileName, lang, lines, content, onOpen }) {
+function CodeFileCard({ fileName, lang, lines, content, onOpen, onSave }) {
   return (
     <div className="cf-card" role="button" tabIndex={0}
       onClick={() => onOpen("code")}
@@ -191,6 +225,10 @@ function CodeFileCard({ fileName, lang, lines, content, onOpen }) {
         <div className="cf-title">{fileName}</div>
         <div className="cf-sub">Kod · {lang.toUpperCase()} · {lines} baris</div>
       </div>
+      <button type="button" className="cf-btn cf-save-btn" onClick={(event) => {
+        event.stopPropagation();
+        onSave();
+      }}>Simpan</button>
       <button type="button" className="cf-btn" onClick={(event) => {
         event.stopPropagation();
         downloadCodeFile(fileName, content);
@@ -257,23 +295,26 @@ function CodeViewerPanel({ fileName, lang, lines, content, startTab, onClose }) 
 
 function CodeBlock({ node, lang, content, onCopy }) {
   const [copied, copy] = useCodeCopy();
+  const [saved, setSaved] = useState(false);
   const [panel, setPanel] = useState(null);
   const closePanel = useCallback(() => setPanel(null), []);
   const lines = content.split("\n").length;
   const fileName = getCodeFileName(node, lang);
   const isLong = lines > LONG_CODE_LINES;
   const canRun = RUNNABLE.includes(lang);
+  const saveFile = () => setSaved(saveGeneratedCodeFile(fileName, content, lang));
 
   return (
     <>
       {isLong ? (
-        <CodeFileCard fileName={fileName} lang={lang} lines={lines} content={content} onOpen={setPanel} />
+        <CodeFileCard fileName={fileName} lang={lang} lines={lines} content={content} onOpen={setPanel} onSave={saveFile} />
       ) : (
         <div className="code-block-wrapper">
           <div className="code-block-header">
             <span className="code-lang">{lang}</span>
             <div className="code-block-actions">
               {canRun && <button type="button" className="copy-btn" aria-label="Jalankan" title="Jalankan" onClick={() => setPanel("preview")}><CodeIconPlay /></button>}
+              <button type="button" className="copy-btn" aria-label="Simpan ke Files" title={saved ? "Disimpan ke Files" : "Simpan ke Files"} onClick={saveFile}>{saved ? <CodeIconCheck /> : <CodeIconFile />}</button>
               <button type="button" className="copy-btn" aria-label="Besarkan" title="Besarkan" onClick={() => setPanel("code")}><CodeIconExpand /></button>
               <button type="button" className="copy-btn" aria-label={copied ? "Kod disalin" : "Salin kod"} title={copied ? "Kod disalin" : "Salin kod"} onClick={() => copy(content)}>
                 {copied ? <CodeIconCheck /> : <CodeIconCopy />}
@@ -287,7 +328,6 @@ function CodeBlock({ node, lang, content, onCopy }) {
     </>
   );
 }
-
 
 function App() {
   const msgRef = useRef(null);
