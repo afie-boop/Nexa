@@ -5674,3 +5674,8 @@ button:not(:disabled):active {
 #root .coding-workspace-page .fm-category-bar {
   padding-right:0 !important;
 }
+
+
+/* Sort dropdown anchored to the two-line button in the top header */
+#root .coding-sort-menu-wrap { position:relative; display:flex; align-items:center; }
+#root .coding-sort-popover { right:0; top:calc(100% + 8px); min-width:156px; }
