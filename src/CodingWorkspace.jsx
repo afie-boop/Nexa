@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
 
 const STORAGE_KEY = "axmchat_generated_files";
 
@@ -57,13 +57,12 @@ function downloadFile(file) {
   URL.revokeObjectURL(url);
 }
 
-export default function CodingWorkspace() {
+const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
   const [store, setStore] = useState(readFileStore);
   const [currentFolder, setCurrentFolder] = useState("");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState("name");
   const [showFolderForm, setShowFolderForm] = useState(false);
-  const [showCreateMenu, setShowCreateMenu] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [folderName, setFolderName] = useState("");
@@ -71,6 +70,12 @@ export default function CodingWorkspace() {
   const [menu, setMenu] = useState(null);
   const [preview, setPreview] = useState(null);
   const [notice, setNotice] = useState("");
+
+  useImperativeHandle(ref, () => ({
+    chooseFiles: () => { setSelectionMode(value => !value); setSelected([]); },
+    createFolder: () => { setShowFolderForm(true); setShowTrash(false); },
+    openTrash: () => { setShowTrash(true); setSelected([]); setQuery(""); setCurrentFolder(""); }
+  }), []);
 
   useEffect(() => {
     const refresh = () => setStore(readFileStore());
@@ -171,13 +176,19 @@ export default function CodingWorkspace() {
 
   function deleteItem(type, path) {
     const label = type === "folder" ? "folder and everything inside it" : "file";
-    if (!window.confirm("Delete this " + label + "?")) return;
+    if (!window.confirm("Move this " + label + " to Sampah?")) return;
+    const deletedAt = Date.now();
     if (type === "file") {
-      commit({ ...store, files: store.files.filter(file => file.path !== path) });
+      const removed = store.files.find(file => file.path === path);
+      commit({ ...store, files: store.files.filter(file => file.path !== path), trash: [...(store.trash || []), { ...removed, type: "file", deletedAt }] });
     } else {
+      const removedFiles = store.files.filter(file => file.path === path || file.path.startsWith(path + "/"));
+      const removedFolders = store.folders.filter(folder => folder === path || folder.startsWith(path + "/"));
       commit({
-        files: store.files.filter(file => file.path !== path && !file.path.startsWith(path + "/")),
-        folders: store.folders.filter(folder => folder !== path && !folder.startsWith(path + "/"))
+        ...store,
+        files: store.files.filter(file => !removedFiles.includes(file)),
+        folders: store.folders.filter(folder => !removedFolders.includes(folder)),
+        trash: [...(store.trash || []), ...removedFolders.map(folder => ({ type: "folder", path: folder, deletedAt })), ...removedFiles.map(file => ({ ...file, type: "file", deletedAt }))]
       });
       if (currentFolder === path || currentFolder.startsWith(path + "/")) setCurrentFolder(parentPath(path));
     }
@@ -186,9 +197,27 @@ export default function CodingWorkspace() {
   }
 
   function deleteSelected() {
-    if (!selected.length || !window.confirm("Delete " + selected.length + " selected file(s)?")) return;
-    commit({ ...store, files: store.files.filter(file => !selected.includes(file.path)) });
+    if (!selected.length || !window.confirm("Move " + selected.length + " selected file(s) to Sampah?")) return;
+    const deletedAt = Date.now();
+    const removed = store.files.filter(file => selected.includes(file.path));
+    commit({ ...store, files: store.files.filter(file => !selected.includes(file.path)), trash: [...(store.trash || []), ...removed.map(file => ({ ...file, type: "file", deletedAt }))] });
     setSelected([]);
+  }
+
+  function restoreTrashItem(item) {
+    const targetExists = store.files.some(file => file.path === item.path) || store.folders.includes(item.path);
+    if (targetExists) { setNotice("An item with that name already exists."); return; }
+    const trash = (store.trash || []).filter(entry => entry !== item);
+    if (item.type === "folder") commit({ ...store, folders: [...store.folders, item.path], trash });
+    else {
+      const { type, deletedAt, ...file } = item;
+      commit({ ...store, files: [...store.files, file], trash });
+    }
+  }
+
+  function permanentlyDeleteTrashItem(item) {
+    if (!window.confirm("Padam item ini secara kekal?")) return;
+    commit({ ...store, trash: (store.trash || []).filter(entry => entry !== item) });
   }
 
   function toggleSelected(path) {
@@ -199,15 +228,6 @@ export default function CodingWorkspace() {
 
   return (
     <main className="fm-shell">
-      <header className="fm-actions">
-        <button type="button" className="fm-create-button" onClick={() => setShowCreateMenu(value => !value)}>＋ Buat <span>⌄</span></button>
-        {showCreateMenu && <div className="fm-create-menu">
-          <button type="button" onClick={() => { setSelectionMode(value => !value); setSelected([]); setShowCreateMenu(false); }}>☑ {selectionMode ? "Tutup pilihan" : "Pilih"}</button>
-          <button type="button" onClick={() => { setShowFolderForm(true); setShowTrash(false); setShowCreateMenu(false); }}>＋ Cipta folder</button>
-          <button type="button" onClick={() => { setShowTrash(true); setSelected([]); setShowCreateMenu(false); }}>▣ Sampah <span>{(store.trash || []).length}</span></button>
-        </div>}
-      </header>
-
       <div className="fm-toolbar">
         <label className="fm-search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
@@ -302,4 +322,6 @@ export default function CodingWorkspace() {
       </div>}
     </main>
   );
-}
+});
+
+export default CodingWorkspace;
