@@ -100,7 +100,7 @@ function downloadCodeFile(name, value) {
 
 function saveGeneratedCodeFile(name, value, lang) {
   const extension = ({ javascript: "js", js: "js", jsx: "jsx", typescript: "ts", ts: "ts", tsx: "tsx", python: "py", py: "py", html: "html", css: "css", json: "json", svg: "svg", bash: "sh", sh: "sh", text: "txt" })[lang] || lang || "txt";
-  const cleanPath = String(name || ("kod." + extension)).replace(/\\/g, "/").replace(/^\/+/, "").split("/").filter(part => part && part !== "." && part !== "..").join("/") || ("kod." + extension);
+  const cleanPath = String(name || ("kod." + extension)).split(String.fromCharCode(92)).join("/").split("/").filter(part => part && part !== "." && part !== "..").join("/") || ("kod." + extension);
   let store;
   try {
     const saved = JSON.parse(localStorage.getItem("axmchat_generated_files") || "null");
