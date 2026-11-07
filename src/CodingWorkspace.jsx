@@ -1,313 +1,299 @@
 import { useEffect, useMemo, useState } from "react";
 
-const DEFAULT_FILES = [
-  { path: "src/App.jsx", content: "function App() {\n  return <main className=\"app\"><h1>Hello, AXMchat!</h1><p>Mula bina projek anda di sini.</p></main>;\n}\n" },
-  { path: "src/style.css", content: "body { margin: 0; font-family: system-ui, sans-serif; }\n.app { min-height: 100vh; display: grid; place-content: center; text-align: center; }\n" },
-  { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>My Project</title></head>\n<body><div id=\"root\"></div></body>\n</html>\n" }
-];
+const STORAGE_KEY = "axmchat_generated_files";
 
-function safeProjectPath(value) {
-  const path = String(value || "").trim().replace(/^\/+/, "");
-  if (!path || path.split("/").some(part => !part || part === "." || part === "..")) return "";
-  return /^[a-zA-Z0-9_./-]+$/.test(path) ? path : "";
+function readFileStore() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (saved && !Array.isArray(saved) && Array.isArray(saved.files)) {
+      return { files: saved.files, folders: Array.isArray(saved.folders) ? saved.folders : [] };
+    }
+  } catch (_) {}
+  return { files: [], folders: [] };
 }
 
-function buildFileTree(files) {
-  const root = [];
-  for (const file of files) {
-    const parts = file.path.split("/");
-    let level = root;
-    let folderPath = "";
-    parts.forEach((part, index) => {
-      folderPath = folderPath ? folderPath + "/" + part : part;
-      const isFile = index === parts.length - 1;
-      let node = level.find(item => item.name === part && item.type === (isFile ? "file" : "folder"));
-      if (!node) {
-        node = isFile
-          ? { name: part, path: file.path, type: "file", file }
-          : { name: part, path: folderPath, type: "folder", children: [] };
-        level.push(node);
-      }
-      if (!isFile) level = node.children;
-    });
-  }
-  const sort = nodes => nodes.sort((a, b) => {
-    if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
-    return a.name.localeCompare(b.name);
-  }).map(node => node.type === "folder" ? { ...node, children: sort(node.children) } : node);
-  return sort(root);
+function parentPath(path) {
+  const index = path.lastIndexOf("/");
+  return index < 0 ? "" : path.slice(0, index);
 }
 
-function makePreviewDocument(files) {
-  const find = ext => files.filter(file => file.path.toLowerCase().endsWith(ext));
-  const htmlFile = files.find(file => file.path.toLowerCase() === "index.html");
-  let html = htmlFile?.content || "<!doctype html><html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head><body><div id='root'></div></body></html>";
-  const css = find(".css").map(file => file.content).join("\n");
-  const js = find(".js").map(file => file.content).join("\n");
-  const jsx = find(".jsx").map(file => file.content).join("\n");
-  const styleTag = "<style>" + css.replace(/<\/style/gi, "<\\/style") + "</style>";
-  const scripts = "<script src='https://unpkg.com/react@18/umd/react.development.js'><\/script>" +
-    "<script src='https://unpkg.com/react-dom@18/umd/react-dom.development.js'><\/script>" +
-    (jsx ? "<script src='https://unpkg.com/@babel/standalone/babel.min.js'><\/script>" : "");
-  let runtime = "";
-  if (jsx) {
-    const safeJsx = JSON.stringify(jsx).replace(/<\/script/gi, "<\\/script");
-    runtime = "<script>(function(){try{" +
-      "var source=" + safeJsx + ";" +
-      "source=source.replace(/^\\s*import\\s+[^\\n]*\\n/gm,'').replace(/^\\s*export\\s+default\\s+/gm,'').replace(/^\\s*export\\s+(?=(function|class|const|let|var)\\b)/gm,'');" +
-      "var compiled=Babel.transform(source,{presets:['env','react']}).code;" +
-      "var runner=new Function('React','ReactDOM','var useState=React.useState,useEffect=React.useEffect,useMemo=React.useMemo,useRef=React.useRef,useCallback=React.useCallback;'+compiled+';if(typeof App!==\'undefined\'&&!/createRoot|ReactDOM\\.render/.test(" + JSON.stringify(jsx) + ")){ReactDOM.createRoot(document.getElementById(\'root\')||document.body).render(React.createElement(App));}');" +
-      "runner(React,ReactDOM);" +
-      "}catch(error){var box=document.getElementById('__axm_error');if(box){box.style.display='block';box.textContent='JSX preview error: '+error.message;}}})();<\/script>";
-  }
-  const jsTag = js ? "<script>" + js.replace(/<\/script/gi, "<\\/script") + "<\/script>" : "";
-  const errorBox = "<pre id='__axm_error' style='display:none;white-space:pre-wrap;margin:12px;padding:12px;background:#fee;color:#900;border-radius:8px;font:12px monospace'></pre>";
-  const additions = styleTag + errorBox + scripts + runtime + jsTag;
-  if (/<\/head>/i.test(html)) html = html.replace(/<\/head>/i, additions + "</head>");
-  else html = additions + html;
-  return html;
+function baseName(path) {
+  return path.split("/").pop() || path;
 }
 
-export default function CodingWorkspace({ generalModel, codingModel, fallbackModel, responseMode, aiAvailability }) {
-  const [files, setFiles] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("axmchat_workspace_files") || "null");
-      if (Array.isArray(saved) && saved.length) return saved;
-    } catch (_) {}
-    return DEFAULT_FILES;
-  });
-  const [activeFile, setActiveFile] = useState("src/App.jsx");
-  const [prompt, setPrompt] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState("");
-  const [showFiles, setShowFiles] = useState(true);
-  const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
-  const [showAddFile, setShowAddFile] = useState(false);
-  const [newFileName, setNewFileName] = useState("");
-  const [view, setView] = useState("editor");
-  const [previewDoc, setPreviewDoc] = useState("");
-  const [previewKey, setPreviewKey] = useState(0);
-  const currentFile = useMemo(() => files.find(file => file.path === activeFile), [files, activeFile]);\n  const fileTree = useMemo(() => buildFileTree(files), [files]);
+function joinPath(folder, name) {
+  return folder ? folder + "/" + name : name;
+}
+
+function extensionOf(path) {
+  const name = baseName(path);
+  const index = name.lastIndexOf(".");
+  return index > 0 ? name.slice(index + 1).toLowerCase() : "file";
+}
+
+function formatSize(value) {
+  const bytes = new Blob([value || ""]).size;
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+function FileGlyph({ folder = false, ext = "" }) {
+  if (folder) return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4l2 2H18.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z" /></svg>;
+  const color = ({ jsx: "#e5bd61", js: "#e5bd61", ts: "#5da9e9", tsx: "#5da9e9", css: "#a88cf0", html: "#e58b65", json: "#d7b56d", png: "#7fc5a0", jpg: "#7fc5a0", svg: "#7fc5a0" })[ext] || "currentColor";
+  return <svg viewBox="0 0 24 24" aria-hidden="true" style={{ color }}><path d="M6 3.5h8l4 4V20a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 20z" /><path d="M14 3.5V8h4M9 13h6M9 16.5h6" /></svg>;
+}
+
+function downloadFile(file) {
+  const blob = new Blob([file.content || ""], { type: "application/octet-stream" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = baseName(file.path);
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+export default function CodingWorkspace() {
+  const [store, setStore] = useState(readFileStore);
+  const [currentFolder, setCurrentFolder] = useState("");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("name");
+  const [showFolderForm, setShowFolderForm] = useState(false);
+  const [folderName, setFolderName] = useState("");
+  const [selected, setSelected] = useState([]);
+  const [menu, setMenu] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
-    try { localStorage.setItem("axmchat_workspace_files", JSON.stringify(files)); }
-    catch (_) { setStatus("Storan browser penuh. Muat turun projek sebagai salinan."); }
-  }, [files]);
+    const refresh = () => setStore(readFileStore());
+    window.addEventListener("axmchat-generated-files-updated", refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener("axmchat-generated-files-updated", refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => setPreviewDoc(makePreviewDocument(files)), 450);
-    return () => window.clearTimeout(timer);
-  }, [files]);
-
-  function updateFile(path, content) {
-    setFiles(previous => previous.map(file => file.path === path ? { ...file, content } : file));
-  }
-
-  function addFile() {
-    const path = safeProjectPath(newFileName);
-    if (!path) return setStatus("Nama fail tidak sah.");
-    if (files.some(file => file.path === path)) return setStatus("Fail dengan nama itu sudah wujud.");
-    setFiles(previous => [...previous, { path, content: "" }]);
-    setActiveFile(path);
-    setNewFileName("");
-    setShowAddFile(false);
-    setView("editor");
-    setStatus("Fail " + path + " berjaya ditambah.");
-  }
-
-  function downloadFile(file) {
-    if (!file) return;
-    const blob = new Blob([file.content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = file.path.split("/").pop() || "code.txt";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-  }
-
-  async function generateProject() {
-    const task = prompt.trim();
-    if (!task || busy) return;
-    setBusy(true);
-    setStatus("Coding AI sedang menyediakan projek...");
+  function commit(next) {
     try {
-      const question = [
-        "Anda sedang bekerja dalam AXMchat Coding Workspace yang mempunyai live preview.",
-        "Permintaan pengguna: " + task,
-        "Fail sedia ada: " + files.map(file => file.path).join(", "),
-        "Hasilkan projek lengkap dan boleh dipratonton. Utamakan index.html, src/App.jsx (komponen utama bernama App), src/style.css dan src/main.js jika perlu.",
-        "Untuk preview JSX, jangan gunakan import daripada fail tempatan atau pakej npm. Gunakan React global dan komponen utama bernama App; jangan panggil createRoot sendiri. Jangan import CSS. CSS akan digabungkan automatik.",
-        "Untuk projek HTML biasa, hasilkan HTML, CSS dan JavaScript biasa yang tidak memerlukan bundler.",
-        "FORMAT WAJIB setiap fail: FILE: laluan/fail.ext pada satu baris diikuti code fence dengan kandungan penuh. Satu code fence bagi setiap fail.",
-        "Jangan gabungkan fail, jangan potong kod, dan keluarkan semula semua fail yang perlu dicipta atau diganti."
-      ].join("\n\n");
-      const response = await fetch("/chat", {
-        method: "POST", credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question, history: [],
-          generalModel: String(generalModel || "").trim(),
-          codingModel: String(codingModel || "").trim(),
-          fallbackModel: String(fallbackModel || "").trim(),
-          responseMode: responseMode || "balance",
-          memoryEnabled: false,
-          aiAvailability: aiAvailability || { general: true, coding: true, fallback: true },
-          clientTime: { iso: new Date().toISOString(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC" }
-        })
-      });
-      if (!response.ok || !response.body) throw new Error("Server balas status " + response.status);
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "", answer = "", serverError = "";
-      const consume = part => {
-        if (!part.startsWith("data: ")) return;
-        try {
-          const data = JSON.parse(part.slice(6));
-          if (data.type === "status" && data.text) setStatus(data.text);
-          if (data.type === "process_step" && data.label) setStatus(data.label);
-          if (data.type === "answer") answer = data.text || "";
-          if (data.type === "error") serverError = data.text || "AI gagal menjana kod.";
-        } catch (_) {}
-      };
-      while (true) {
-        const chunk = await reader.read();
-        if (chunk.done) break;
-        buffer += decoder.decode(chunk.value, { stream: true });
-        const parts = buffer.split("\n\n");
-        buffer = parts.pop() || "";
-        parts.forEach(consume);
-      }
-      buffer += decoder.decode();
-      buffer.split("\n\n").forEach(consume);
-      if (serverError) throw new Error(serverError);
-      if (!answer) throw new Error("Tiada jawapan diterima daripada AI.");
-      const generated = [];
-      const pattern = /^\s*(?:#{1,6}\s*)?(?:\/\/\s*)?FILE:\s*(.+?)\s*\n```([^\n]*)\n([\s\S]*?)\n```/gm;
-      let match;
-      while ((match = pattern.exec(answer)) !== null) {
-        const path = safeProjectPath(match[1]);
-        if (path) generated.push({ path, content: match[3].replace(/\n$/, "") + "\n" });
-      }
-      if (!generated.length) throw new Error("Format fail AI tidak dikenali. Cuba jana semula.");
-      setFiles(previous => {
-        const next = [...previous];
-        generated.forEach(item => {
-          const index = next.findIndex(file => file.path === item.path);
-          if (index >= 0) next[index] = item;
-          else next.push(item);
-        });
-        return next;
-      });
-      setActiveFile(generated[0].path);
-      setPrompt("");
-      setView("preview");
-      setStatus(generated.length + " fail berjaya dijana. Live preview sedang dikemas kini.");
-    } catch (error) {
-      setStatus(error.message || "Gagal menjana projek.");
-    } finally {
-      setBusy(false);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      setStore(next);
+      window.dispatchEvent(new Event("axmchat-generated-files-updated"));
+      setNotice("Changes saved");
+    } catch (_) {
+      setNotice("Storage is full. Download files to keep a copy.");
     }
   }
 
-  function renderFileNodes(nodes, depth = 0) {
-    return nodes.map(node => {
-      if (node.type === "folder") {
-        const collapsed = collapsedFolders.has(node.path);
-        return <div className="cw-tree-group" key={node.path}>
-          <button type="button" className="cw-tree-folder" style={{ "--tree-depth": depth }} aria-expanded={!collapsed} onClick={() => setCollapsedFolders(previous => { const next = new Set(previous); if (next.has(node.path)) next.delete(node.path); else next.add(node.path); return next; })}>
-            <svg className={`cw-tree-chevron ${collapsed ? "" : "open"}`} viewBox="0 0 16 16" aria-hidden="true"><path d="m5.5 3.5 5 4.5-5 4.5" /></svg>
-            <svg className="cw-tree-folder-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5.5h6l1.7 2H17a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-9a1 1 0 0 1 .5-1Z" /></svg>
-            <span>{node.name}</span><small>{node.children.length}</small>
-          </button>
-          {!collapsed && <div className="cw-tree-children">{renderFileNodes(node.children, depth + 1)}</div>}
-        </div>;
-      }
-      const ext = node.name.includes(".") ? node.name.split(".").pop().toLowerCase() : "file";
-      return <button type="button" key={node.path} title={node.path} style={{ "--tree-depth": depth }} className={`cw-tree-file ${activeFile === node.path ? "active" : ""}`} onClick={() => { setActiveFile(node.path); setView("editor"); }}>
-        <span className={`cw-file-type cw-ext-${ext}`}>{ext === "file" ? "FILE" : ext.slice(0, 3).toUpperCase()}</span><span className="cw-file-path">{node.name}</span>
-      </button>;
-    });
+  const visibleFolders = useMemo(() => {
+    if (query.trim()) return [];
+    return store.folders
+      .filter(path => parentPath(path) === currentFolder)
+      .sort((a, b) => baseName(a).localeCompare(baseName(b)));
+  }, [store.folders, currentFolder, query]);
+
+  const visibleFiles = useMemo(() => {
+    let list = store.files.filter(file => query.trim()
+      ? file.path.toLowerCase().includes(query.trim().toLowerCase())
+      : parentPath(file.path) === currentFolder);
+    if (sort === "date") list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    else if (sort === "type") list.sort((a, b) => extensionOf(a.path).localeCompare(extensionOf(b.path)) || baseName(a.path).localeCompare(baseName(b.path)));
+    else list.sort((a, b) => baseName(a.path).localeCompare(baseName(b.path)));
+    return list;
+  }, [store.files, currentFolder, query, sort]);
+
+  const totalBytes = useMemo(() => store.files.reduce((sum, file) => sum + new Blob([file.content || ""]).size, 0), [store.files]);
+  const breadcrumbs = currentFolder ? currentFolder.split("/") : [];
+
+  function createFolder(event) {
+    event.preventDefault();
+    const name = folderName.trim().replace(/[\\/]/g, "");
+    if (!name || name === "." || name === "..") return;
+    const path = joinPath(currentFolder, name);
+    if (store.folders.includes(path) || store.files.some(file => file.path === path)) {
+      setNotice("An item with that name already exists.");
+      return;
+    }
+    commit({ ...store, folders: [...store.folders, path] });
+    setFolderName("");
+    setShowFolderForm(false);
   }
 
-  function removeFile() {
-    if (!currentFile || !window.confirm("Padam fail " + activeFile + "?")) return;
-    const next = files.filter(file => file.path !== activeFile);
-    setFiles(next);
-    setActiveFile(next[0]?.path || "");
+  function renameItem(type, path) {
+    const nextName = window.prompt("New name", baseName(path));
+    if (!nextName || !nextName.trim()) return;
+    const clean = nextName.trim().replace(/[\\/]/g, "");
+    if (!clean || clean === "." || clean === "..") return;
+    const nextPath = joinPath(parentPath(path), clean);
+    if (nextPath === path) return;
+    if (store.files.some(file => file.path === nextPath) || store.folders.includes(nextPath)) {
+      setNotice("An item with that name already exists.");
+      return;
+    }
+    if (type === "file") {
+      commit({ ...store, files: store.files.map(file => file.path === path ? { ...file, path: nextPath, updatedAt: Date.now() } : file) });
+    } else {
+      const movePath = value => value === path || value.startsWith(path + "/") ? nextPath + value.slice(path.length) : value;
+      commit({
+        files: store.files.map(file => ({ ...file, path: movePath(file.path) })),
+        folders: store.folders.map(movePath)
+      });
+      if (currentFolder === path || currentFolder.startsWith(path + "/")) setCurrentFolder(movePath(currentFolder));
+    }
+    setMenu(null);
   }
+
+  function moveFile(path) {
+    const destination = window.prompt("Move to folder path (leave blank for Files root)", parentPath(path));
+    if (destination === null) return;
+    const folder = destination.trim().replace(/^\\/+|\\/+$/g, "");
+    if (folder && !store.folders.includes(folder)) {
+      setNotice("That destination folder does not exist.");
+      return;
+    }
+    const nextPath = joinPath(folder, baseName(path));
+    if (nextPath !== path && (store.files.some(file => file.path === nextPath) || store.folders.includes(nextPath))) {
+      setNotice("An item with that name already exists.");
+      return;
+    }
+    commit({ ...store, files: store.files.map(file => file.path === path ? { ...file, path: nextPath, updatedAt: Date.now() } : file) });
+    setMenu(null);
+  }
+
+  function deleteItem(type, path) {
+    const label = type === "folder" ? "folder and everything inside it" : "file";
+    if (!window.confirm("Delete this " + label + "?")) return;
+    if (type === "file") {
+      commit({ ...store, files: store.files.filter(file => file.path !== path) });
+    } else {
+      commit({
+        files: store.files.filter(file => file.path !== path && !file.path.startsWith(path + "/")),
+        folders: store.folders.filter(folder => folder !== path && !folder.startsWith(path + "/"))
+      });
+      if (currentFolder === path || currentFolder.startsWith(path + "/")) setCurrentFolder(parentPath(path));
+    }
+    setSelected(previous => previous.filter(item => item !== path));
+    setMenu(null);
+  }
+
+  function deleteSelected() {
+    if (!selected.length || !window.confirm("Delete " + selected.length + " selected file(s)?")) return;
+    commit({ ...store, files: store.files.filter(file => !selected.includes(file.path)) });
+    setSelected([]);
+  }
+
+  function toggleSelected(path) {
+    setSelected(previous => previous.includes(path) ? previous.filter(item => item !== path) : [...previous, path]);
+  }
+
+  const allVisibleSelected = visibleFiles.length > 0 && visibleFiles.every(file => selected.includes(file.path));
 
   return (
-    <div className="coding-workspace">
-      <header className="cw-heading">
-        <div className="cw-heading-copy">
-          
-          <h2>Coding Workspace</h2>
-          
+    <main className="fm-shell">
+      <header className="fm-header">
+        <div className="fm-heading">
+          <div className="fm-heading-icon"><FileGlyph folder /></div>
+          <div><h2>My Files</h2><p>Files created by AXMchat AI</p></div>
         </div>
-        <div className="cw-heading-actions" />
+        <button type="button" className="fm-new-folder" onClick={() => setShowFolderForm(value => !value}><span>＋</span> New folder</button>
       </header>
 
-      <section className="cw-workbench">
-        <aside className={`cw-file-panel ${showFiles ? "" : "cw-file-panel-hidden"}`}>
-          <div className="cw-panel-heading">
-            <div className="cw-panel-title"><span>FILES</span><small>{files.length} {files.length === 1 ? "FILE" : "FILES"}</small></div>
-            <button type="button" onClick={() => setShowFiles(value => !value)} aria-label="Toggle file explorer">{showFiles ? "‹" : "›"}</button>
-          </div>
-          {showFiles && <>
-            <div className="cw-file-list">
-              <div className="cw-tree-root"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5.5h6l1.7 2H17a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-9a1 1 0 0 1 .5-1Z" /></svg><span>PROJECT</span></div>
-              {renderFileNodes(fileTree)}
-              {!files.length && <p className="cw-empty-files">Folder ini masih kosong.</p>}
-            </div>
-            <div className="cw-file-panel-footer">
-              <button type="button" className="cw-add-file-side" onClick={() => setShowAddFile(value => !value)}><span className="cw-add-file-plus">＋</span><span>New file</span></button>
-            </div>
-            {showAddFile && (
-              <form className="cw-add-file-inline" onSubmit={event => { event.preventDefault(); addFile(); }}>
-                <input value={newFileName} onChange={event => setNewFileName(event.target.value)} placeholder="Nama fail / lokasi" aria-label="Nama dan lokasi fail" autoFocus />
-                <div className="cw-add-file-inline-actions">
-                  <button type="submit" disabled={!newFileName.trim()}>Tambah</button>
-                  <button type="button" className="cw-cancel-add" onClick={() => { setShowAddFile(false); setNewFileName(""); }}>Batal</button>
-                </div>
-              </form>
-            )}
-          </>}
-        </aside>
+      <div className="fm-summary">
+        <div><strong>{store.files.length}</strong><span>Files</span></div>
+        <i />
+        <div><strong>{store.folders.length}</strong><span>Folders</span></div>
+        <i />
+        <div><strong>{formatSize(String(totalBytes))}</strong><span>Used</span></div>
+      </div>
 
-        <div className="cw-main-panel">
-          <div className="cw-workbench-toolbar">
-            <div className="cw-view-tabs">
-              <button type="button" className={`cw-view-tab ${view === "editor" ? "active" : ""}`} aria-pressed={view === "editor"} onClick={() => setView("editor")}>
-                <svg className="cw-view-tab-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.5"/><path d="M7 3v14M9.5 7h5M9.5 10h5M9.5 13h3" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round"/></svg>
-                <span>Editor</span>
-              </button>
-              <button type="button" className={`cw-view-tab ${view === "preview" ? "active" : ""}`} aria-pressed={view === "preview"} onClick={() => { setView("preview"); setPreviewKey(value => value + 1); }}>
-                <svg className="cw-view-tab-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.25" y="3.25" width="15.5" height="13.5" rx="2.5" stroke="currentColor" strokeWidth="1.5"/><path d="m8 7 5 3-5 3V7Z" fill="currentColor" stroke="currentColor" strokeLinejoin="round"/></svg>
-                <span>Preview</span>
-              </button>
-            </div>
-            <div className="cw-toolbar-right">
-              {view === "editor" && <><span className="cw-active-filename">{activeFile || "No file selected"}</span><button type="button" className="cw-tool-btn" onClick={removeFile} disabled={!currentFile}>Delete</button><button type="button" className="cw-tool-btn" onClick={() => downloadFile(currentFile)} disabled={!currentFile}>Download</button></>}
-              {view === "preview" && <><span className="cw-live-indicator"><i /> Live</span><button type="button" className="cw-tool-btn" onClick={() => setPreviewKey(value => value + 1)}>↻ Refresh</button></>}
-            </div>
-          </div>
+      <div className="fm-toolbar">
+        <label className="fm-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+          <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search files and folders" />
+          {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search">×</button>}
+        </label>
+        <label className="fm-sort"><span>Sort</span><select value={sort} onChange={event => setSort(event.target.value)}><option value="name">Name</option><option value="date">Date modified</option><option value="type">File type</option></select></label>
+      </div>
 
-          {view === "editor" ? (
-            <div className="cw-editor-area">
-              {currentFile ? <textarea className="cw-code-editor" spellCheck="false" autoCapitalize="off" autoCorrect="off" autoComplete="off" value={currentFile.content} onChange={event => updateFile(activeFile, event.target.value)} aria-label={activeFile} /> : <div className="cw-empty-editor">Pilih fail dalam Explorer atau tambah fail baharu.</div>}
-              <div className="cw-editor-footer"><span>● Auto-saved on this device</span><span>{currentFile?.content.split("\n").length || 0} lines</span></div>
-            </div>
-          ) : (
-            <div className="cw-preview-area">
-              <div className="cw-preview-topline"><span>Preview</span></div>
-              <iframe key={previewKey} title="Project live preview" className="cw-preview-frame" sandbox="allow-scripts" srcDoc={previewDoc || "<!doctype html><html><body style='font-family:sans-serif;padding:24px'>Menyiapkan preview…</body></html>"} />
-            </div>
-          )}
+      {showFolderForm && <form className="fm-create-folder" onSubmit={createFolder}>
+        <input value={folderName} onChange={event => setFolderName(event.target.value)} placeholder="Folder name" autoFocus />
+        <button type="submit" disabled={!folderName.trim()}>Create</button>
+        <button type="button" className="fm-cancel" onClick={() => { setShowFolderForm(false); setFolderName(""); }}>Cancel</button>
+      </form>}
+
+      <nav className="fm-breadcrumbs" aria-label="Folder path">
+        <button type="button" onClick={() => { setCurrentFolder(""); setQuery(""); }}>Files</button>
+        {breadcrumbs.map((part, index) => {
+          const path = breadcrumbs.slice(0, index + 1).join("/");
+          return <span key={path}><b>›</b><button type="button" onClick={() => { setCurrentFolder(path); setQuery(""); }}>{part}</button></span>;
+        })}
+        {query && <span><b>›</b><em>Search results</em></span>}
+      </nav>
+
+      {selected.length > 0 && <div className="fm-selection">
+        <span>{selected.length} selected</span>
+        <button type="button" onClick={deleteSelected}>Delete selected</button>
+        <button type="button" onClick={() => setSelected([])}>Clear</button>
+      </div>}
+
+      <section className="fm-content">
+        <div className="fm-list-head">
+          <span>Name</span><span>Size</span><span>Modified</span>
+          <button type="button" onClick={() => setSelected(allVisibleSelected ? [] : visibleFiles.map(file => file.path))}>{allVisibleSelected ? "Clear" : "Select all"}</button>
         </div>
+
+        {visibleFolders.map(path => <div className="fm-row" key={path}>
+          <button type="button" className="fm-item-main" onClick={() => setCurrentFolder(path)}>
+            <span className="fm-item-icon folder"><FileGlyph folder /></span>
+            <span className="fm-item-copy"><strong>{baseName(path)}</strong><small>Folder</small></span>
+          </button>
+          <span className="fm-row-meta">—</span><span className="fm-row-meta">—</span>
+          <button type="button" className="fm-more" aria-label={"Actions for " + baseName(path)} onClick={() => setMenu(menu?.path === path ? null : { type: "folder", path })}>⋮</button>
+          {menu?.path === path && <div className="fm-menu"><button onClick={() => renameItem("folder", path)}>Rename</button><button className="danger" onClick={() => deleteItem("folder", path)}>Delete</button></div>}
+        </div>)}
+
+        {visibleFiles.map(file => {
+          const ext = extensionOf(file.path);
+          const checked = selected.includes(file.path);
+          return <div className={"fm-row " + (checked ? "selected" : "")} key={file.path}>
+            <input className="fm-check" type="checkbox" checked={checked} onChange={() => toggleSelected(file.path)} aria-label={"Select " + baseName(file.path)} />
+            <button type="button" className="fm-item-main" onClick={() => setPreview(file)}>
+              <span className="fm-item-icon"><FileGlyph ext={ext} /></span>
+              <span className="fm-item-copy"><strong>{baseName(file.path)}</strong><small>{ext.toUpperCase()} · AI generated</small></span>
+            </button>
+            <span className="fm-row-meta">{formatSize(file.content || "")}</span>
+            <span className="fm-row-meta">{file.updatedAt ? new Date(file.updatedAt).toLocaleDateString() : "—"}</span>
+            <button type="button" className="fm-more" aria-label={"Actions for " + baseName(file.path)} onClick={() => setMenu(menu?.path === file.path ? null : { type: "file", path: file.path })}>⋮</button>
+            {menu?.path === file.path && <div className="fm-menu">
+              <button onClick={() => { setPreview(file); setMenu(null); }}>Open</button>
+              <button onClick={() => { downloadFile(file); setMenu(null); }}>Download</button>
+              <button onClick={() => renameItem("file", file.path)}>Rename</button>
+              <button onClick={() => moveFile(file.path)}>Move to folder</button>
+              <button className="danger" onClick={() => deleteItem("file", file.path)}>Delete</button>
+            </div>}
+          </div>;
+        })}
+
+        {!visibleFolders.length && !visibleFiles.length && <div className="fm-empty">
+          <div className="fm-empty-icon"><FileGlyph folder /></div>
+          <strong>{query ? "No matching files" : "No files yet"}</strong>
+          <p>{query ? "Try another search term." : "When AXMchat creates code, tap “Save to Files” on its code block. Your saved files will appear here."}</p>
+        </div>}
       </section>
-    </div>
+
+      <footer className="fm-footer"><span>{store.files.length} files · {formatSize(String(totalBytes))} used</span><span>{notice || "Stored on this device"}</span></footer>
+
+      {preview && <div className="fm-preview-backdrop" onClick={() => setPreview(null)}>
+        <section className="fm-preview" role="dialog" aria-modal="true" aria-label={baseName(preview.path)} onClick={event => event.stopPropagation()}>
+          <header><div><strong>{baseName(preview.path)}</strong><small>{preview.path}</small></div><button type="button" onClick={() => setPreview(null)} aria-label="Close">×</button></header>
+          <pre>{preview.content || ""}</pre>
+          <footer><button type="button" onClick={() => downloadFile(preview)}>Download</button><button type="button" onClick={() => setPreview(null)}>Close</button></footer>
+        </section>
+      </div>}
+    </main>
   );
 }
