@@ -5570,3 +5570,41 @@ button:not(:disabled):active {
     padding-right: 4px !important;
   }
 }
+
+
+/* Claude's direct flex alignment override */
+#root .coding-workspace-page .fm-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: calc(100% - 16px) !important;
+  margin-left: 8px !important;
+  margin-right: 8px !important;
+  box-sizing: border-box !important;
+}
+#root .coding-workspace-page .fm-toolbar .fm-search {
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+}
+#root .coding-workspace-page .fm-toolbar .fm-sort {
+  flex: 0 0 auto !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  transform: none !important;
+}
+#root .coding-workspace-page .fm-category-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+#root .coding-workspace-page .fm-category-bar .fm-filter {
+  margin-right: auto !important;
+}
+#root .coding-workspace-page .fm-category-bar .fm-sort {
+  margin-left: auto !important;
+  margin-right: 4px !important;
+  transform: none !important;
+}
