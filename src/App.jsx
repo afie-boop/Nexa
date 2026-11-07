@@ -1959,6 +1959,11 @@ function App() {
                             </svg>
                             {loadingStatus}
                           </span>
+                          <div className="loading-skeleton" aria-hidden="true">
+                            <span className="skeleton-line skeleton-line-wide" />
+                            <span className="skeleton-line skeleton-line-medium" />
+                            <span className="skeleton-line skeleton-line-short" />
+                          </div>
                         </div>
                       </div>
                     </div>
