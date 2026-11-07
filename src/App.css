@@ -2967,3 +2967,97 @@ button:not(:disabled):active {
  .cw-add-file-copy { grid-column:1/-1; }
  .cw-add-file button { padding:0 7px; font-size:10px; }
 }
+
+
+/* AXMchat native visual language — Coding Workspace */
+.coding-workspace-page .sub-panel-inner,
+.coding-workspace { color:var(--primary-text); }
+.coding-workspace-page .cw-heading { margin-bottom:18px; }
+.coding-workspace-page .cw-eyebrow { color:var(--secondary-text); letter-spacing:.08em; font-size:10px; }
+.coding-workspace-page .cw-heading-copy h2 { font-size:clamp(20px,2.6vw,25px); font-weight:650; letter-spacing:-.025em; }
+.coding-workspace-page .cw-heading-copy p { color:var(--secondary-text); font-size:13px; line-height:1.6; }
+.coding-workspace-page .cw-ai-card,
+.coding-workspace-page .cw-add-file {
+  background:var(--card-bg,rgba(255,255,255,.025));
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow:none;
+}
+.coding-workspace-page .cw-ai-card { padding:16px; gap:11px; }
+.coding-workspace-page .cw-ai-spark { color:var(--secondary-text); }
+.coding-workspace-page .cw-ai-card textarea,
+.coding-workspace-page .cw-add-file input {
+  background:var(--input-bg,rgba(255,255,255,.035));
+  color:var(--primary-text);
+  border:1px solid var(--border);
+  border-radius:9px;
+  font:13px/1.6 inherit;
+  font-family:inherit;
+}
+.coding-workspace-page .cw-ai-card textarea:focus,
+.coding-workspace-page .cw-add-file input:focus { border-color:var(--secondary-text); box-shadow:none; }
+.coding-workspace-page .cw-status-text,
+.coding-workspace-page .cw-add-file-copy span,
+.coding-workspace-page .cw-footnote { color:var(--secondary-text); }
+.coding-workspace-page .cw-generate-btn {
+  background:var(--primary-text);
+  color:var(--bg-color,#111);
+  border:1px solid var(--primary-text);
+  border-radius:9px;
+  font-weight:650;
+}
+.coding-workspace-page .cw-secondary-btn,
+.coding-workspace-page .cw-add-file button {
+  background:transparent;
+  color:var(--primary-text);
+  border:1px solid var(--border);
+  border-radius:9px;
+}
+.coding-workspace-page .cw-secondary-btn:hover,
+.coding-workspace-page .cw-add-file button:hover { background:rgba(255,255,255,.07); }
+.coding-workspace-page .cw-add-file .cw-cancel-add { color:var(--secondary-text); }
+.coding-workspace-page .cw-workbench {
+  border:1px solid var(--border);
+  border-radius:12px;
+  background:var(--bg-color,#111);
+  box-shadow:none;
+  overflow:hidden;
+}
+.coding-workspace-page .cw-file-panel { background:var(--card-bg,rgba(255,255,255,.025)); border-right:1px solid var(--border); }
+.coding-workspace-page .cw-panel-heading,
+.coding-workspace-page .cw-workbench-toolbar,
+.coding-workspace-page .cw-editor-footer {
+  background:transparent;
+  border-color:var(--border);
+}
+.coding-workspace-page .cw-panel-heading { color:var(--secondary-text); letter-spacing:.09em; }
+.coding-workspace-page .cw-panel-heading button { color:var(--secondary-text); }
+.coding-workspace-page .cw-file-row { color:var(--secondary-text); border-radius:7px; }
+.coding-workspace-page .cw-file-row:hover { background:rgba(255,255,255,.055); }
+.coding-workspace-page .cw-file-row.active { background:rgba(255,255,255,.09); color:var(--primary-text); }
+.coding-workspace-page .cw-file-type { background:rgba(255,255,255,.07); color:var(--secondary-text); }
+.coding-workspace-page .cw-ext-jsx,
+.coding-workspace-page .cw-ext-js,
+.coding-workspace-page .cw-ext-css,
+.coding-workspace-page .cw-ext-html { color:var(--primary-text); }
+.coding-workspace-page .cw-add-file-side { border-color:var(--border); color:var(--secondary-text); border-radius:8px; }
+.coding-workspace-page .cw-add-file-side:hover { background:rgba(255,255,255,.05); color:var(--primary-text); }
+.coding-workspace-page .cw-view-tabs button { color:var(--secondary-text); border-radius:7px; }
+.coding-workspace-page .cw-view-tabs button.active { background:rgba(255,255,255,.1); color:var(--primary-text); }
+.coding-workspace-page .cw-tool-btn { background:transparent; color:var(--secondary-text); border:1px solid var(--border); border-radius:7px; }
+.coding-workspace-page .cw-tool-btn:hover { color:var(--primary-text); background:rgba(255,255,255,.06); }
+.coding-workspace-page .cw-code-editor { background:var(--bg-color,#111); color:var(--primary-text); font:12px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace; }
+.coding-workspace-page .cw-editor-footer { color:var(--secondary-text); }
+.coding-workspace-page .cw-preview-area { background:var(--bg-color,#111); }
+.coding-workspace-page .cw-preview-topline { color:var(--secondary-text); background:var(--card-bg,rgba(255,255,255,.025)); border-bottom:1px solid var(--border); }
+.coding-workspace-page .cw-live-indicator { color:var(--primary-text); }
+.coding-workspace-page .cw-live-indicator i { background:#8b8b8b; box-shadow:none; }
+.coding-workspace-page .cw-empty-editor,
+.coding-workspace-page .cw-empty-files { color:var(--secondary-text); }
+@media(max-width:520px) {
+  .coding-workspace-page .cw-ai-card { padding:13px; }
+  .coding-workspace-page .cw-add-file { border-radius:10px; }
+  .coding-workspace-page .cw-workbench { border-radius:10px; }
+  .coding-workspace-page .cw-heading-copy p { max-width:100%; }
+  .coding-workspace-page .cw-toolbar-right { flex-wrap:nowrap; }
+}
