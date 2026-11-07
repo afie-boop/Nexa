@@ -5094,7 +5094,11 @@ button:not(:disabled):active {
   margin-bottom:5px;
 }
 #root .fm-list-head {
-  display:none;
+  display:flex;
+  justify-content:flex-end;
+  grid-template-columns:none;
+  min-height:34px;
+  border-bottom:1px solid var(--fm-border);
 }
 @media (max-width:640px) {
   #root .fm-shell { padding-top:7px; }
