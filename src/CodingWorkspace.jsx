@@ -63,6 +63,7 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
   const [query, setQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [sort, setSort] = useState("name");
+  const [filter, setFilter] = useState("all");
   const [showFolderForm, setShowFolderForm] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
@@ -101,14 +102,15 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
   }
 
   const visibleFolders = useMemo(() => {
-    if (query.trim() || showTrash) return [];
+    if (query.trim() || showTrash || filter === "files") return [];
     return store.folders
       .filter(path => parentPath(path) === currentFolder)
       .sort((a, b) => baseName(a).localeCompare(baseName(b)));
-  }, [store.folders, currentFolder, query, showTrash]);
+  }, [store.folders, currentFolder, query, showTrash, filter]);
 
   const visibleFiles = useMemo(() => {
     if (showTrash) return [];
+    if (filter === "folders") return [];
     let list = store.files.filter(file => query.trim()
       ? file.path.toLowerCase().includes(query.trim().toLowerCase())
       : parentPath(file.path) === currentFolder);
@@ -116,7 +118,7 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
     else if (sort === "type") list.sort((a, b) => extensionOf(a.path).localeCompare(extensionOf(b.path)) || baseName(a.path).localeCompare(baseName(b.path)));
     else list.sort((a, b) => baseName(a.path).localeCompare(baseName(b.path)));
     return list;
-  }, [store.files, currentFolder, query, sort, showTrash]);
+  }, [store.files, currentFolder, query, sort, showTrash, filter]);
 
   const totalBytes = useMemo(() => store.files.reduce((sum, file) => sum + new Blob([file.content || ""]).size, 0), [store.files]);
   const breadcrumbs = currentFolder ? currentFolder.split("/") : [];
@@ -246,14 +248,23 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
       </form>}
 
       <nav className="fm-breadcrumbs" aria-label="Folder path">
-        <button type="button" onClick={() => { setCurrentFolder(""); setQuery(""); setShowTrash(false); }}>Files</button>
-        {!showTrash && breadcrumbs.map((part, index) => {
-          const path = breadcrumbs.slice(0, index + 1).join("/");
-          return <span key={path}><b>›</b><button type="button" onClick={() => { setCurrentFolder(path); setQuery(""); }}>{part}</button></span>;
-        })}
-        {showTrash && <span><b>›</b><em>Sampah</em></span>}{query && <span><b>›</b><em>Search results</em></span>}
+        <button type="button" className="fm-home-crumb" onClick={() => { setCurrentFolder(""); setQuery(""); setShowTrash(false); }} aria-label="Folder utama">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21H3z"/><path d="M9 21v-7h6v7"/></svg>
+        </button>
+        <span className="fm-crumb-arrow">▸</span>
+        {!showTrash && <em>{breadcrumbs.length ? breadcrumbs[breadcrumbs.length - 1] : "Storan AXMchat"}</em>}
+        {showTrash && <em>Sampah</em>}{query && <em>Hasil carian</em>}
       </nav>
-
+      <div className="fm-category-bar">
+        <label className="fm-filter"><select value={filter} onChange={event => setFilter(event.target.value)} aria-label="Tapis item">
+          <option value="all">Semua</option><option value="folders">Folder</option><option value="files">Fail</option>
+        </select><span aria-hidden="true">▾</span></label>
+        <label className="fm-sort"><span className="fm-sort-icon">☷</span>
+          <select value={sort} onChange={event => setSort(event.target.value)} aria-label="Susun item">
+            <option value="name">Nama</option><option value="date">Tarikh diubah</option><option value="type">Jenis fail</option>
+          </select><span className="fm-sort-direction">↑</span>
+        </label>
+      </div>
       {selectionMode && selected.length > 0 && <div className="fm-selection">
         <span>{selected.length} selected</span>
         <button type="button" onClick={deleteSelected}>Delete selected</button>
@@ -263,27 +274,32 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
       <section className="fm-content">
         {selectionMode && <div className="fm-list-head"><span></span><span></span><span></span><button type="button" onClick={() => setSelected(allVisibleSelected ? [] : visibleFiles.map(file => file.path))}>{allVisibleSelected ? "Clear" : "Select all"}</button></div>}
 
-        {visibleFolders.map(path => <div className="fm-row" key={path}>
-          <button type="button" className="fm-item-main" onClick={() => setCurrentFolder(path)}>
-            <span className="fm-item-icon folder"><FileGlyph folder /></span>
-            <span className="fm-item-copy"><strong>{baseName(path)}</strong><small>Folder</small></span>
-          </button>
-          <span className="fm-row-meta">—</span><span className="fm-row-meta">—</span>
-          <button type="button" className="fm-more" aria-label={"Actions for " + baseName(path)} onClick={() => setMenu(menu?.path === path ? null : { type: "folder", path })}>⋮</button>
-          {menu?.path === path && <div className="fm-menu"><button onClick={() => renameItem("folder", path)}>Rename</button><button className="danger" onClick={() => deleteItem("folder", path)}>Delete</button></div>}
-        </div>)}
+        {visibleFolders.map(path => {
+          const childFolders = store.folders.filter(folder => parentPath(folder) === path).length;
+          const childFiles = store.files.filter(file => parentPath(file.path) === path).length;
+          const count = childFolders + childFiles;
+          const latest = store.files.filter(file => file.path.startsWith(path + "/")).reduce((value, file) => Math.max(value, file.updatedAt || 0), 0);
+          return <div className="fm-row fm-folder-row" key={path}>
+            <button type="button" className="fm-item-main" onClick={() => { setCurrentFolder(path); setFilter("all"); }}>
+              <span className="fm-item-icon folder"><FileGlyph folder /></span>
+              <span className="fm-item-copy"><strong>{baseName(path)}</strong><small>{latest ? new Date(latest).toLocaleString("ms-MY", { day:"numeric", month:"short", hour:"numeric", minute:"2-digit" }) : "Folder"}</small></span>
+            </button>
+            <span className="fm-item-count">{count} item</span>
+            <button type="button" className="fm-more" aria-label={"Actions for " + baseName(path)} onClick={() => setMenu(menu?.path === path ? null : { type: "folder", path })}>⋮</button>
+            {menu?.path === path && <div className="fm-menu"><button onClick={() => renameItem("folder", path)}>Rename</button><button className="danger" onClick={() => deleteItem("folder", path)}>Delete</button></div>}
+          </div>;
+        })}
 
         {visibleFiles.map(file => {
           const ext = extensionOf(file.path);
           const checked = selected.includes(file.path);
-          return <div className={"fm-row " + (checked ? "selected" : "")} key={file.path}>
+          return <div className={"fm-row fm-file-row " + (checked ? "selected" : "")} key={file.path}>
             {selectionMode && <input className="fm-check" type="checkbox" checked={checked} onChange={() => toggleSelected(file.path)} aria-label={"Select " + baseName(file.path)} />}
             <button type="button" className="fm-item-main" onClick={() => setPreview(file)}>
               <span className="fm-item-icon"><FileGlyph ext={ext} /></span>
-              <span className="fm-item-copy"><strong>{baseName(file.path)}</strong><small>{ext.toUpperCase()} · AI generated</small></span>
+              <span className="fm-item-copy"><strong>{baseName(file.path)}</strong><small>{file.updatedAt ? new Date(file.updatedAt).toLocaleString("ms-MY", { day:"numeric", month:"short", hour:"numeric", minute:"2-digit" }) : ext.toUpperCase()}</small></span>
             </button>
-            <span className="fm-row-meta">{formatSize(file.content || "")}</span>
-            <span className="fm-row-meta">{file.updatedAt ? new Date(file.updatedAt).toLocaleDateString() : "—"}</span>
+            <span className="fm-item-count">{formatSize(file.content || "")}</span>
             <button type="button" className="fm-more" aria-label={"Actions for " + baseName(file.path)} onClick={() => setMenu(menu?.path === file.path ? null : { type: "file", path: file.path })}>⋮</button>
             {menu?.path === file.path && <div className="fm-menu">
               <button onClick={() => { setPreview(file); setMenu(null); }}>Open</button>
