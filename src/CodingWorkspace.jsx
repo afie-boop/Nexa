@@ -19,7 +19,8 @@ function makePreviewDocument(files) {
   const css = find(".css").map(file => file.content).join("\n");
   const js = find(".js").map(file => file.content).join("\n");
   const jsx = find(".jsx").map(file => file.content).join("\n");
-  const styleTag = "<style>" + css.replace(/<\/style/gi, "<\\/style") + "</style>";
+  const previewBaseCss = ":root{color-scheme:dark}html,body{background:#20242b;color:#e6e8ec}#root{color:inherit}";
+  const styleTag = "<style>" + previewBaseCss + "\\n" + css.replace(/<\/style/gi, "<\\/style") + "</style>";
   const scripts = "<script src='https://unpkg.com/react@18/umd/react.development.js'><\/script>" +
     "<script src='https://unpkg.com/react-dom@18/umd/react-dom.development.js'><\/script>" +
     (jsx ? "<script src='https://unpkg.com/@babel/standalone/babel.min.js'><\/script>" : "");
