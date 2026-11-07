@@ -128,13 +128,13 @@ function CodeHighlight({ lang, content, fontSize = 13, padding = "10px 16px 18px
       wrapLongLines
       customStyle={{
         margin: 0, border: "none", borderRadius: 0, padding,
-        fontSize: \`\${fontSize}px\`, lineHeight: "1.4", background: "transparent",
+        fontSize: fontSize + "px", lineHeight: "1.4", background: "transparent",
         textShadow: "none", overflowX: "hidden", whiteSpace: "pre-wrap",
         wordBreak: "normal", overflowWrap: "break-word"
       }}
       codeTagProps={{
         style: {
-          fontSize: \`\${fontSize}px\`, lineHeight: "1.4", padding: 0, margin: 0,
+          fontSize: fontSize + "px", lineHeight: "1.4", padding: 0, margin: 0,
           textShadow: "none", whiteSpace: "pre-wrap", wordBreak: "normal",
           overflowWrap: "break-word", fontVariantLigatures: "none",
           fontFamily: '"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace'
