@@ -427,6 +427,7 @@ function App() {
   const [contextLimitLoading, setContextLimitLoading] = useState(false);
   const [modelContextLimits, setModelContextLimits] = useState({});
   const [sessionMenuOpen, setSessionMenuOpen] = useState(false);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
   const [sessionActionMenuId, setSessionActionMenuId] = useState(null);
   const sessionLongPressTimerRef = useRef(null);
@@ -2004,9 +2005,16 @@ function App() {
                 <button type="button" className="coding-search-trigger" onClick={() => codingWorkspaceRef.current?.toggleSearch()} aria-label="Cari fail dan folder" title="Cari fail dan folder">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
                 </button>
-                <button type="button" className="coding-sort-trigger" onClick={() => codingWorkspaceRef.current?.cycleSort()} aria-label="Tukar susunan fail" title="Tukar susunan fail">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14M5 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
-                </button>
+                <div className="session-menu-wrap coding-sort-menu-wrap">
+                  <button type="button" className="coding-sort-trigger" onClick={() => setSortMenuOpen(open => !open)} aria-label="Susun fail" aria-expanded={sortMenuOpen} aria-haspopup="menu" title="Susun fail">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14M5 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+                  </button>
+                  {sortMenuOpen && <div className="session-menu-popover coding-sort-popover" role="menu">
+                    <button type="button" role="menuitem" className="session-menu-item" onClick={() => { codingWorkspaceRef.current?.setSortMode("name"); setSortMenuOpen(false); }}><span>Nama (A–Z)</span></button>
+                    <button type="button" role="menuitem" className="session-menu-item" onClick={() => { codingWorkspaceRef.current?.setSortMode("date"); setSortMenuOpen(false); }}><span>Tarikh terbaru</span></button>
+                    <button type="button" role="menuitem" className="session-menu-item" onClick={() => { codingWorkspaceRef.current?.setSortMode("type"); setSortMenuOpen(false); }}><span>Jenis fail</span></button>
+                  </div>}
+                </div>
               <div className="session-menu-wrap">
                 <button type="button" className="session-menu-trigger" onClick={() => setSessionMenuOpen(open => !open)} aria-label="Menu fail" aria-expanded={sessionMenuOpen} aria-haspopup="menu" title="Menu fail">
                   <svg stroke="currentColor" fill="currentColor" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
