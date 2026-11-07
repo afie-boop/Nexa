@@ -524,20 +524,6 @@ function App() {
     }
   });
   const [explorerMenuOpen, setExplorerMenuOpen] = useState(false);
-  const explorerLongPressRef = useRef(null);
-
-  const startExplorerLongPress = () => {
-    window.clearTimeout(explorerLongPressRef.current);
-    explorerLongPressRef.current = window.setTimeout(() => {
-      setExplorerMenuOpen(true);
-      explorerLongPressRef.current = null;
-    }, 500);
-  };
-
-  const cancelExplorerLongPress = () => {
-    window.clearTimeout(explorerLongPressRef.current);
-    explorerLongPressRef.current = null;
-  };
 
   useEffect(() => {
     try {
@@ -2159,46 +2145,6 @@ function App() {
                       <div className="mode-picker-menu" role="menu">
                         <div className="mode-picker-heading">
                           <span>Response Mode</span>
-                          <div className="explorer-toggle-wrap">
-                            <button
-                              type="button"
-                              className={`mode-picker-coding-btn ${explorerEnabled ? "active" : ""}`}
-                              aria-label="Tekan lama untuk tetapan Explorer"
-                              aria-haspopup="menu"
-                              aria-expanded={explorerMenuOpen}
-                              title="Tekan lama untuk pilih Explorer ON atau OFF"
-                              onPointerDown={startExplorerLongPress}
-                              onPointerUp={cancelExplorerLongPress}
-                              onPointerLeave={cancelExplorerLongPress}
-                              onPointerCancel={cancelExplorerLongPress}
-                              onContextMenu={event => {
-                                event.preventDefault();
-                                cancelExplorerLongPress();
-                                setExplorerMenuOpen(true);
-                              }}
-                            >&lt;/&gt;</button>
-                            {explorerMenuOpen && (
-                              <div className="explorer-toggle-menu" role="menu" aria-label="Tetapan Explorer">
-                                <div className="explorer-toggle-title">Explorer Context</div>
-                                {["on", "off"].map(option => (
-                                  <button
-                                    key={option}
-                                    type="button"
-                                    role="menuitemradio"
-                                    aria-checked={explorerEnabled === (option === "on")}
-                                    className={`explorer-toggle-option ${explorerEnabled === (option === "on") ? "active" : ""}`}
-                                    onClick={() => {
-                                      setExplorerEnabled(option === "on");
-                                      setExplorerMenuOpen(false);
-                                    }}
-                                  >
-                                    <span>{option.toUpperCase()}</span>
-                                    {explorerEnabled === (option === "on") && <span>✓</span>}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
                         </div>
                         {Object.entries(responseModes).map(([key, mode]) => (
                           <button
@@ -2216,6 +2162,38 @@ function App() {
                               <strong>{mode.label}</strong>
                             </span>
                             {responseMode === key && <span className="mode-option-check">✓</span>}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="explorer-toggle-wrap">
+                    <button
+                      type="button"
+                      className={`mode-picker-coding-btn ${explorerEnabled ? "active" : ""}`}
+                      aria-label="Tetapan Explorer"
+                      aria-haspopup="menu"
+                      aria-expanded={explorerMenuOpen}
+                      title="Tetapan Explorer"
+                      onClick={() => setExplorerMenuOpen(open => !open)}
+                    >&lt;/&gt;</button>
+                    {explorerMenuOpen && (
+                      <div className="explorer-toggle-menu" role="menu" aria-label="Tetapan Explorer">
+                        <div className="explorer-toggle-title">Explorer Context</div>
+                        {["on", "off"].map(option => (
+                          <button
+                            key={option}
+                            type="button"
+                            role="menuitemradio"
+                            aria-checked={explorerEnabled === (option === "on")}
+                            className={`explorer-toggle-option ${explorerEnabled === (option === "on") ? "active" : ""}`}
+                            onClick={() => {
+                              setExplorerEnabled(option === "on");
+                              setExplorerMenuOpen(false);
+                            }}
+                          >
+                            <span>{option.toUpperCase()}</span>
+                            {explorerEnabled === (option === "on") && <span>✓</span>}
                           </button>
                         ))}
                       </div>
