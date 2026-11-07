@@ -57,7 +57,7 @@ function downloadFile(file) {
   URL.revokeObjectURL(url);
 }
 
-const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
+const CodingWorkspace = forwardRef(function CodingWorkspace({ onCycleSort }, ref) {
   const [store, setStore] = useState(readFileStore);
   const [currentFolder, setCurrentFolder] = useState("");
   const [query, setQuery] = useState("");
@@ -251,6 +251,9 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
         <label className="fm-filter"><select value={filter} onChange={event => setFilter(event.target.value)} aria-label="Tapis item">
           <option value="all">Semua</option><option value="folders">Folder</option><option value="files">Fail</option>
         </select><span aria-hidden="true">▾</span></label>
+        <button type="button" className="coding-sort-trigger" onClick={onCycleSort} aria-label="Tukar susunan fail" title="Tukar susunan fail">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14M5 15h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/></svg>
+        </button>
       </div>
       {selectionMode && selected.length > 0 && <div className="fm-selection">
         <span>{selected.length} selected</span>
