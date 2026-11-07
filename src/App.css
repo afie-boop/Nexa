@@ -5293,3 +5293,36 @@ button:not(:disabled):active {
   #root .fm-check { position:absolute;left:7px;z-index:2; }
   #root .fm-row:has(.fm-check) .fm-item-main { padding-left:16px; }
 }
+
+
+/* Edge-to-edge file list: remove storage breadcrumb and outer gutters */
+#root .fm-shell {
+  padding-top: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+#root .fm-category-bar {
+  min-height: 44px;
+  padding-left: 0;
+  padding-right: 0;
+  margin-top: 0;
+  margin-bottom: 4px;
+}
+#root .fm-content {
+  width: 100%;
+  margin: 0;
+}
+#root .fm-row {
+  padding-left: 0;
+  padding-right: 0;
+}
+#root .fm-list-head {
+  padding-left: 0;
+  padding-right: 0;
+}
+@media (max-width:640px) {
+  #root .fm-shell { padding-top: 0; padding-left: 0; padding-right: 0; }
+  #root .fm-category-bar { padding-left: 0; padding-right: 0; margin-top: 0; margin-bottom: 2px; }
+  #root .fm-row { padding-left: 0; padding-right: 0; }
+  #root .fm-list-head { padding-left: 0; padding-right: 0; }
+}
