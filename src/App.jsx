@@ -347,6 +347,7 @@ function CodeBlock({ node, lang, content, onCopy }) {
 function App() {
   const msgRef = useRef(null);
   const sendButtonRef = useRef(null);
+  const codingWorkspaceRef = useRef(null);
 
   // Navigation State: 'chats' | 'models' | 'history' | 'settings' | 'about'
   const [activeNav, setActiveNav] = useState("chats");
@@ -1941,72 +1942,83 @@ function App() {
           </div>
 
           <div className="top-bar-actions">
-            {(() => {
-              const usageMessages = chat.filter(item => item.type === "ai" && item.usage);
-              const totalTokens = usageMessages.reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0);
-              const latestUsage = [...usageMessages].reverse()[0]?.usage || {};
-              const latestCall = [...(latestUsage.models || [])].reverse().find(item => item.model);
-              const activeModel = latestCall?.model || generalModel;
-              const contextLimit = Number(latestUsage.contextLimit || modelContextLimits[activeModel] || modelContextLimits[generalModel] || modelContextLimits[codingModel] || 0);
-              const remainingTokens = contextLimit > 0 ? Math.max(0, contextLimit - totalTokens) : null;
-              const usedPercent = contextLimit > 0 ? Math.min(100, (totalTokens / contextLimit) * 100) : 0;
-              const compact = value => value >= 1000000 ? (value / 1000000).toFixed(1).replace(/\\.0$/, "") + "M" : value >= 1000 ? (value / 1000).toFixed(value >= 10000 ? 0 : 1).replace(/\\.0$/, "") + "k" : String(value);
-              return (
+            {activeNav === "chats" && <>
+              {(() => {
+                const usageMessages = chat.filter(item => item.type === "ai" && item.usage);
+                const totalTokens = usageMessages.reduce((sum, item) => sum + Number(item.usage?.totalTokens || 0), 0);
+                const latestUsage = [...usageMessages].reverse()[0]?.usage || {};
+                const latestCall = [...(latestUsage.models || [])].reverse().find(item => item.model);
+                const activeModel = latestCall?.model || generalModel;
+                const contextLimit = Number(latestUsage.contextLimit || modelContextLimits[activeModel] || modelContextLimits[generalModel] || modelContextLimits[codingModel] || 0);
+                const remainingTokens = contextLimit > 0 ? Math.max(0, contextLimit - totalTokens) : null;
+                const compact = value => value >= 1000000 ? (value / 1000000).toFixed(1).replace(/\\.0$/, "") + "M" : value >= 1000 ? (value / 1000).toFixed(value >= 10000 ? 0 : 1).replace(/\\.0$/, "") + "k" : String(value);
+                return (
+                  <button
+                    type="button"
+                    className="token-usage-trigger token-usage-text-button"
+                    onClick={() => setTokenDetailsOpen(true)}
+                    title="Token tersisa dan butiran penggunaan"
+                    aria-label={remainingTokens === null ? "Buka butiran token" : `${remainingTokens.toLocaleString()} token tersisa`}
+                  >
+                    <span>Tokens</span>
+                    <strong>{remainingTokens === null ? "—" : compact(remainingTokens)}</strong>
+                  </button>
+                );
+              })()}
+              <div className="session-menu-wrap">
                 <button
                   type="button"
-                  className="token-usage-trigger token-usage-text-button"
-                  onClick={() => setTokenDetailsOpen(true)}
-                  title="Token tersisa dan butiran penggunaan"
-                  aria-label={remainingTokens === null ? "Buka butiran token" : `${remainingTokens.toLocaleString()} token tersisa`}
+                  className="session-menu-trigger"
+                  onClick={() => setSessionMenuOpen(open => !open)}
+                  aria-label="Menu sesi"
+                  aria-expanded={sessionMenuOpen}
+                  aria-haspopup="menu"
+                  title="Menu sesi"
                 >
-                  <span>Tokens</span>
-                  <strong>{remainingTokens === null ? "—" : compact(remainingTokens)}</strong>
+                  <svg stroke="currentColor" fill="currentColor" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <circle cx="12" cy="5" r="1.8" />
+                    <circle cx="12" cy="12" r="1.8" />
+                    <circle cx="12" cy="19" r="1.8" />
+                  </svg>
                 </button>
-              );
-            })()}
-            <div className="session-menu-wrap">
-              <button
-                type="button"
-                className="session-menu-trigger"
-                onClick={() => setSessionMenuOpen(open => !open)}
-                aria-label="Menu sesi"
-                aria-expanded={sessionMenuOpen}
-                aria-haspopup="menu"
-                title="Menu sesi"
-              >
-                <svg stroke="currentColor" fill="currentColor" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                  <circle cx="12" cy="5" r="1.8" />
-                  <circle cx="12" cy="12" r="1.8" />
-                  <circle cx="12" cy="19" r="1.8" />
-                </svg>
-              </button>
-              {sessionMenuOpen && (
-                <div className="session-menu-popover" role="menu">
-                  <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handlePinConversation(activeConversation.id); }}>
-                    <span aria-hidden="true">⌖</span>
-                    <span>{activeConversation.pinned ? "Unpin" : "Pin"}</span>
+                {sessionMenuOpen && (
+                  <div className="session-menu-popover" role="menu">
+                    <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handlePinConversation(activeConversation.id); }}>
+                      <span aria-hidden="true">⌖</span><span>{activeConversation.pinned ? "Unpin" : "Pin"}</span>
+                    </button>
+                    <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handleArchiveConversation(activeConversation.id); }}>
+                      <span aria-hidden="true">▣</span><span>{activeConversation.archived ? "Nyaharkib" : "Arkib"}</span>
+                    </button>
+                    <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handleShareConversation(activeConversation.id); }} disabled={chat.length === 0}>
+                      <span aria-hidden="true">↗</span><span>{copiedIdx === "top-bar-share" ? "Disalin ✓" : "Kongsi sesi"}</span>
+                    </button>
+                    <button type="button" role="menuitem" className="session-menu-item session-menu-item-danger" onClick={() => { setSessionMenuOpen(false); handleDeleteConversation(activeConversation.id); }}>
+                      <span aria-hidden="true">×</span><span>Delete</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>}
+            {activeNav === "coding" && (
+              <div className="session-menu-wrap">
+                <button type="button" className="session-menu-trigger" onClick={() => setSessionMenuOpen(open => !open)} aria-label="Menu fail" aria-expanded={sessionMenuOpen} aria-haspopup="menu" title="Menu fail">
+                  <svg stroke="currentColor" fill="currentColor" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <circle cx="12" cy="5" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="12" cy="19" r="1.8" />
+                  </svg>
+                </button>
+                {sessionMenuOpen && <div className="session-menu-popover" role="menu">
+                  <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); codingWorkspaceRef.current?.chooseFiles(); }}>
+                    <span aria-hidden="true">☑</span><span>Pilih</span>
                   </button>
-                  <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handleArchiveConversation(activeConversation.id); }}>
-                    <span aria-hidden="true">▣</span>
-                    <span>{activeConversation.archived ? "Nyaharkib" : "Arkib"}</span>
+                  <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); codingWorkspaceRef.current?.createFolder(); }}>
+                    <span aria-hidden="true">＋</span><span>Cipta folder</span>
                   </button>
-                  <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); handleShareConversation(activeConversation.id); }} disabled={chat.length === 0}>
-                    <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                      <circle cx="18" cy="5" r="3"></circle>
-                      <circle cx="6" cy="12" r="3"></circle>
-                      <circle cx="18" cy="19" r="3"></circle>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                    </svg>
-                    <span>{copiedIdx === "top-bar-share" ? "Disalin ✓" : "Kongsi sesi"}</span>
+                  <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); codingWorkspaceRef.current?.openTrash(); }}>
+                    <span aria-hidden="true">▣</span><span>Sampah</span>
                   </button>
-                  <button type="button" role="menuitem" className="session-menu-item session-menu-item-danger" onClick={() => { setSessionMenuOpen(false); handleDeleteConversation(activeConversation.id); }}>
-                    <span aria-hidden="true">×</span>
-                    <span>Delete</span>
-                  </button>
-                </div>
-              )}
-            </div>
+                </div>}
+              </div>
+            )}
           </div>
         </header>
 
@@ -2259,6 +2271,7 @@ function App() {
           <div className="sub-panel-container animate-fade coding-workspace-page">
             <div className="sub-panel-inner coding-workspace-inner">
               <CodingWorkspace
+                ref={codingWorkspaceRef}
                 generalModel={generalModel}
                 codingModel={codingModel}
                 fallbackModel={fallbackModel}
