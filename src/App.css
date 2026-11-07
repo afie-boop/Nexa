@@ -5343,3 +5343,41 @@ button:not(:disabled):active {
     padding-top: 0 !important;
   }
 }
+
+
+/* File manager empty state and category controls alignment */
+#root .fm-category-bar {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+}
+#root .fm-filter {
+  margin-right:auto;
+  justify-content:flex-start;
+}
+#root .fm-sort {
+  margin-left:auto;
+  justify-content:flex-end;
+}
+#root .fm-content-empty {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height:calc(100dvh - 270px);
+}
+#root .fm-content-empty > .fm-empty {
+  width:100%;
+  min-height:0;
+  flex:1;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+#root .fm-footer { display:none !important; }
+@media (max-width:640px) {
+  #root .fm-category-bar { justify-content:space-between; }
+  #root .fm-filter { margin-right:auto; }
+  #root .fm-sort { margin-left:auto; }
+  #root .fm-content-empty { min-height:calc(100dvh - 235px); }
+}
