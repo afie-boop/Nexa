@@ -31,12 +31,13 @@ function extensionOf(path) {
   return index > 0 ? name.slice(index + 1).toLowerCase() : "file";
 }
 
-function formatSize(value) {
-  const bytes = new Blob([value || ""]).size;
+function formatBytes(bytes) {
   if (bytes < 1024) return bytes + " B";
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
+
+function formatSize(value) { return formatBytes(new Blob([value || ""]).size); }
 
 function FileGlyph({ folder = false, ext = "" }) {
   if (folder) return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4l2 2H18.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z" /></svg>;
@@ -199,7 +200,7 @@ export default function CodingWorkspace() {
           <div className="fm-heading-icon"><FileGlyph folder /></div>
           <div><h2>My Files</h2><p>Files created by AXMchat AI</p></div>
         </div>
-        <button type="button" className="fm-new-folder" onClick={() => setShowFolderForm(value => !value}><span>＋</span> New folder</button>
+        <button type="button" className="fm-new-folder" onClick={() => setShowFolderForm(value => !value)}><span>＋</span> New folder</button>
       </header>
 
       <div className="fm-summary">
@@ -207,7 +208,7 @@ export default function CodingWorkspace() {
         <i />
         <div><strong>{store.folders.length}</strong><span>Folders</span></div>
         <i />
-        <div><strong>{formatSize(String(totalBytes))}</strong><span>Used</span></div>
+        <div><strong>{formatBytes(totalBytes)}</strong><span>Used</span></div>
       </div>
 
       <div className="fm-toolbar">
