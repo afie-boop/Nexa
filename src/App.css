@@ -5066,14 +5066,14 @@ button:not(:disabled):active {
   height:36px;
   flex:0 0 36px;
   place-items:center;
-  border:1px solid var(--border);
-  border-radius:9px;
-  background:rgba(255,255,255,.045);
+  border:0;
+  border-radius:8px;
+  background:transparent;
   color:var(--secondary-text);
   cursor:pointer;
 }
 #root .coding-search-trigger:hover {
-  background:rgba(255,255,255,.085);
+  background:var(--surface-hover);
   color:var(--primary-text);
 }
 #root .coding-search-trigger svg {
