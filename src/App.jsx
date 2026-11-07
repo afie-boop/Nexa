@@ -2240,8 +2240,7 @@ function App() {
           </div>
         )}
 
-        {activeNav === "coding" && (
-          <div className="sub-panel-container animate-fade coding-workspace-page">
+        <div className="sub-panel-container animate-fade coding-workspace-page" style={{ display: activeNav === "coding" ? undefined : "none" }}>
             <div className="sub-panel-inner coding-workspace-inner">
               <CodingWorkspace
                 ref={codingWorkspaceRef}
@@ -2254,7 +2253,6 @@ function App() {
               />
             </div>
           </div>
-        )}
 
         {activeNav === "brain" && (
           <div className="sub-panel-container animate-fade">
