@@ -12,6 +12,32 @@ function safeProjectPath(value) {
   return /^[a-zA-Z0-9_./-]+$/.test(path) ? path : "";
 }
 
+function buildFileTree(files) {
+  const root = [];
+  for (const file of files) {
+    const parts = file.path.split("/");
+    let level = root;
+    let folderPath = "";
+    parts.forEach((part, index) => {
+      folderPath = folderPath ? folderPath + "/" + part : part;
+      const isFile = index === parts.length - 1;
+      let node = level.find(item => item.name === part && item.type === (isFile ? "file" : "folder"));
+      if (!node) {
+        node = isFile
+          ? { name: part, path: file.path, type: "file", file }
+          : { name: part, path: folderPath, type: "folder", children: [] };
+        level.push(node);
+      }
+      if (!isFile) level = node.children;
+    });
+  }
+  const sort = nodes => nodes.sort((a, b) => {
+    if (a.type !== b.type) return a.type === "folder" ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  }).map(node => node.type === "folder" ? { ...node, children: sort(node.children) } : node);
+  return sort(root);
+}
+
 function makePreviewDocument(files) {
   const find = ext => files.filter(file => file.path.toLowerCase().endsWith(ext));
   const htmlFile = files.find(file => file.path.toLowerCase() === "index.html");
@@ -54,13 +80,13 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
-  const [showFiles, setShowFiles] = useState(true);
+  const [showFiles, setShowFiles] = useState(true);\n  const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
   const [showAddFile, setShowAddFile] = useState(false);
   const [newFileName, setNewFileName] = useState("");
   const [view, setView] = useState("editor");
   const [previewDoc, setPreviewDoc] = useState("");
   const [previewKey, setPreviewKey] = useState(0);
-  const currentFile = useMemo(() => files.find(file => file.path === activeFile), [files, activeFile]);
+  const currentFile = useMemo(() => files.find(file => file.path === activeFile), [files, activeFile]);\n  const fileTree = useMemo(() => buildFileTree(files), [files]);
 
   useEffect(() => {
     try { localStorage.setItem("axmchat_workspace_files", JSON.stringify(files)); }
@@ -185,6 +211,26 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
     }
   }
 
+  function renderFileNodes(nodes, depth = 0) {
+    return nodes.map(node => {
+      if (node.type === "folder") {
+        const collapsed = collapsedFolders.has(node.path);
+        return <div className="cw-tree-group" key={node.path}>
+          <button type="button" className="cw-tree-folder" style={{ "--tree-depth": depth }} aria-expanded={!collapsed} onClick={() => setCollapsedFolders(previous => { const next = new Set(previous); if (next.has(node.path)) next.delete(node.path); else next.add(node.path); return next; })}>
+            <svg className={`cw-tree-chevron ${collapsed ? "" : "open"}`} viewBox="0 0 16 16" aria-hidden="true"><path d="m5.5 3.5 5 4.5-5 4.5" /></svg>
+            <svg className="cw-tree-folder-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5.5h6l1.7 2H17a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-9a1 1 0 0 1 .5-1Z" /></svg>
+            <span>{node.name}</span><small>{node.children.length}</small>
+          </button>
+          {!collapsed && <div className="cw-tree-children">{renderFileNodes(node.children, depth + 1)}</div>}
+        </div>;
+      }
+      const ext = node.name.includes(".") ? node.name.split(".").pop().toLowerCase() : "file";
+      return <button type="button" key={node.path} title={node.path} style={{ "--tree-depth": depth }} className={`cw-tree-file ${activeFile === node.path ? "active" : ""}`} onClick={() => { setActiveFile(node.path); setView("editor"); }}>
+        <span className={`cw-file-type cw-ext-${ext}`}>{ext === "file" ? "FILE" : ext.slice(0, 3).toUpperCase()}</span><span className="cw-file-path">{node.name}</span>
+      </button>;
+    });
+  }
+
   function removeFile() {
     if (!currentFile || !window.confirm("Padam fail " + activeFile + "?")) return;
     const next = files.filter(file => file.path !== activeFile);
@@ -205,16 +251,18 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
 
       <section className="cw-workbench">
         <aside className={`cw-file-panel ${showFiles ? "" : "cw-file-panel-hidden"}`}>
-          <div className="cw-panel-heading"><span>EXPLORER</span><button type="button" onClick={() => setShowFiles(value => !value)} aria-label="Toggle file explorer">{showFiles ? "‹" : "›"}</button></div>
+          <div className="cw-panel-heading">
+            <div className="cw-panel-title"><span>FILES</span><small>{files.length} {files.length === 1 ? "FILE" : "FILES"}</small></div>
+            <button type="button" onClick={() => setShowFiles(value => !value)} aria-label="Toggle file explorer">{showFiles ? "‹" : "›"}</button>
+          </div>
           {showFiles && <>
             <div className="cw-file-list">
-              {files.map(file => <button type="button" key={file.path} className={`cw-file-row ${activeFile === file.path ? "active" : ""}`} onClick={() => { setActiveFile(file.path); setView("editor"); }}>
-                <span className={`cw-file-type cw-ext-${file.path.split(".").pop()?.toLowerCase()}`}>{file.path.split(".").pop()?.toUpperCase().slice(0, 3) || "FILE"}</span><span className="cw-file-path">{file.path}</span>
-              </button>)}
-              {!files.length && <p className="cw-empty-files">Belum ada fail.</p>}
+              <div className="cw-tree-root"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 5.5h6l1.7 2H17a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-9a1 1 0 0 1 .5-1Z" /></svg><span>PROJECT</span></div>
+              {renderFileNodes(fileTree)}
+              {!files.length && <p className="cw-empty-files">Folder ini masih kosong.</p>}
             </div>
             <div className="cw-file-panel-footer">
-              <button type="button" className="cw-add-file-side" onClick={() => setShowAddFile(value => !value)}>＋ <span>Add File</span></button>
+              <button type="button" className="cw-add-file-side" onClick={() => setShowAddFile(value => !value)}><span className="cw-add-file-plus">＋</span><span>New file</span></button>
             </div>
             {showAddFile && (
               <form className="cw-add-file-inline" onSubmit={event => { event.preventDefault(); addFile(); }}>
