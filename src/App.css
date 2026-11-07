@@ -4220,3 +4220,10 @@ button:not(:disabled):active {
   flex:0 0 auto;
   margin-left:auto;
 }
+
+
+.mode-picker-coding-btn.active {
+  background: rgba(152, 195, 121, .14);
+  border-color: rgba(152, 195, 121, .55);
+  color: #98c379;
+}
