@@ -76,6 +76,7 @@ const CodingWorkspace = forwardRef(function CodingWorkspace({ onCycleSort }, ref
   useImperativeHandle(ref, () => ({
     chooseFiles: () => { setSelectionMode(value => !value); setSelected([]); },
     cycleSort: () => setSort(value => value === "name" ? "date" : value === "date" ? "type" : "name"),
+    setSortMode: mode => setSort(mode),
     toggleSearch: () => setSearchOpen(value => !value),
     createFolder: () => { setShowFolderForm(true); setShowTrash(false); },
     openTrash: () => { setShowTrash(true); setSelected([]); setQuery(""); setCurrentFolder(""); }
