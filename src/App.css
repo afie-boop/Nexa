@@ -4275,3 +4275,21 @@ button:not(:disabled):active {
 .explorer-toggle-option.active {
   background: var(--surface-active);
 }
+
+
+/* Explorer panel: blend into the workspace while keeping a clear outline. */
+#root .coding-workspace-page .cw-file-panel {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+#root .coding-workspace-page .cw-file-panel .cw-panel-heading {
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+}
+#root .coding-workspace-page .cw-file-panel .cw-file-list,
+#root .coding-workspace-page .cw-file-panel .cw-file-panel-footer {
+  background: transparent;
+}
