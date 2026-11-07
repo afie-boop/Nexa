@@ -5608,3 +5608,10 @@ button:not(:disabled):active {
   margin-right: 4px !important;
   transform: none !important;
 }
+
+
+/* Coding header: icon-only sort control stacked under the file menu */
+#root .coding-top-actions > .session-menu-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; }
+#root .coding-sort-trigger { display:grid; width:36px; height:30px; place-items:center; padding:0; border:0; border-radius:8px; color:var(--secondary-text); background:transparent; cursor:pointer; }
+#root .coding-sort-trigger svg { width:19px; height:19px; }
+#root .coding-sort-trigger:hover { color:var(--primary-text); background:var(--surface-hover); }
