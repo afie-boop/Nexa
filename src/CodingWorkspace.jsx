@@ -80,7 +80,8 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
   const [prompt, setPrompt] = useState("");
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
-  const [showFiles, setShowFiles] = useState(true);\n  const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
+  const [showFiles, setShowFiles] = useState(true);
+  const [collapsedFolders, setCollapsedFolders] = useState(() => new Set());
   const [showAddFile, setShowAddFile] = useState(false);
   const [newFileName, setNewFileName] = useState("");
   const [view, setView] = useState("editor");
