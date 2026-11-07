@@ -74,16 +74,20 @@ const CodingWorkspace = forwardRef(function CodingWorkspace({ onCycleSort }, ref
   const [notice, setNotice] = useState("");
 
   function getAiContext() {
-    const files = store.files.slice(0, 100).map(file => ({
-      path: file.path,
-      content: String(file.content || "").slice(0, 24000),
-      language: file.language || extensionOf(file.path)
-    }));
+    let remaining = 120000;
+    const files = [];
+    for (const file of store.files.slice(0, 100)) {
+      if (remaining <= 0) break;
+      const content = String(file.content || "");
+      const clipped = content.slice(0, remaining);
+      files.push({ path: file.path, content: clipped, language: file.language || extensionOf(file.path) });
+      remaining -= clipped.length;
+    }
     return {
       files,
       folders: store.folders.slice(0, 100),
       totalFiles: store.files.length,
-      truncated: store.files.length > files.length || files.some((file, index) => String(store.files[index]?.content || "").length > 24000)
+      truncated: store.files.length > files.length || files.some((file, index) => String(store.files[index]?.content || "").length > file.content.length)
     };
   }
 
