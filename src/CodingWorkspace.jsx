@@ -247,14 +247,6 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
         <button type="button" className="fm-cancel" onClick={() => { setShowFolderForm(false); setFolderName(""); }}>Cancel</button>
       </form>}
 
-      <nav className="fm-breadcrumbs" aria-label="Folder path">
-        <button type="button" className="fm-home-crumb" onClick={() => { setCurrentFolder(""); setQuery(""); setShowTrash(false); }} aria-label="Folder utama">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21H3z"/><path d="M9 21v-7h6v7"/></svg>
-        </button>
-        <span className="fm-crumb-arrow">▸</span>
-        {!showTrash && <em>{breadcrumbs.length ? breadcrumbs[breadcrumbs.length - 1] : "Storan AXMchat"}</em>}
-        {showTrash && <em>Sampah</em>}{query && <em>Hasil carian</em>}
-      </nav>
       <div className="fm-category-bar">
         <label className="fm-filter"><select value={filter} onChange={event => setFilter(event.target.value)} aria-label="Tapis item">
           <option value="all">Semua</option><option value="folders">Folder</option><option value="files">Fail</option>
@@ -262,7 +254,7 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
         <label className="fm-sort"><span className="fm-sort-icon">☷</span>
           <select value={sort} onChange={event => setSort(event.target.value)} aria-label="Susun item">
             <option value="name">Nama</option><option value="date">Tarikh diubah</option><option value="type">Jenis fail</option>
-          </select><span className="fm-sort-direction">↑</span>
+          </select>
         </label>
       </div>
       {selectionMode && selected.length > 0 && <div className="fm-selection">
