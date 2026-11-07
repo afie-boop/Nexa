@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 const DEFAULT_FILES = [
-  { path: "src/App.jsx", content: "function App() {\\n  return <main className=\\"app\\"><h1>Hello, AXMchat!</h1><p>Mula bina projek anda di sini.</p></main>;\\n}\\n" },
-  { path: "src/style.css", content: "body { margin: 0; font-family: system-ui, sans-serif; }\\n.app { min-height: 100vh; display: grid; place-content: center; text-align: center; }\\n" },
-  { path: "index.html", content: "<!doctype html>\\n<html lang=\\"en\\">\\n<head><meta charset=\\"UTF-8\\"><meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1.0\\"><title>My Project</title></head>\\n<body><div id=\\"root\\"></div></body>\\n</html>\\n" }
+  { path: "src/App.jsx", content: "function App() {\n  return <main className=\"app\"><h1>Hello, AXMchat!</h1><p>Mula bina projek anda di sini.</p></main>;\n}\n" },
+  { path: "src/style.css", content: "body { margin: 0; font-family: system-ui, sans-serif; }\n.app { min-height: 100vh; display: grid; place-content: center; text-align: center; }\n" },
+  { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>My Project</title></head>\n<body><div id=\"root\"></div></body>\n</html>\n" }
 ];
 
 function safeProjectPath(value) {
-  const path = String(value || "").trim().replace(/^\\/+/, "");
+  const path = String(value || "").trim().replace(/^\/+/, "");
   if (!path || path.split("/").some(part => !part || part === "." || part === "..")) return "";
   return /^[a-zA-Z0-9_./-]+$/.test(path) ? path : "";
 }
@@ -16,28 +16,28 @@ function makePreviewDocument(files) {
   const find = ext => files.filter(file => file.path.toLowerCase().endsWith(ext));
   const htmlFile = files.find(file => file.path.toLowerCase() === "index.html");
   let html = htmlFile?.content || "<!doctype html><html><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width,initial-scale=1'></head><body><div id='root'></div></body></html>";
-  const css = find(".css").map(file => file.content).join("\\n");
-  const js = find(".js").map(file => file.content).join("\\n");
-  const jsx = find(".jsx").map(file => file.content).join("\\n");
-  const styleTag = "<style>" + css.replace(/<\\/style/gi, "<\\\\/style") + "</style>";
-  const scripts = "<script src='https://unpkg.com/react@18/umd/react.development.js'><\\/script>" +
-    "<script src='https://unpkg.com/react-dom@18/umd/react-dom.development.js'><\\/script>" +
-    (jsx ? "<script src='https://unpkg.com/@babel/standalone/babel.min.js'><\\/script>" : "");
+  const css = find(".css").map(file => file.content).join("\n");
+  const js = find(".js").map(file => file.content).join("\n");
+  const jsx = find(".jsx").map(file => file.content).join("\n");
+  const styleTag = "<style>" + css.replace(/<\/style/gi, "<\\/style") + "</style>";
+  const scripts = "<script src='https://unpkg.com/react@18/umd/react.development.js'><\/script>" +
+    "<script src='https://unpkg.com/react-dom@18/umd/react-dom.development.js'><\/script>" +
+    (jsx ? "<script src='https://unpkg.com/@babel/standalone/babel.min.js'><\/script>" : "");
   let runtime = "";
   if (jsx) {
-    const safeJsx = JSON.stringify(jsx).replace(/<\\/script/gi, "<\\\\/script");
+    const safeJsx = JSON.stringify(jsx).replace(/<\/script/gi, "<\\/script");
     runtime = "<script>(function(){try{" +
       "var source=" + safeJsx + ";" +
-      "source=source.replace(/^\\\\s*import\\\\s+[^\\\\n]*\\\\n/gm,'').replace(/^\\\\s*export\\\\s+default\\\\s+/gm,'').replace(/^\\\\s*export\\\\s+(?=(function|class|const|let|var)\\\\b)/gm,'');" +
+      "source=source.replace(/^\\s*import\\s+[^\\n]*\\n/gm,'').replace(/^\\s*export\\s+default\\s+/gm,'').replace(/^\\s*export\\s+(?=(function|class|const|let|var)\\b)/gm,'');" +
       "var compiled=Babel.transform(source,{presets:['env','react']}).code;" +
-      "var runner=new Function('React','ReactDOM',compiled+';if(typeof App!==\\'undefined\\'&&!/createRoot|ReactDOM\\\\.render/.test(" + JSON.stringify(jsx) + ")){ReactDOM.createRoot(document.getElementById(\\'root\\')||document.body).render(React.createElement(App));}');" +
+      "var runner=new Function('React','ReactDOM',compiled+';if(typeof App!==\'undefined\'&&!/createRoot|ReactDOM\\.render/.test(" + JSON.stringify(jsx) + ")){ReactDOM.createRoot(document.getElementById(\'root\')||document.body).render(React.createElement(App));}');" +
       "runner(React,ReactDOM);" +
-      "}catch(error){var box=document.getElementById('__axm_error');if(box){box.style.display='block';box.textContent='JSX preview error: '+error.message;}}})();<\\/script>";
+      "}catch(error){var box=document.getElementById('__axm_error');if(box){box.style.display='block';box.textContent='JSX preview error: '+error.message;}}})();<\/script>";
   }
-  const jsTag = js ? "<script>" + js.replace(/<\\/script/gi, "<\\\\/script") + "<\\/script>" : "";
+  const jsTag = js ? "<script>" + js.replace(/<\/script/gi, "<\\/script") + "<\/script>" : "";
   const errorBox = "<pre id='__axm_error' style='display:none;white-space:pre-wrap;margin:12px;padding:12px;background:#fee;color:#900;border-radius:8px;font:12px monospace'></pre>";
   const additions = styleTag + errorBox + scripts + runtime + jsTag;
-  if (/<\\/head>/i.test(html)) html = html.replace(/<\\/head>/i, additions + "</head>");
+  if (/<\/head>/i.test(html)) html = html.replace(/<\/head>/i, additions + "</head>");
   else html = additions + html;
   return html;
 }
@@ -116,7 +116,7 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
         "Untuk projek HTML biasa, hasilkan HTML, CSS dan JavaScript biasa yang tidak memerlukan bundler.",
         "FORMAT WAJIB setiap fail: FILE: laluan/fail.ext pada satu baris diikuti code fence dengan kandungan penuh. Satu code fence bagi setiap fail.",
         "Jangan gabungkan fail, jangan potong kod, dan keluarkan semula semua fail yang perlu dicipta atau diganti."
-      ].join("\\n\\n");
+      ].join("\n\n");
       const response = await fetch("/chat", {
         method: "POST", credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
@@ -149,20 +149,20 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
         const chunk = await reader.read();
         if (chunk.done) break;
         buffer += decoder.decode(chunk.value, { stream: true });
-        const parts = buffer.split("\\n\\n");
+        const parts = buffer.split("\n\n");
         buffer = parts.pop() || "";
         parts.forEach(consume);
       }
       buffer += decoder.decode();
-      buffer.split("\\n\\n").forEach(consume);
+      buffer.split("\n\n").forEach(consume);
       if (serverError) throw new Error(serverError);
       if (!answer) throw new Error("Tiada jawapan diterima daripada AI.");
       const generated = [];
-      const pattern = /^\\s*(?:#{1,6}\\s*)?(?:\\/\\/\\s*)?FILE:\\s*(.+?)\\s*\\n\`\`\`([^\n]*)\\n([\\s\\S]*?)\\n\`\`\`/gm;
+      const pattern = /^\s*(?:#{1,6}\s*)?(?:\/\/\s*)?FILE:\s*(.+?)\s*\n\`\`\`([^\n]*)\n([\s\S]*?)\n\`\`\`/gm;
       let match;
       while ((match = pattern.exec(answer)) !== null) {
         const path = safeProjectPath(match[1]);
-        if (path) generated.push({ path, content: match[3].replace(/\\n$/, "") + "\\n" });
+        if (path) generated.push({ path, content: match[3].replace(/\n$/, "") + "\n" });
       }
       if (!generated.length) throw new Error("Format fail AI tidak dikenali. Cuba jana semula.");
       setFiles(previous => {
@@ -250,7 +250,7 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
           {view === "editor" ? (
             <div className="cw-editor-area">
               {currentFile ? <textarea className="cw-code-editor" spellCheck="false" autoCapitalize="off" autoCorrect="off" autoComplete="off" value={currentFile.content} onChange={event => updateFile(activeFile, event.target.value)} aria-label={activeFile} /> : <div className="cw-empty-editor">Pilih fail dalam Explorer atau tambah fail baharu.</div>}
-              <div className="cw-editor-footer"><span>● Auto-saved on this device</span><span>{currentFile?.content.split("\\n").length || 0} lines</span></div>
+              <div className="cw-editor-footer"><span>● Auto-saved on this device</span><span>{currentFile?.content.split("\n").length || 0} lines</span></div>
             </div>
           ) : (
             <div className="cw-preview-area">
