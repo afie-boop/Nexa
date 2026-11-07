@@ -5436,12 +5436,16 @@ button:not(:disabled):active {
 
 /* Fine-tune horizontal positions of file category controls */
 #root .coding-workspace-page .fm-filter {
-  margin-left: 12px;
+  margin-left: 20px;
 }
 #root .coding-workspace-page .fm-sort {
-  transform: translateX(8px);
+  margin-right: 4px;
+  transform: translateX(12px);
 }
 @media (max-width:640px) {
-  #root .coding-workspace-page .fm-filter { margin-left: 12px; }
-  #root .coding-workspace-page .fm-sort { transform: translateX(8px); }
+  #root .coding-workspace-page .fm-filter { margin-left: 20px; }
+  #root .coding-workspace-page .fm-sort {
+    margin-right: 4px;
+    transform: translateX(12px);
+  }
 }
