@@ -232,7 +232,6 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
             </button>)}
             {!files.length && <p className="cw-empty-files">Belum ada fail.</p>}
           </div>}
-          {showFiles && <button type="button" className="cw-add-file-side" onClick={() => setShowAddFile(true)}>＋ Add file</button>}
         </aside>
 
         <div className="cw-main-panel">
@@ -260,7 +259,6 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
           )}
         </div>
       </section>
-      <p className="cw-footnote">Fail disimpan dalam browser peranti ini. Preview berjalan dalam ruang terasing; projek yang memerlukan pakej npm atau import fail kompleks memerlukan proses build berasingan.</p>
     </div>
   );
 }
