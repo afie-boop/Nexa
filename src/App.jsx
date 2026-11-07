@@ -58,7 +58,7 @@ const CODE_EXT = {
 function getCodeFileName(node, lang) {
   const meta = node?.meta || node?.data?.meta || "";
   const match = /(?:title|file|filename)=["']?([^"'\s]+)["']?/.exec(meta);
-  return match ? match[1] : \`kod.\${CODE_EXT[lang] || lang || "txt"}\`;
+  return match ? match[1] : "kod." + (CODE_EXT[lang] || lang || "txt");
 }
 
 function useCodeCopy() {
@@ -99,7 +99,7 @@ function downloadCodeFile(name, value) {
 
 function buildCodePreview(lang, value) {
   if (lang === "svg") {
-    return \`<!doctype html><html><body style="margin:0;display:grid;place-items:center;min-height:100vh;background:#fff">\${value}</body></html>\`;
+    return "<!doctype html><html><body style=\"margin:0;display:grid;place-items:center;min-height:100vh;background:#fff\">" + value + "</body></html>";
   }
   return value;
 }
@@ -229,7 +229,7 @@ function CodeBlock({ node, lang, content, onCopy }) {
   const [copied, copy] = useCodeCopy();
   const [panel, setPanel] = useState(null);
   const closePanel = useCallback(() => setPanel(null), []);
-  const lines = content.split("\\n").length;
+  const lines = content.split("\n").length;
   const fileName = getCodeFileName(node, lang);
   const isLong = lines > LONG_CODE_LINES;
   const canRun = RUNNABLE.includes(lang);
@@ -1216,10 +1216,10 @@ function App() {
 
   const MarkdownComponents = {
     code({ node, className, children, ...props }) {
-      const match = /language-(\\w+)/.exec(className || "");
+      const match = /language-(\w+)/.exec(className || "");
       const isInline = !match;
       const lang = match ? match[1].toLowerCase() : "text";
-      const content = String(children).replace(/\\n$/, "");
+      const content = String(children).replace(/\n$/, "");
 
       if (isInline) {
         return <code className="inline-code" {...props}>{children}</code>;
