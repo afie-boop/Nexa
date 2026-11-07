@@ -238,7 +238,6 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
           <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search files and folders" />
           {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search">×</button>}
         </label>
-        <label className="fm-sort"><span>Sort</span><select value={sort} onChange={event => setSort(event.target.value)}><option value="name">Name</option><option value="date">Date modified</option><option value="type">File type</option></select></label>
       </div>}
 
       {showFolderForm && <form className="fm-create-folder" onSubmit={createFolder}>
