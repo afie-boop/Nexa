@@ -203,15 +203,6 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
         <div className="cw-heading-actions" />
       </header>
 
-      <section className="cw-ai-card">
-        <div className="cw-ai-label"><label htmlFor="workspace-ai-prompt">Apa yang anda mahu bina?</label></div>
-        <textarea id="workspace-ai-prompt" value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="" rows={3} disabled={busy} />
-        <div className="cw-ai-footer">
-          {status && <span className="cw-status-text" role="status">{status}</span>}
-          <button type="button" className="cw-generate-btn" onClick={generateProject} disabled={busy || !prompt.trim()}>{busy ? "Sedang membina…" : "Generate project"}</button>
-        </div>
-      </section>
-
       <section className="cw-workbench">
         <aside className={`cw-file-panel ${showFiles ? "" : "cw-file-panel-hidden"}`}>
           <div className="cw-panel-heading"><span>EXPLORER</span><button type="button" onClick={() => setShowFiles(value => !value)} aria-label="Toggle file explorer">{showFiles ? "‹" : "›"}</button></div>
