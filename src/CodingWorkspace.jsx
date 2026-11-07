@@ -200,9 +200,7 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
           <h2>Coding Workspace</h2>
           
         </div>
-        <div className="cw-heading-actions">
-          <button type="button" className="cw-secondary-btn" onClick={() => setShowAddFile(value => !value)}>＋ Add file</button>
-        </div>
+        <div className="cw-heading-actions" />
       </header>
 
       <section className="cw-ai-card">
@@ -214,24 +212,29 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
         </div>
       </section>
 
-      {showAddFile && (
-        <form className="cw-add-file" onSubmit={event => { event.preventDefault(); addFile(); }}>
-          <strong className="cw-add-file-title">Tambah fail</strong>
-          <input value={newFileName} onChange={event => setNewFileName(event.target.value)} placeholder="Nama fail dan lokasi" aria-label="Nama dan lokasi fail" autoFocus />
-          <button type="submit" disabled={!newFileName.trim()}>Tambah</button>
-          <button type="button" className="cw-cancel-add" onClick={() => { setShowAddFile(false); setNewFileName(""); }}>Batal</button>
-        </form>
-      )}
-
       <section className="cw-workbench">
         <aside className={`cw-file-panel ${showFiles ? "" : "cw-file-panel-hidden"}`}>
           <div className="cw-panel-heading"><span>EXPLORER</span><button type="button" onClick={() => setShowFiles(value => !value)} aria-label="Toggle file explorer">{showFiles ? "‹" : "›"}</button></div>
-          {showFiles && <div className="cw-file-list">
-            {files.map(file => <button type="button" key={file.path} className={`cw-file-row ${activeFile === file.path ? "active" : ""}`} onClick={() => { setActiveFile(file.path); setView("editor"); }}>
-              <span className={`cw-file-type cw-ext-${file.path.split(".").pop()?.toLowerCase()}`}>{file.path.split(".").pop()?.toUpperCase().slice(0, 3) || "FILE"}</span><span className="cw-file-path">{file.path}</span>
-            </button>)}
-            {!files.length && <p className="cw-empty-files">Belum ada fail.</p>}
-          </div>}
+          {showFiles && <>
+            <div className="cw-file-list">
+              {files.map(file => <button type="button" key={file.path} className={`cw-file-row ${activeFile === file.path ? "active" : ""}`} onClick={() => { setActiveFile(file.path); setView("editor"); }}>
+                <span className={`cw-file-type cw-ext-${file.path.split(".").pop()?.toLowerCase()}`}>{file.path.split(".").pop()?.toUpperCase().slice(0, 3) || "FILE"}</span><span className="cw-file-path">{file.path}</span>
+              </button>)}
+              {!files.length && <p className="cw-empty-files">Belum ada fail.</p>}
+            </div>
+            <div className="cw-file-panel-footer">
+              <button type="button" className="cw-add-file-side" onClick={() => setShowAddFile(value => !value)}>＋ <span>Add File</span></button>
+            </div>
+            {showAddFile && (
+              <form className="cw-add-file-inline" onSubmit={event => { event.preventDefault(); addFile(); }}>
+                <input value={newFileName} onChange={event => setNewFileName(event.target.value)} placeholder="Nama fail / lokasi" aria-label="Nama dan lokasi fail" autoFocus />
+                <div className="cw-add-file-inline-actions">
+                  <button type="submit" disabled={!newFileName.trim()}>Tambah</button>
+                  <button type="button" className="cw-cancel-add" onClick={() => { setShowAddFile(false); setNewFileName(""); }}>Batal</button>
+                </div>
+              </form>
+            )}
+          </>}
         </aside>
 
         <div className="cw-main-panel">
