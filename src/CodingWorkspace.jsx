@@ -19,8 +19,7 @@ function makePreviewDocument(files) {
   const css = find(".css").map(file => file.content).join("\n");
   const js = find(".js").map(file => file.content).join("\n");
   const jsx = find(".jsx").map(file => file.content).join("\n");
-  const previewBaseCss = ":root{color-scheme:dark}html,body{background:#20242b;color:#e6e8ec}#root{color:inherit}";
-  const styleTag = "<style>" + previewBaseCss + "\\n" + css.replace(/<\/style/gi, "<\\/style") + "</style>";
+  const styleTag = "<style>" + css.replace(/<\\/style/gi, "<\\\\/style") + "</style>";
   const scripts = "<script src='https://unpkg.com/react@18/umd/react.development.js'><\/script>" +
     "<script src='https://unpkg.com/react-dom@18/umd/react-dom.development.js'><\/script>" +
     (jsx ? "<script src='https://unpkg.com/@babel/standalone/babel.min.js'><\/script>" : "");
@@ -232,8 +231,14 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
         <div className="cw-main-panel">
           <div className="cw-workbench-toolbar">
             <div className="cw-view-tabs">
-              <button type="button" className={view === "editor" ? "active" : ""} onClick={() => setView("editor")}>Editor</button>
-              <button type="button" className={view === "preview" ? "active" : ""} onClick={() => { setView("preview"); setPreviewKey(value => value + 1); }}>Preview</button>
+              <button type="button" className={`cw-view-tab ${view === "editor" ? "active" : ""}`} aria-pressed={view === "editor"} onClick={() => setView("editor")}>
+                <svg className="cw-view-tab-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.5" y="3" width="15" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.5"/><path d="M7 3v14M9.5 7h5M9.5 10h5M9.5 13h3" stroke="currentColor" strokeWidth="1.35" strokeLinecap="round"/></svg>
+                <span>Editor</span>
+              </button>
+              <button type="button" className={`cw-view-tab ${view === "preview" ? "active" : ""}`} aria-pressed={view === "preview"} onClick={() => { setView("preview"); setPreviewKey(value => value + 1); }}>
+                <svg className="cw-view-tab-icon" viewBox="0 0 20 20" fill="none" aria-hidden="true"><rect x="2.25" y="3.25" width="15.5" height="13.5" rx="2.5" stroke="currentColor" strokeWidth="1.5"/><path d="m8 7 5 3-5 3V7Z" fill="currentColor" stroke="currentColor" strokeLinejoin="round"/></svg>
+                <span>Preview</span>
+              </button>
             </div>
             <div className="cw-toolbar-right">
               {view === "editor" && <><span className="cw-active-filename">{activeFile || "No file selected"}</span><button type="button" className="cw-tool-btn" onClick={removeFile} disabled={!currentFile}>Delete</button><button type="button" className="cw-tool-btn" onClick={() => downloadFile(currentFile)} disabled={!currentFile}>Download</button></>}
