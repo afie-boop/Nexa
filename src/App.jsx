@@ -120,27 +120,54 @@ const CodeIconExpand = () => <CodeSvg><polyline points="15 3 21 3 21 9" /><polyl
 const CodeIconPlay = () => <CodeSvg><polygon points="5 3 19 12 5 21 5 3" /></CodeSvg>;
 const CodeIconFile = () => <CodeSvg size={22}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></CodeSvg>;
 
-function CodeHighlight({ lang, content, fontSize = 13, padding = "10px 16px 18px", preserveLayout = false }) {
-  const whiteSpace = preserveLayout ? "pre" : "pre-wrap";
-  const overflowWrap = preserveLayout ? "normal" : "break-word";
+const LINE_STYLE = {
+  display: "block",
+  minHeight: "1.4em",
+  whiteSpace: "pre-wrap",
+  wordBreak: "normal",
+  overflowWrap: "break-word",
+};
+
+function CodeHighlight({ lang, content, fontSize = 13, padding = "10px 16px 18px" }) {
   return (
     <SyntaxHighlighter
       language={lang}
       style={axmCodeTheme}
-      wrapLongLines={!preserveLayout}
+      PreTag="pre"
+      wrapLines={true}
+      wrapLongLines={true}
+      lineProps={() => ({ style: LINE_STYLE })}
       customStyle={{
-        margin: 0, border: "none", borderRadius: 0, padding,
-        fontSize: fontSize + "px", lineHeight: "1.55", background: "transparent",
-        textShadow: "none", overflowX: preserveLayout ? "auto" : "hidden", whiteSpace,
-        wordBreak: "normal", overflowWrap
+        display: "block",
+        maxWidth: "100%",
+        margin: 0,
+        border: "none",
+        borderRadius: 0,
+        padding,
+        fontSize: `${fontSize}px`,
+        lineHeight: "1.4",
+        background: "transparent",
+        textShadow: "none",
+        overflow: "visible",
+        whiteSpace: "pre-wrap",
+        wordBreak: "normal",
+        overflowWrap: "break-word",
       }}
       codeTagProps={{
         style: {
-          fontSize: fontSize + "px", lineHeight: "1.55", padding: 0, margin: 0,
-          textShadow: "none", whiteSpace, wordBreak: "normal",
-          overflowWrap, fontVariantLigatures: "none",
-          fontFamily: '"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace'
-        }
+          display: "block",
+          fontSize: `${fontSize}px`,
+          lineHeight: "1.4",
+          padding: 0,
+          margin: 0,
+          textShadow: "none",
+          whiteSpace: "pre-wrap",
+          wordBreak: "normal",
+          overflowWrap: "break-word",
+          fontVariantLigatures: "none",
+          fontFamily:
+            '"JetBrains Mono", ui-monospace, "SFMono-Regular", Consolas, monospace',
+        },
       }}
     >
       {content}
@@ -216,7 +243,7 @@ function CodeViewerPanel({ fileName, lang, lines, content, startTab, onClose }) 
         </div>
         <div className="cv-body">
           {tab === "code" ? (
-            <CodeHighlight lang={lang} content={content} fontSize={fontSize} padding="14px 16px 28px" preserveLayout />
+            <CodeHighlight lang={lang} content={content} fontSize={fontSize} padding="14px 16px 28px" />
           ) : (
             <iframe className="cv-frame" title="Pratonton kod" sandbox="allow-scripts" srcDoc={buildCodePreview(lang, content)} />
           )}
