@@ -6,6 +6,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import "./App.css";
 import BrainGraph from "./BrainGraph";
+import CodingWorkspace from "./CodingWorkspace";
 
 // AXMchat syntax theme: vivid, distinct colours for readable code on dark backgrounds.
 const axmCodeTheme = {
@@ -1562,6 +1563,18 @@ function App() {
             <span>Models</span>
           </button>
           <button
+            className={`nav-item ${activeNav === "coding" ? "active" : ""}`}
+            onClick={() => { setActiveNav("coding"); setSidebarOpen(false); }}
+            title="Coding Workspace"
+          >
+            <span className="nav-icon">
+              <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="16" width="16" xmlns="http://www.w3.org/2000/svg">
+                <polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline><line x1="14" y1="4" x2="10" y2="20"></line>
+              </svg>
+            </span>
+            <span>Coding</span>
+          </button>
+          <button
             className={`nav-item ${activeNav === "brain" ? "active" : ""}`}
             onClick={() => { setActiveNav("brain"); setSidebarOpen(false); }}
           >
@@ -2083,6 +2096,20 @@ function App() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeNav === "coding" && (
+          <div className="sub-panel-container animate-fade coding-workspace-page">
+            <div className="sub-panel-inner coding-workspace-inner">
+              <CodingWorkspace
+                generalModel={generalModel}
+                codingModel={codingModel}
+                fallbackModel={fallbackModel}
+                responseMode={responseMode}
+                aiAvailability={aiAvailability}
+              />
             </div>
           </div>
         )}
