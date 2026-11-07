@@ -5713,3 +5713,16 @@ button:not(:disabled):active {
   top:calc(100% + 8px);
   min-width:156px;
 }
+
+
+/* Explorer toggle sits beside Response Mode and opens with a single tap. */
+.composer-mode-row > .explorer-toggle-wrap {
+  margin-left: 8px;
+  align-self: center;
+}
+.composer-mode-row > .explorer-toggle-wrap .explorer-toggle-menu {
+  top: auto;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: auto;
+}
