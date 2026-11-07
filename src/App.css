@@ -4171,3 +4171,34 @@ button:not(:disabled):active {
     font-size:8px;
   }
 }
+
+
+/* Response Mode header: separate Coding Workspace shortcut */
+.mode-picker-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:6px 8px 8px;
+}
+.mode-picker-coding-btn {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:38px;
+  height:28px;
+  padding:0 7px;
+  border:1px solid var(--border);
+  border-radius:7px;
+  background:rgba(255,255,255,.045);
+  color:var(--primary-text);
+  font:700 12px/1 "JetBrains Mono",ui-monospace,monospace;
+  letter-spacing:-.08em;
+  cursor:pointer;
+  transition:background .15s ease,border-color .15s ease,transform .15s ease;
+}
+.mode-picker-coding-btn:hover {
+  background:rgba(255,255,255,.11);
+  border-color:rgba(255,255,255,.24);
+}
+.mode-picker-coding-btn:active { transform:scale(.96); }
