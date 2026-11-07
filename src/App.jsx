@@ -2000,6 +2000,10 @@ function App() {
               </div>
             </>}
             {activeNav === "coding" && (
+              <div className="coding-top-actions">
+                <button type="button" className="coding-search-trigger" onClick={() => codingWorkspaceRef.current?.toggleSearch()} aria-label="Cari fail dan folder" title="Cari fail dan folder">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
+                </button>
               <div className="session-menu-wrap">
                 <button type="button" className="session-menu-trigger" onClick={() => setSessionMenuOpen(open => !open)} aria-label="Menu fail" aria-expanded={sessionMenuOpen} aria-haspopup="menu" title="Menu fail">
                   <svg stroke="currentColor" fill="currentColor" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
@@ -2017,6 +2021,7 @@ function App() {
                     <span aria-hidden="true">▣</span><span>Sampah</span>
                   </button>
                 </div>}
+              </div>
               </div>
             )}
           </div>
