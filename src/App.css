@@ -5504,3 +5504,69 @@ button:not(:disabled):active {
     padding-right: 8px !important;
   }
 }
+
+
+/* Hard override: anchor both sort controls to the right and widen search */
+#root .coding-workspace-page .fm-shell > .fm-toolbar {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: calc(100% - 12px) !important;
+  margin: 0 6px 14px !important;
+  box-sizing: border-box !important;
+}
+#root .coding-workspace-page .fm-shell > .fm-toolbar > .fm-search {
+  display: flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  flex: initial !important;
+  box-sizing: border-box !important;
+}
+#root .coding-workspace-page .fm-shell > .fm-toolbar > .fm-sort {
+  display: flex !important;
+  justify-self: end !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+#root .coding-workspace-page .fm-shell > .fm-category-bar {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  width: 100% !important;
+  padding: 0 4px 0 20px !important;
+  box-sizing: border-box !important;
+}
+#root .coding-workspace-page .fm-shell > .fm-category-bar > .fm-filter {
+  justify-self: start !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+#root .coding-workspace-page .fm-shell > .fm-category-bar > .fm-sort {
+  display: flex !important;
+  justify-self: end !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+@media (max-width:640px) {
+  #root .coding-workspace-page .fm-shell > .fm-toolbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    width: calc(100% - 8px) !important;
+    margin-left: 4px !important;
+    margin-right: 4px !important;
+  }
+  #root .coding-workspace-page .fm-shell > .fm-toolbar > .fm-search {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  #root .coding-workspace-page .fm-shell > .fm-toolbar > .fm-sort {
+    display: flex !important;
+  }
+  #root .coding-workspace-page .fm-shell > .fm-category-bar {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    padding-left: 20px !important;
+    padding-right: 4px !important;
+  }
+}
