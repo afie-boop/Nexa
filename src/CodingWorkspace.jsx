@@ -78,7 +78,7 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
 
   function addFile() {
     const path = safeProjectPath(newFileName);
-    if (!path) return setStatus("Masukkan nama fail yang sah, contoh: src/game.jsx");
+    if (!path) return setStatus("Nama fail tidak sah.");
     if (files.some(file => file.path === path)) return setStatus("Fail dengan nama itu sudah wujud.");
     setFiles(previous => [...previous, { path, content: "" }]);
     setActiveFile(path);
@@ -196,9 +196,9 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
     <div className="coding-workspace">
       <header className="cw-heading">
         <div className="cw-heading-copy">
-          <span className="cw-eyebrow">AXMCHAT DEVELOPER TOOLS</span>
+          
           <h2>Coding Workspace</h2>
-          <p>Bina projek bersama AI, urus fail dan lihat hasilnya secara langsung.</p>
+          
         </div>
         <div className="cw-heading-actions">
           <button type="button" className="cw-secondary-btn" onClick={() => setShowAddFile(value => !value)}>＋ Add file</button>
@@ -206,20 +206,20 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
       </header>
 
       <section className="cw-ai-card">
-        <div className="cw-ai-label"><span className="cw-ai-spark">✦</span><label htmlFor="workspace-ai-prompt">Apa yang anda mahu bina?</label></div>
-        <textarea id="workspace-ai-prompt" value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="Contoh: Bina game platformer 2D dengan skor, musuh dan butang kawalan..." rows={3} disabled={busy} />
+        <div className="cw-ai-label"><label htmlFor="workspace-ai-prompt">Apa yang anda mahu bina?</label></div>
+        <textarea id="workspace-ai-prompt" value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="Terangkan projek yang ingin dibina..." rows={3} disabled={busy} />
         <div className="cw-ai-footer">
-          <span className="cw-status-text">{status || "AI akan hasilkan fail projek secara berasingan."}</span>
-          <button type="button" className="cw-generate-btn" onClick={generateProject} disabled={busy || !prompt.trim()}>{busy ? "Sedang membina…" : "✦ Generate project"}</button>
+          {status && <span className="cw-status-text" role="status">{status}</span>}
+          <button type="button" className="cw-generate-btn" onClick={generateProject} disabled={busy || !prompt.trim()}>{busy ? "Sedang membina…" : "Generate project"}</button>
         </div>
       </section>
 
       {showAddFile && (
         <form className="cw-add-file" onSubmit={event => { event.preventDefault(); addFile(); }}>
-          <div className="cw-add-file-copy"><strong>Tambah fail baharu</strong><span>Masukkan nama dan lokasi fail pilihan anda.</span></div>
-          <input value={newFileName} onChange={event => setNewFileName(event.target.value)} placeholder="Contoh: src/player.jsx atau styles/game.css" aria-label="Nama dan lokasi fail" autoFocus />
-          <button type="submit" disabled={!newFileName.trim()}>Create file</button>
-          <button type="button" className="cw-cancel-add" onClick={() => { setShowAddFile(false); setNewFileName(""); }}>Cancel</button>
+          <strong className="cw-add-file-title">Tambah fail</strong>
+          <input value={newFileName} onChange={event => setNewFileName(event.target.value)} placeholder="Nama fail dan lokasi" aria-label="Nama dan lokasi fail" autoFocus />
+          <button type="submit" disabled={!newFileName.trim()}>Tambah</button>
+          <button type="button" className="cw-cancel-add" onClick={() => { setShowAddFile(false); setNewFileName(""); }}>Batal</button>
         </form>
       )}
 
@@ -254,7 +254,7 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
             </div>
           ) : (
             <div className="cw-preview-area">
-              <div className="cw-preview-topline"><span>PROJECT PREVIEW</span><span>Perubahan dipaparkan secara automatik</span></div>
+              <div className="cw-preview-topline"><span>Preview</span></div>
               <iframe key={previewKey} title="Project live preview" className="cw-preview-frame" sandbox="allow-scripts" srcDoc={previewDoc || "<!doctype html><html><body style='font-family:sans-serif;padding:24px'>Menyiapkan preview…</body></html>"} />
             </div>
           )}
