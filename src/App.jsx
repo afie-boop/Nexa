@@ -2021,6 +2021,18 @@ function App() {
                     </button>
                   </div>}
                 </div>
+                <div className="session-menu-wrap">
+                  <button type="button" className="session-menu-trigger" onClick={() => setSessionMenuOpen(open => !open)} aria-label="Menu lain" aria-expanded={sessionMenuOpen} aria-haspopup="menu" title="Menu lain">
+                    <svg stroke="currentColor" fill="currentColor" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                      <circle cx="12" cy="5" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="12" cy="19" r="1.8" />
+                    </svg>
+                  </button>
+                  {sessionMenuOpen && <div className="session-menu-popover" role="menu">
+                    <button type="button" role="menuitem" className="session-menu-item" onClick={() => { setSessionMenuOpen(false); codingWorkspaceRef.current?.openTrash(); }}>
+                      <span aria-hidden="true">▣</span><span>Sampah</span>
+                    </button>
+                  </div>}
+                </div>
               </div>
             )}
           </div>
