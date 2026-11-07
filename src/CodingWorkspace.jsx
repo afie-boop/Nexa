@@ -207,7 +207,7 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
 
       <section className="cw-ai-card">
         <div className="cw-ai-label"><label htmlFor="workspace-ai-prompt">Apa yang anda mahu bina?</label></div>
-        <textarea id="workspace-ai-prompt" value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="Terangkan projek yang ingin dibina..." rows={3} disabled={busy} />
+        <textarea id="workspace-ai-prompt" value={prompt} onChange={event => setPrompt(event.target.value)} placeholder="" rows={3} disabled={busy} />
         <div className="cw-ai-footer">
           {status && <span className="cw-status-text" role="status">{status}</span>}
           <button type="button" className="cw-generate-btn" onClick={generateProject} disabled={busy || !prompt.trim()}>{busy ? "Sedang membina…" : "Generate project"}</button>
@@ -238,11 +238,11 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
         <div className="cw-main-panel">
           <div className="cw-workbench-toolbar">
             <div className="cw-view-tabs">
-              <button type="button" className={view === "editor" ? "active" : ""} onClick={() => setView("editor")}>〈/〉 Editor</button>
-              <button type="button" className={view === "preview" ? "active" : ""} onClick={() => { setView("preview"); setPreviewKey(value => value + 1); }}>▣ Preview</button>
+              <button type="button" className={view === "editor" ? "active" : ""} onClick={() => setView("editor")}>Editor</button>
+              <button type="button" className={view === "preview" ? "active" : ""} onClick={() => { setView("preview"); setPreviewKey(value => value + 1); }}>Preview</button>
             </div>
             <div className="cw-toolbar-right">
-              {view === "editor" && <><span className="cw-active-filename">{activeFile || "No file selected"}</span><button type="button" className="cw-tool-btn" onClick={removeFile} disabled={!currentFile}>Delete</button><button type="button" className="cw-tool-btn" onClick={() => downloadFile(currentFile)} disabled={!currentFile}>↓ Download</button></>}
+              {view === "editor" && <><span className="cw-active-filename">{activeFile || "No file selected"}</span><button type="button" className="cw-tool-btn" onClick={removeFile} disabled={!currentFile}>Delete</button><button type="button" className="cw-tool-btn" onClick={() => downloadFile(currentFile)} disabled={!currentFile}>Download</button></>}
               {view === "preview" && <><span className="cw-live-indicator"><i /> Live</span><button type="button" className="cw-tool-btn" onClick={() => setPreviewKey(value => value + 1)}>↻ Refresh</button></>}
             </div>
           </div>
