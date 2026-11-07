@@ -5679,3 +5679,37 @@ button:not(:disabled):active {
 /* Sort dropdown anchored to the two-line button in the top header */
 #root .coding-sort-menu-wrap { position:relative; display:flex; align-items:center; }
 #root .coding-sort-popover { right:0; top:calc(100% + 8px); min-width:156px; }
+
+
+/* Preserve the original two-horizontal-line menu button in the file header */
+#root .coding-sort-menu-wrap {
+  position:relative;
+  display:flex;
+  align-items:center;
+}
+#root .coding-sort-menu-wrap > .coding-sort-trigger {
+  display:grid;
+  width:36px;
+  height:36px;
+  flex:0 0 36px;
+  place-items:center;
+  padding:0;
+  border:0;
+  border-radius:8px;
+  background:transparent;
+  color:var(--secondary-text);
+  cursor:pointer;
+}
+#root .coding-sort-menu-wrap > .coding-sort-trigger svg {
+  width:19px;
+  height:19px;
+}
+#root .coding-sort-menu-wrap > .coding-sort-trigger:hover {
+  background:var(--surface-hover);
+  color:var(--primary-text);
+}
+#root .coding-sort-popover {
+  right:0;
+  top:calc(100% + 8px);
+  min-width:156px;
+}
