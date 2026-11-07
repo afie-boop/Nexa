@@ -75,6 +75,7 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
 
   useImperativeHandle(ref, () => ({
     chooseFiles: () => { setSelectionMode(value => !value); setSelected([]); },
+    cycleSort: () => setSort(value => value === "name" ? "date" : value === "date" ? "type" : "name"),
     toggleSearch: () => setSearchOpen(value => !value),
     createFolder: () => { setShowFolderForm(true); setShowTrash(false); },
     openTrash: () => { setShowTrash(true); setSelected([]); setQuery(""); setCurrentFolder(""); }
@@ -250,11 +251,6 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
         <label className="fm-filter"><select value={filter} onChange={event => setFilter(event.target.value)} aria-label="Tapis item">
           <option value="all">Semua</option><option value="folders">Folder</option><option value="files">Fail</option>
         </select><span aria-hidden="true">▾</span></label>
-        <label className="fm-sort"><span className="fm-sort-icon">☷</span>
-          <select value={sort} onChange={event => setSort(event.target.value)} aria-label="Susun item">
-            <option value="name">Nama</option><option value="date">Tarikh diubah</option><option value="type">Jenis fail</option>
-          </select>
-        </label>
       </div>
       {selectionMode && selected.length > 0 && <div className="fm-selection">
         <span>{selected.length} selected</span>
