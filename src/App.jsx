@@ -98,9 +98,11 @@ function downloadCodeFile(name, value) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function baseNameForSave(path) { return String(path).split("/").pop() || path; }
+
 function saveGeneratedCodeFile(name, value, lang) {
   const extension = ({ javascript: "js", js: "js", jsx: "jsx", typescript: "ts", ts: "ts", tsx: "tsx", python: "py", py: "py", html: "html", css: "css", json: "json", svg: "svg", bash: "sh", sh: "sh", text: "txt" })[lang] || lang || "txt";
-  const cleanPath = String(name || ("kod." + extension)).split(String.fromCharCode(92)).join("/").split("/").filter(part => part && part !== "." && part !== "..").join("/") || ("kod." + extension);
+  let cleanPath = String(name || ("kod." + extension)).split(String.fromCharCode(92)).join("/").split("/").filter(part => part && part !== "." && part !== "..").join("/") || ("kod." + extension);
   let store;
   try {
     const saved = JSON.parse(localStorage.getItem("axmchat_generated_files") || "null");
@@ -110,6 +112,19 @@ function saveGeneratedCodeFile(name, value, lang) {
   }
   const files = Array.isArray(store.files) ? [...store.files] : [];
   const folders = Array.isArray(store.folders) ? [...store.folders] : [];
+  const currentGeneric = files.find(file => file.path === cleanPath);
+  if (baseNameForSave(cleanPath).startsWith("kod.") && currentGeneric && currentGeneric.content !== value) {
+    const parts = cleanPath.split("/");
+    const leaf = parts.pop();
+    const extensionPart = leaf.slice(4);
+    let suffix = 2;
+    let candidate = "";
+    do {
+      candidate = [...parts, "kod-" + suffix + "." + extensionPart].filter(Boolean).join("/");
+      suffix += 1;
+    } while (files.some(file => file.path === candidate));
+    cleanPath = candidate;
+  }
   const existing = files.findIndex(file => file.path === cleanPath);
   const previous = existing >= 0 ? files[existing] : null;
   const now = Date.now();
