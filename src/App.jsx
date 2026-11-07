@@ -2028,7 +2028,19 @@ function App() {
 
                     {modeMenuOpen && (
                       <div className="mode-picker-menu" role="menu">
-                        <div className="mode-picker-heading">Response Mode</div>
+                        <div className="mode-picker-heading">
+                          <span>Response Mode</span>
+                          <button
+                            type="button"
+                            className="mode-picker-coding-btn"
+                            aria-label="Buka Coding Workspace"
+                            title="Coding Workspace"
+                            onClick={() => {
+                              setModeMenuOpen(false);
+                              setActiveNav("coding");
+                            }}
+                          >&lt;/&gt;</button>
+                        </div>
                         {Object.entries(responseModes).map(([key, mode]) => (
                           <button
                             key={key}
