@@ -2735,3 +2735,83 @@ button, input, textarea, select {
   word-break: normal !important;
   overflow-wrap: break-word !important;
 }
+
+
+/* Micro-interactions: tactile button press, responsive cards, and loading shimmer. */
+button:not(:disabled) {
+  -webkit-tap-highlight-color: transparent;
+  transition-property: transform, background-color, border-color, color, box-shadow, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(.2,.8,.2,1);
+}
+button:not(:disabled):active {
+  transform: scale(.96);
+}
+.card-action-btn:active,
+.code-block-header .copy-btn:active,
+.cv-actions .icon-btn:active,
+.cf-btn:active {
+  transform: scale(.93);
+}
+@media (hover: hover) {
+  .flat-card,
+  .cf-card,
+  .session-history-item {
+    transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  }
+  .flat-card:hover,
+  .cf-card:hover,
+  .session-history-item:hover {
+    border-color: #484848;
+    box-shadow: 0 7px 22px rgba(0,0,0,.22);
+  }
+}
+.flat-card:active,
+.cf-card:active,
+.session-history-item:active {
+  transform: scale(.985);
+  border-color: #555;
+}
+.loading-card {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 12px;
+}
+.loading-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  width: min(100%, 460px);
+  padding: 2px 0 4px;
+}
+.skeleton-line {
+  position: relative;
+  display: block;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #252525;
+}
+.skeleton-line::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.13), transparent);
+  animation: axm-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+.skeleton-line-wide { width: 100%; }
+.skeleton-line-medium { width: 76%; }
+.skeleton-line-short { width: 48%; }
+@keyframes axm-skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled),
+  .flat-card,
+  .cf-card,
+  .session-history-item {
+    transition-duration: .01ms !important;
+  }
+  .skeleton-line::after { animation-duration: 3s; }
+}
