@@ -466,6 +466,21 @@ function App() {
       return false;
     }
   });
+  const [explorerMenuOpen, setExplorerMenuOpen] = useState(false);
+  const explorerLongPressRef = useRef(null);
+
+  const startExplorerLongPress = () => {
+    window.clearTimeout(explorerLongPressRef.current);
+    explorerLongPressRef.current = window.setTimeout(() => {
+      setExplorerMenuOpen(true);
+      explorerLongPressRef.current = null;
+    }, 500);
+  };
+
+  const cancelExplorerLongPress = () => {
+    window.clearTimeout(explorerLongPressRef.current);
+    explorerLongPressRef.current = null;
+  };
 
   useEffect(() => {
     try {
@@ -2073,14 +2088,46 @@ function App() {
                       <div className="mode-picker-menu" role="menu">
                         <div className="mode-picker-heading">
                           <span>Response Mode</span>
-                          <button
-                            type="button"
-                            className={`mode-picker-coding-btn ${explorerEnabled ? "active" : ""}`}
-                            aria-label={explorerEnabled ? "Matikan Explorer untuk AI" : "Hidupkan Explorer untuk AI"}
-                            aria-pressed={explorerEnabled}
-                            title={explorerEnabled ? "Explorer ON — AI menggunakan fail projek" : "Explorer OFF — AI tidak menggunakan fail projek"}
-                            onClick={() => setExplorerEnabled(value => !value)}
-                          >&lt;/&gt;</button>
+                          <div className="explorer-toggle-wrap">
+                            <button
+                              type="button"
+                              className={`mode-picker-coding-btn ${explorerEnabled ? "active" : ""}`}
+                              aria-label="Tekan lama untuk tetapan Explorer"
+                              aria-haspopup="menu"
+                              aria-expanded={explorerMenuOpen}
+                              title="Tekan lama untuk pilih Explorer ON atau OFF"
+                              onPointerDown={startExplorerLongPress}
+                              onPointerUp={cancelExplorerLongPress}
+                              onPointerLeave={cancelExplorerLongPress}
+                              onPointerCancel={cancelExplorerLongPress}
+                              onContextMenu={event => {
+                                event.preventDefault();
+                                cancelExplorerLongPress();
+                                setExplorerMenuOpen(true);
+                              }}
+                            >&lt;/&gt;</button>
+                            {explorerMenuOpen && (
+                              <div className="explorer-toggle-menu" role="menu" aria-label="Tetapan Explorer">
+                                <div className="explorer-toggle-title">Explorer Context</div>
+                                {["on", "off"].map(option => (
+                                  <button
+                                    key={option}
+                                    type="button"
+                                    role="menuitemradio"
+                                    aria-checked={explorerEnabled === (option === "on")}
+                                    className={`explorer-toggle-option ${explorerEnabled === (option === "on") ? "active" : ""}`}
+                                    onClick={() => {
+                                      setExplorerEnabled(option === "on");
+                                      setExplorerMenuOpen(false);
+                                    }}
+                                  >
+                                    <span>{option.toUpperCase()}</span>
+                                    {explorerEnabled === (option === "on") && <span>✓</span>}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         </div>
                         {Object.entries(responseModes).map(([key, mode]) => (
                           <button
