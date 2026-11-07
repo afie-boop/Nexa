@@ -4293,3 +4293,17 @@ button:not(:disabled):active {
 #root .coding-workspace-page .cw-file-panel .cw-file-panel-footer {
   background: transparent;
 }
+
+
+/* Correct Explorer styling: target the actual .coding-workspace root. */
+#root .coding-workspace .cw-file-panel {
+  background: var(--bg) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px;
+  overflow: hidden;
+}
+#root .coding-workspace .cw-file-panel .cw-panel-heading,
+#root .coding-workspace .cw-file-panel .cw-file-list,
+#root .coding-workspace .cw-file-panel .cw-file-panel-footer {
+  background: transparent !important;
+}
