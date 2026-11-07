@@ -4227,3 +4227,51 @@ button:not(:disabled):active {
   border-color: rgba(152, 195, 121, .55);
   color: #98c379;
 }
+
+
+.explorer-toggle-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.explorer-toggle-menu {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 156px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #101010;
+  box-shadow: 0 12px 30px rgba(0,0,0,.5);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.explorer-toggle-title {
+  padding: 7px 9px 6px;
+  color: var(--muted-text);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.explorer-toggle-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--primary-text);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.explorer-toggle-option:hover,
+.explorer-toggle-option.active {
+  background: var(--surface-active);
+}
