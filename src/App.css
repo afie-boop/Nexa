@@ -5627,3 +5627,23 @@ button:not(:disabled):active {
   transform: none !important;
   justify-self: end !important;
 }
+
+/* Match the sort icon center to the three-dot menu center.
+   Top bar horizontal padding is 16px on mobile and 28px on desktop. */
+#root .coding-workspace-page .fm-category-bar {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding-right: 28px !important;
+}
+#root .coding-workspace-page .fm-category-bar > .coding-sort-trigger {
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  transform: none !important;
+}
+@media (max-width: 768px) {
+  #root .coding-workspace-page .fm-category-bar {
+    padding-right: 16px !important;
+  }
+}
