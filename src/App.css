@@ -4202,3 +4202,21 @@ button:not(:disabled):active {
   border-color:rgba(255,255,255,.24);
 }
 .mode-picker-coding-btn:active { transform:scale(.96); }
+
+/* Keep the </> shortcut pinned to the far-right edge of the menu header. */
+.mode-picker-menu .mode-picker-heading {
+  display:flex;
+  width:100%;
+  box-sizing:border-box;
+  align-items:center;
+  justify-content:space-between;
+}
+.mode-picker-menu .mode-picker-heading > span {
+  flex:1 1 auto;
+  min-width:0;
+  text-align:left;
+}
+.mode-picker-menu .mode-picker-heading > .mode-picker-coding-btn {
+  flex:0 0 auto;
+  margin-left:auto;
+}
