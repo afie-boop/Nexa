@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 const DEFAULT_FILES = [
-  { path: "src/App.jsx", content: "// Mula bina projek anda di sini\\n" },
-  { path: "src/style.css", content: "/* Gaya projek */\\n" },
-  { path: "index.html", content: "<!doctype html>\\n<html lang=\\"en\\">\\n<head><meta charset=\\"UTF-8\\"><meta name=\\"viewport\\" content=\\"width=device-width, initial-scale=1.0\\"><title>My Project</title></head>\\n<body><div id=\\"root\\"></div></body>\\n</html>\\n" }
+  { path: "src/App.jsx", content: "// Mula bina projek anda di sini\n" },
+  { path: "src/style.css", content: "/* Gaya projek */\n" },
+  { path: "index.html", content: "<!doctype html>\n<html lang=\"en\">\n<head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"><title>My Project</title></head>\n<body><div id=\"root\"></div></body>\n</html>\n" }
 ];
 
 function safeProjectPath(value) {
-  const path = String(value || "").trim().replace(/^\\/+/, "");
+  const path = String(value || "").trim().replace(/^\/+/, "");
   if (!path || path.split("/").some(part => !part || part === "." || part === "..")) return "";
   return /^[a-zA-Z0-9_./-]+$/.test(path) ? path : "";
 }
@@ -73,7 +73,7 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
         "Hasilkan projek lengkap dan berfungsi. Pecahkan kepada fail berasingan seperti index.html, src/App.jsx, src/style.css, package.json dan fail lain yang diperlukan.",
         "FORMAT WAJIB bagi setiap fail: satu baris FILE: laluan/fail.ext diikuti satu code fence dengan bahasa yang sesuai dan kandungan fail penuh.",
         "Jangan gabungkan fail. Jangan potong kod. Jangan letak penerangan di dalam code fence. Keluarkan semula fail lengkap yang perlu dicipta atau diganti."
-      ].join("\\n\\n");
+      ].join("\n\n");
       const response = await fetch("/chat", {
         method: "POST",
         credentials: "same-origin",
@@ -110,25 +110,25 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
         const chunk = await reader.read();
         if (chunk.done) break;
         buffer += decoder.decode(chunk.value, { stream: true });
-        const parts = buffer.split("\\n\\n");
+        const parts = buffer.split("\n\n");
         buffer = parts.pop() || "";
         parts.forEach(consume);
       }
       buffer += decoder.decode();
-      buffer.split("\\n\\n").forEach(consume);
+      buffer.split("\n\n").forEach(consume);
       if (serverError) throw new Error(serverError);
       if (!answer) throw new Error("Tiada jawapan diterima daripada AI.");
 
       const generated = [];
-      const pattern = /^\\s*(?:#{1,6}\\s*)?(?:\\/\\/\\s*)?FILE:\\s*(.+?)\\s*\\n```([^\\n]*)\\n([\\s\\S]*?)\\n```/gm;
+      const pattern = /^\s*(?:#{1,6}\s*)?(?:\/\/\s*)?FILE:\s*(.+?)\s*\n```([^\n]*)\n([\s\S]*?)\n```/gm;
       let match;
       while ((match = pattern.exec(answer)) !== null) {
         const path = safeProjectPath(match[1]);
-        if (path) generated.push({ path, content: match[3].replace(/\\n$/, "") + "\\n" });
+        if (path) generated.push({ path, content: match[3].replace(/\n$/, "") + "\n" });
       }
       if (!generated.length) {
-        const single = answer.match(/```(?:jsx?|tsx?|css|html|json|javascript|typescript)?\\s*\\n([\\s\\S]*?)\\n```/i);
-        if (single) generated.push({ path: "src/App.jsx", content: single[1] + "\\n" });
+        const single = answer.match(/```(?:jsx?|tsx?|css|html|json|javascript|typescript)?\s*\n([\s\S]*?)\n```/i);
+        if (single) generated.push({ path: "src/App.jsx", content: single[1] + "\n" });
       }
       if (!generated.length) throw new Error("Format fail AI tidak dikenali. Cuba jana semula.");
       setFiles(previous => {
@@ -197,7 +197,7 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
             </div>
           </div>
           {currentFile ? <textarea className="coding-code-editor" spellCheck="false" autoCapitalize="off" autoCorrect="off" value={currentFile.content} onChange={event => updateFile(activeFile, event.target.value)} /> : <div className="coding-editor-empty">Pilih fail atau cipta fail baharu.</div>}
-          <div className="coding-editor-status"><span>● Saved locally</span><span>{currentFile?.content.split("\\n").length || 0} lines</span></div>
+          <div className="coding-editor-status"><span>● Saved locally</span><span>{currentFile?.content.split("\n").length || 0} lines</span></div>
         </section>
       </div>
       <p className="coding-workspace-note">Fail disimpan automatik dalam browser pada peranti ini. Gunakan Download untuk simpan salinan ke peranti. Workspace ini belum menjalankan atau membina APK secara langsung.</p>
