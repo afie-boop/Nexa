@@ -2718,3 +2718,20 @@ button, input, textarea, select {
   overflow-wrap: normal !important;
   word-break: normal !important;
 }
+
+
+/* Restore each highlighted source line and wrap long lines without merging rows. */
+.cv-body {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.cv-body pre,
+.cv-body pre code {
+  display: block !important;
+  max-width: 100%;
+  overflow: visible !important;
+  white-space: pre-wrap !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
