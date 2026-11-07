@@ -158,7 +158,7 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
       if (serverError) throw new Error(serverError);
       if (!answer) throw new Error("Tiada jawapan diterima daripada AI.");
       const generated = [];
-      const pattern = /^\s*(?:#{1,6}\s*)?(?:\/\/\s*)?FILE:\s*(.+?)\s*\n\`\`\`([^\n]*)\n([\s\S]*?)\n\`\`\`/gm;
+      const pattern = /^\s*(?:#{1,6}\s*)?(?:\/\/\s*)?FILE:\s*(.+?)\s*\n```([^\n]*)\n([\s\S]*?)\n```/gm;
       let match;
       while ((match = pattern.exec(answer)) !== null) {
         const path = safeProjectPath(match[1]);
@@ -224,11 +224,11 @@ export default function CodingWorkspace({ generalModel, codingModel, fallbackMod
       )}
 
       <section className="cw-workbench">
-        <aside className={\`cw-file-panel \${showFiles ? "" : "cw-file-panel-hidden"}\`}>
+        <aside className={`cw-file-panel ${showFiles ? "" : "cw-file-panel-hidden"}`}>
           <div className="cw-panel-heading"><span>EXPLORER</span><button type="button" onClick={() => setShowFiles(value => !value)} aria-label="Toggle file explorer">{showFiles ? "‹" : "›"}</button></div>
           {showFiles && <div className="cw-file-list">
-            {files.map(file => <button type="button" key={file.path} className={\`cw-file-row \${activeFile === file.path ? "active" : ""}\`} onClick={() => { setActiveFile(file.path); setView("editor"); }}>
-              <span className={\`cw-file-type cw-ext-\${file.path.split(".").pop()?.toLowerCase()}\`}>{file.path.split(".").pop()?.toUpperCase().slice(0, 3) || "FILE"}</span><span className="cw-file-path">{file.path}</span>
+            {files.map(file => <button type="button" key={file.path} className={`cw-file-row ${activeFile === file.path ? "active" : ""}`} onClick={() => { setActiveFile(file.path); setView("editor"); }}>
+              <span className={`cw-file-type cw-ext-${file.path.split(".").pop()?.toLowerCase()}`}>{file.path.split(".").pop()?.toUpperCase().slice(0, 3) || "FILE"}</span><span className="cw-file-path">{file.path}</span>
             </button>)}
             {!files.length && <p className="cw-empty-files">Belum ada fail.</p>}
           </div>}
