@@ -73,7 +73,112 @@ const CodingWorkspace = forwardRef(function CodingWorkspace({ onCycleSort }, ref
   const [preview, setPreview] = useState(null);
   const [notice, setNotice] = useState("");
 
+  function getAiContext() {
+    const files = store.files.slice(0, 100).map(file => ({
+      path: file.path,
+      content: String(file.content || "").slice(0, 24000),
+      language: file.language || extensionOf(file.path)
+    }));
+    return {
+      files,
+      folders: store.folders.slice(0, 100),
+      totalFiles: store.files.length,
+      truncated: store.files.length > files.length || files.some((file, index) => String(store.files[index]?.content || "").length > 24000)
+    };
+  }
+
+  function applyAiActions(actions) {
+    if (!Array.isArray(actions) || actions.length > 30) throw new Error("Senarai tindakan AI tidak sah.");
+    const next = {
+      files: [...store.files],
+      folders: [...store.folders],
+      trash: [...(store.trash || [])]
+    };
+    const results = [];
+    const cleanPath = value => {
+      if (typeof value !== "string" || !value.trim()) throw new Error("Laluan fail kosong atau tidak sah.");
+      const parts = value.replace(/\\/g, "/").split("/").filter(Boolean);
+      if (!parts.length || parts.some(part => part === "." || part === ".." || part.length > 120)) throw new Error("Laluan fail tidak dibenarkan: " + value);
+      return parts.join("/");
+    };
+    const ensureParents = path => {
+      const parts = path.split("/");
+      let parent = "";
+      parts.slice(0, -1).forEach(part => {
+        parent = parent ? parent + "/" + part : part;
+        if (!next.folders.includes(parent)) next.folders.push(parent);
+      });
+    };
+
+    const destructive = actions.some(action => action && ["delete_file", "delete_folder"].includes(action.type));
+    if (destructive && !window.confirm("AI meminta memadam fail/folder. Item akan dipindahkan ke Sampah. Teruskan?")) {
+      return { applied: 0, cancelled: true, results: ["Tindakan pemadaman dibatalkan."] };
+    }
+
+    for (const action of actions) {
+      if (!action || typeof action !== "object") continue;
+      const type = action.type;
+      if (type === "write_file") {
+        const path = cleanPath(action.path);
+        if (typeof action.content !== "string") throw new Error("Kandungan fail tidak sah: " + path);
+        ensureParents(path);
+        const index = next.files.findIndex(file => file.path === path);
+        const previous = index >= 0 ? next.files[index] : null;
+        const now = Date.now();
+        const record = { id: previous?.id || ("ai_file_" + now + "_" + Math.random().toString(36).slice(2, 8)), path, content: action.content, language: String(action.language || extensionOf(path)), source: "ai", createdAt: previous?.createdAt || now, updatedAt: now };
+        if (index >= 0) next.files[index] = record;
+        else next.files.push(record);
+        results.push("Ditulis: " + path);
+      } else if (type === "create_folder") {
+        const path = cleanPath(action.path);
+        if (next.files.some(file => file.path === path)) throw new Error("Nama folder bertembung dengan fail: " + path);
+        ensureParents(path + "/_");
+        if (!next.folders.includes(path)) next.folders.push(path);
+        results.push("Folder dibuat: " + path);
+      } else if (type === "rename") {
+        const from = cleanPath(action.from);
+        const to = cleanPath(action.to);
+        const file = next.files.find(item => item.path === from);
+        const folder = next.folders.includes(from);
+        if (!file && !folder) throw new Error("Item untuk rename tidak ditemui: " + from);
+        if (next.files.some(item => item.path === to) || next.folders.includes(to)) throw new Error("Nama sasaran sudah digunakan: " + to);
+        const move = value => value === from || value.startsWith(from + "/") ? to + value.slice(from.length) : value;
+        next.files = next.files.map(item => ({ ...item, path: move(item.path) }));
+        next.folders = next.folders.map(move);
+        ensureParents(to);
+        results.push("Rename: " + from + " → " + to);
+      } else if (type === "delete_file" || type === "delete_folder") {
+        const path = cleanPath(action.path);
+        const deletedAt = Date.now();
+        if (type === "delete_file") {
+          const removed = next.files.find(item => item.path === path);
+          if (!removed) throw new Error("Fail tidak ditemui: " + path);
+          next.files = next.files.filter(item => item.path !== path);
+          next.trash.push({ ...removed, type: "file", deletedAt });
+        } else {
+          const removedFiles = next.files.filter(item => item.path === path || item.path.startsWith(path + "/"));
+          const removedFolders = next.folders.filter(item => item === path || item.startsWith(path + "/"));
+          if (!removedFiles.length && !removedFolders.length) throw new Error("Folder tidak ditemui: " + path);
+          next.files = next.files.filter(item => !removedFiles.includes(item));
+          next.folders = next.folders.filter(item => !removedFolders.includes(item));
+          next.trash.push(...removedFolders.map(item => ({ type: "folder", path: item, deletedAt })), ...removedFiles.map(item => ({ ...item, type: "file", deletedAt })));
+        }
+        results.push("Dipindahkan ke Sampah: " + path);
+      } else {
+        throw new Error("Jenis tindakan AI tidak disokong: " + String(type));
+      }
+    }
+
+    commit(next);
+    setCurrentFolder("");
+    setShowTrash(false);
+    setSelected([]);
+    return { applied: results.length, cancelled: false, results };
+  }
+
   useImperativeHandle(ref, () => ({
+    getAiContext,
+    applyAiActions,
     chooseFiles: () => { setSelectionMode(value => !value); setSelected([]); },
     cycleSort: () => setSort(value => value === "name" ? "date" : value === "date" ? "type" : "name"),
     setSortMode: mode => setSort(mode),
