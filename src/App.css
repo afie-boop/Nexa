@@ -3304,3 +3304,69 @@ button:not(:disabled):active {
   .coding-workspace-page .cw-add-file-inline-actions button { min-height:29px; padding:0 4px; font-size:9px; }
   .coding-workspace-page .cw-toolbar-right .cw-tool-btn { min-height:27px; padding:0 6px; font-size:9px; }
 }
+
+/* Strong, explicit overrides for Explorer title and project submit action */
+#root .coding-workspace-page .coding-workspace .cw-panel-heading > span {
+  font-family: Inter, "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.15 !important;
+  letter-spacing: .015em !important;
+  text-transform: none !important;
+  color: var(--primary-text) !important;
+}
+#root .coding-workspace-page .coding-workspace .cw-ai-footer > .cw-generate-btn {
+  display: inline-flex !important;
+  min-width: 148px !important;
+  min-height: 42px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  padding: 0 18px !important;
+  border: 1px solid #f2f2f2 !important;
+  border-radius: 10px !important;
+  background: #f2f2f2 !important;
+  color: #111 !important;
+  font-family: Inter, "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 750 !important;
+  line-height: 1 !important;
+  letter-spacing: .005em !important;
+  box-shadow: 0 3px 12px rgba(0,0,0,.18) !important;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease, box-shadow .16s ease !important;
+}
+#root .coding-workspace-page .coding-workspace .cw-ai-footer > .cw-generate-btn::after {
+  content: "→";
+  display: inline-block;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  transition: transform .16s ease;
+}
+#root .coding-workspace-page .coding-workspace .cw-ai-footer > .cw-generate-btn:hover:not(:disabled) {
+  background: #fff !important;
+  border-color: #fff !important;
+  box-shadow: 0 5px 18px rgba(0,0,0,.26) !important;
+  transform: translateY(-1px) !important;
+}
+#root .coding-workspace-page .coding-workspace .cw-ai-footer > .cw-generate-btn:hover:not(:disabled)::after {
+  transform: translateX(3px);
+}
+#root .coding-workspace-page .coding-workspace .cw-ai-footer > .cw-generate-btn:active:not(:disabled) {
+  transform: scale(.97) !important;
+}
+#root .coding-workspace-page .coding-workspace .cw-ai-footer > .cw-generate-btn:disabled {
+  opacity: .34 !important;
+  box-shadow: none !important;
+}
+@media(max-width:520px) {
+  #root .coding-workspace-page .coding-workspace .cw-panel-heading > span {
+    font-size: 10px !important;
+  }
+  #root .coding-workspace-page .coding-workspace .cw-ai-footer > .cw-generate-btn {
+    min-width: 136px !important;
+    min-height: 39px !important;
+    padding: 0 14px !important;
+    font-size: 11px !important;
+  }
+}
