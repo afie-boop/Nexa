@@ -61,6 +61,7 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
   const [store, setStore] = useState(readFileStore);
   const [currentFolder, setCurrentFolder] = useState("");
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [sort, setSort] = useState("name");
   const [showFolderForm, setShowFolderForm] = useState(false);
   const [showTrash, setShowTrash] = useState(false);
@@ -73,6 +74,7 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
 
   useImperativeHandle(ref, () => ({
     chooseFiles: () => { setSelectionMode(value => !value); setSelected([]); },
+    toggleSearch: () => setSearchOpen(value => !value),
     createFolder: () => { setShowFolderForm(true); setShowTrash(false); },
     openTrash: () => { setShowTrash(true); setSelected([]); setQuery(""); setCurrentFolder(""); }
   }), []);
@@ -228,14 +230,14 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
 
   return (
     <main className="fm-shell">
-      <div className="fm-toolbar">
+      {searchOpen && <div className="fm-toolbar">
         <label className="fm-search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg>
           <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search files and folders" />
           {query && <button type="button" onClick={() => setQuery("")} aria-label="Clear search">×</button>}
         </label>
         <label className="fm-sort"><span>Sort</span><select value={sort} onChange={event => setSort(event.target.value)}><option value="name">Name</option><option value="date">Date modified</option><option value="type">File type</option></select></label>
-      </div>
+      </div>}
 
       {showFolderForm && <form className="fm-create-folder" onSubmit={createFolder}>
         <input value={folderName} onChange={event => setFolderName(event.target.value)} placeholder="Folder name" autoFocus />
@@ -259,10 +261,7 @@ const CodingWorkspace = forwardRef(function CodingWorkspace(props, ref) {
       </div>}
 
       <section className="fm-content">
-        <div className="fm-list-head">
-          <span>Name</span><span>Size</span><span>Modified</span>
-          {selectionMode && <button type="button" onClick={() => setSelected(allVisibleSelected ? [] : visibleFiles.map(file => file.path))}>{allVisibleSelected ? "Clear" : "Select all"}</button>}
-        </div>
+        {selectionMode && <div className="fm-list-head"><span></span><span></span><span></span><button type="button" onClick={() => setSelected(allVisibleSelected ? [] : visibleFiles.map(file => file.path))}>{allVisibleSelected ? "Clear" : "Select all"}</button></div>}
 
         {visibleFolders.map(path => <div className="fm-row" key={path}>
           <button type="button" className="fm-item-main" onClick={() => setCurrentFolder(path)}>
