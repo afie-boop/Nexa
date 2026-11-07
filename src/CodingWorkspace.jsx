@@ -151,7 +151,7 @@ export default function CodingWorkspace() {
   function moveFile(path) {
     const destination = window.prompt("Move to folder path (leave blank for Files root)", parentPath(path));
     if (destination === null) return;
-    const folder = destination.trim().replace(/^\\/+|\\/+$/g, "");
+    const folder = destination.trim().replace(/^\/+|\/+$/g, "");
     if (folder && !store.folders.includes(folder)) {
       setNotice("That destination folder does not exist.");
       return;
